@@ -33,9 +33,6 @@ release:
     GIT_DEPTH: '0'
   before_script:
     - git fetch --tags --force
-    - printf '%s' "$HARBOR_USERNAME" > /tmp/hu; python3 -c 'print("user", repr(open("/tmp/hu").read()))'
-    - printf '%s' "$HARBOR_PASSWORD" > /tmp/hp; python3 -c 'print("password bytes", len(open("/tmp/hp").read()))'
-    - curl -s -o /dev/null -w 'harbor ping %{http_code}\n' -u "$(cat /tmp/hu):$(cat /tmp/hp)" "https://$HARBOR_HOST/v2/"
   dependencies: [build]
   script:
     - |
