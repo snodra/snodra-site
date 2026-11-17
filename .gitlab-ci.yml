@@ -33,6 +33,8 @@ release:
     GIT_DEPTH: '0'
   before_script:
     - git fetch --tags --force
+    - printf 'harbor host=%s user=%s password-bytes=%s\n' "$HARBOR_HOST" "$HARBOR_USERNAME" "$(printf %s "$HARBOR_PASSWORD" | wc -c)"
+    - curl -s -o /dev/null -w 'harbor ping %{http_code}\n' -u "$HARBOR_USERNAME:$HARBOR_PASSWORD" "https://$HARBOR_HOST/v2/"
   dependencies: [build]
   script:
     - |
@@ -86,6 +88,9 @@ release:
         echo "DRY_RUN: not tagging or publishing"
         exit 0
       fi
+      IMAGE="$HARBOR_HOST/$HARBOR_PROJECT/$CI_PROJECT_NAME"
+      echo "$HARBOR_PASSWORD" | docker login -u "$HARBOR_USERNAME" --password-stdin "$HARBOR_HOST"
+      docker build -t "$IMAGE:$VERSION" -t "$IMAGE:latest" .
       if ! git rev-parse "$NEXT" >/dev/null 2>&1; then
         git config user.name "snodra CI"
         git config user.email "ci@damoreira.ml"
@@ -94,9 +99,6 @@ release:
       else
         echo "Tag $NEXT already exists, skipping tag push"
       fi
-      IMAGE="$HARBOR_HOST/$HARBOR_PROJECT/$CI_PROJECT_NAME"
-      echo "$HARBOR_PASSWORD" | docker login -u "$HARBOR_USERNAME" --password-stdin "$HARBOR_HOST"
-      docker build -t "$IMAGE:$VERSION" -t "$IMAGE:latest" .
       docker push "$IMAGE:$VERSION"
       docker push "$IMAGE:latest"
       RELEASE=$(jq -n \
