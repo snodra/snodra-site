@@ -23,7 +23,6 @@ pymdown-extensions==13.1
 python-dateutil==4.0.0
 pyyaml==6.0.3
 pyyaml-env-tag==1.1
-readthedocs-upload==1.0.0a1
 requests==2.34.2
 tzdata==2026.6
 urllib3==2.8.0
