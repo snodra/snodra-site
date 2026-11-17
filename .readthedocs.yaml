@@ -1,0 +1,21 @@
+# Read the Docs configuration file for the kraken documentation.
+# Reference: https://docs.readthedocs.com/platform/stable/config-file/v2.html
+#
+# The project currently publishes with direct upload from GitLab CI
+# (`scripts/publish-docs.sh`), so this file is used when Read the Docs builds the
+# repository itself: `latest` from `main` and one version per `v*` tag.
+
+version: 2
+
+build:
+  os: ubuntu-26.04
+  tools:
+    python: "3.14"
+
+mkdocs:
+  configuration: mkdocs.yml
+  fail_on_warning: true
+
+python:
+  install:
+    - requirements: docs/requirements.lock

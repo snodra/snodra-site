@@ -1,0 +1,95 @@
+site_name: Snodra
+site_description: One messaging stack for services that speak Kafka and gRPC, without a commercial messaging platform.
+site_url: https://snodra.damoreira.com/
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Server:
+      - server/index.md
+      - Quick start: server/quickstart.md
+      - Authentication:
+          - server/configuration/index.md
+          - Anonymous: server/configuration/anonymous.md
+          - Static token: server/configuration/token.md
+          - Keycloak JWT: server/configuration/jwt-keycloak.md
+          - mTLS: server/configuration/mtls.md
+      - Server settings: server/configuration/server.md
+      - Topology: server/topology.md
+      - Dashboard: server/dashboard.md
+      - Event processors: server/event-processors.md
+      - Processor control: server/processor-control.md
+      - Event browser: server/event-browser.md
+      - Routing: server/routing.md
+      - Protocol: server/protocol.md
+      - Lifecycle: server/lifecycle.md
+      - Operations: server/operations.md
+      - Observability: server/observability.md
+      - Build and image: server/build-and-image.md
+      - Limitations: server/limitations.md
+      - Licence: server/license.md
+  - Messaging:
+      - messaging/index.md
+      - Kotlin:
+          - Overview: messaging/kotlin/index.md
+          - Quick start: messaging/kotlin/quickstart.md
+          - Configuration: messaging/kotlin/configuration.md
+          - API: messaging/kotlin/api.md
+          - Testing: messaging/kotlin/testing.md
+          - Modules and build: messaging/kotlin/modules.md
+      - Rust:
+          - Overview: messaging/rust/index.md
+          - Quick start: messaging/rust/quickstart.md
+          - Configuration: messaging/rust/configuration.md
+          - API: messaging/rust/api.md
+          - Dead letters: messaging/rust/dead-letters.md
+          - Sagas: messaging/rust/sagas.md
+          - Testing: messaging/rust/testing.md
+          - Modules and build: messaging/rust/modules.md
+  - Examples: examples/index.md
+  - Editions: editions.md
+  - Licence: concepts/license.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+exclude_docs: |
+  adr/template.md
+
+validation:
+  links:
+    absolute_links: relative_to_docs
+    anchors: warn
