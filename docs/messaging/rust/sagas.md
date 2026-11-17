@@ -6,7 +6,7 @@ Sagas, deadlines and the integration toolkit of ADR 0021 (S2): the model of the 
 collections and document shapes (`sagas`, `saga_dispatch`, `saga_dispatch_leases`, `deadlines`, `saga_failures`,
 `external_calls`, markers in `processed_events`), so a Kotlin and a Rust instance read each other's documents. The
 programming model, the delivery guarantees and the command-failure taxonomy are in
-[kraken/https://snodra-server.readthedocs.io/latest/messaging/, "Sagas and deadlines"](../index.md#sagas-and-deadlines) (its "Rust"
+[kraken/https://snodra.damoreira.com/messaging/, "Sagas and deadlines"](../index.md#sagas-and-deadlines) (its "Rust"
 subsection maps every Kotlin element to this crate); the decisions in
 ADR 0021, S2 rulings 47 to 67. The sandbox's banner saga
 (`examples/service-c/src/banner.rs`) is a complete example.
@@ -44,7 +44,7 @@ fn banner_saga(d: SagaDefinition<Banner>) -> SagaDefinition<Banner> {
     })
 }
 
-let app = KrakenMessaging::builder(Config::from_env()?).await?
+let app = SnodraMessaging::builder(Config::from_env()?).await?
     .saga("examples.Banner", banner_saga)
     // The adapter: a command handler made idempotent over external_calls (one call per key).
     .idempotent_command::<PrintBanner, _, _>(IdempotencyKey::default(), false, move |c, ctx| {

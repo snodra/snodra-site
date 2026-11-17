@@ -16,7 +16,7 @@ route any request while at least one is up.
   every 5 s on each stream. The hub keeps the latest report per session (replaced by each,
   dropped with the session; at most 64 hub ids of at most 128 bytes, empty, over-long and
   duplicate ids ignored) and shows it as `connectedHubIds` and `statusAgeMs` in the
-  [topology](https://snodra-server.readthedocs.io/latest/hub/topology/).
+  [topology](https://snodra.damoreira.com/server/topology/).
 - `SNODRA_SERVER_PEERS` lists the hubs' dashboards; the page reads every peer's
   `/api/v1/topology` in the browser and, under "All hubs", merges them and flags where the
   reachable hubs disagree: an instance missing on a hub, an instance with different types on
@@ -70,7 +70,7 @@ subscriptions are bound to one hub. Rules shared by both libraries:
 | Default | `static://snodra-server:7000` (one hub) | `static://snodra-server:7000` (one hub) |
 
 One target is the single-hub setup. The keyed-request hash, the permit split and top-up, and the
-address-family rule are identical in both libraries ([02-messaging.md](https://snodra-server.readthedocs.io/latest/messaging/)). In the sandbox
+address-family rule are identical in both libraries ([02-messaging.md](https://snodra.damoreira.com/messaging/)). In the sandbox
 every service uses `static://hub:7000,hub-2:7000`.
 
 ## Graceful shutdown

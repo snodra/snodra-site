@@ -1,13 +1,13 @@
 # Examples
 
-Runnable starting points for the hub and its clients. Full reference: [the hub pages](../hub/).
+Runnable starting points for the hub and its clients. Full reference: [the server pages](../server/index.md).
 
 ## Run the hub
 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
   -e SNODRA_SERVER_OTLP_ENDPOINT= \
-  gdamoreira/snodra-server:latest
+  snodra/snodra-server:latest
 ```
 
 Or with Compose:
@@ -15,7 +15,7 @@ Or with Compose:
 ```yaml
 services:
   snodra-server:
-    image: gdamoreira/snodra-server:latest
+    image: snodra/snodra-server:latest
     ports: ["7000:7000", "7001:7001"]
     environment:
       SNODRA_SERVER_OTLP_ENDPOINT: ""
@@ -50,13 +50,13 @@ The hub routes it to a live `orders` instance and relays `Reply` or `Error`.
 ```sh
 openssl rand -hex 32                       # the service's token
 echo '<the token>' | docker run --rm -i --entrypoint /app/snodra-server \
-  gdamoreira/snodra-server:latest acl hash -  # its SHA-256 for the ACL
+  snodra/snodra-server:latest acl hash -  # its SHA-256 for the ACL
 
 docker run --rm -p 7000:7000 -p 7001:7001 \
   -e SNODRA_SERVER_AUTH_MODE=permissive \
   -e SNODRA_SERVER_ACL_FILE=/etc/kraken/kraken.acl.toml \
   -v "$PWD/kraken.acl.toml:/etc/kraken/kraken.acl.toml:ro" \
-  gdamoreira/snodra-server:latest
+  snodra/snodra-server:latest
 ```
 
 Then follow [the authentication pages](../server/configuration/index.md).

@@ -23,7 +23,7 @@ What the hub deliberately does not do, and what is planned next.
   header, a hub left in `off` or `permissive` (which refuse only a takeover), or the HTTP topology when no dashboard
   token is set.
   Both libraries send the token, so `enforce` works with every service that has a token in its ACL
-  entry ([Client configuration](https://snodra-server.readthedocs.io/latest/hub/configuration/mtls/)).
+  entry ([Client configuration](https://snodra.damoreira.com/server/configuration/mtls/)).
   Request contents are still protected by the forwarded JWT, which the handler validates; the
   ACL does not replace it. A static token is a long-lived secret per service (JWT credentials,
   ADR 0019, and client certificates,

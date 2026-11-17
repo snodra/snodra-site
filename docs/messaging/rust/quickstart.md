@@ -4,15 +4,15 @@
 
 ```toml
 [dependencies]
-snodra-messaging-rs = { git = "https://gitlab.example.com/kraken-org/snodra-messaging-rs", tag = "vX.Y.Z" }
+snodra-messaging-rs = "0.6"
 ```
 
-The crate is a git dependency until v1.0.0; pin a tag.
+The crates live on crates.io: pin a minor version (`0.6`), or the exact release.
 
 ## Usage
 
 ```rust
-use snodra_messaging::{Command, Config, Event, KrakenMessaging, MessagingError, Query, SendOptions, message_type};
+use snodra_messaging::{Command, Config, Event, SnodraMessaging, MessagingError, Query, SendOptions, message_type};
 use snodra_messaging::identity::Guard;
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -29,7 +29,7 @@ impl Event for TextShouted {}
 
 #[tokio::main]
 async fn main() -> Result<(), MessagingError> {
-    let builder = KrakenMessaging::builder(Config::from_env()?).await?;
+    let builder = SnodraMessaging::builder(Config::from_env()?).await?;
     let events = builder.events();                                   // capture what handlers need
     let app = builder
         .command::<Shout, _, _>(move |cmd, ctx| {

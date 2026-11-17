@@ -31,7 +31,7 @@ answer.
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
   -e SNODRA_SERVER_OTLP_ENDPOINT= \
-  gdamoreira/snodra-server:latest
+  snodra/snodra-server:latest
 ```
 
 The dashboard is at <http://localhost:7001/ui/>. [The quick start](quickstart.md) checks health and
@@ -47,7 +47,7 @@ sends a first request; [server settings](configuration/server.md) lists every en
 4. The handler answers `Reply` (or parts, for streaming); the hub relays them to the sender and
    enforces the deadline.
 
-The full contract is in [the protocol page](https://snodra-server.readthedocs.io/latest/hub/protocol/).
+The full contract is in [the protocol page](https://snodra.damoreira.com/server/protocol/).
 
 ## Licence
 

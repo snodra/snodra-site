@@ -30,7 +30,7 @@ This is the simplest credential for a small deployment without an identity provi
    ```sh
    SNODRA_SERVER_AUTH_MODE=permissive \
    SNODRA_SERVER_ACL_FILE=/etc/kraken/kraken.acl.toml \
-   gdamoreira/snodra-server:latest
+   snodra/snodra-server:latest
    ```
 
 `permissive` evaluates and logs every rule but refuses nothing except an instance-id takeover.

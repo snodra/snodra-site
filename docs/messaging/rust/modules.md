@@ -32,19 +32,21 @@ Kotlin examples.
 
 ## CI/CD pipeline
 
-Defined in ``.gitlab-ci.yml``; runs on every push and merge request on a Rust image
-with `protobuf-compiler` installed.
+Defined in `.github/workflows/ci.yml` and `.github/workflows/release.yml`; the checks run on every push and pull request
+on GitHub-hosted Ubuntu runners with the toolchain from `rust-toolchain.toml` and `protoc`.
 
 ```mermaid
 flowchart LR
-    fmt["fmt<br/>cargo fmt --check"] --> clippy["clippy<br/>--all-targets -D warnings"] --> test["test<br/>cargo test"] --> docker["docker · tag vX.Y.Z<br/>Docker → Harbor"]
+    fmt["fmt<br/>cargo fmt --check"] --> clippy["clippy<br/>--workspace -D warnings"] --> test["test<br/>cargo test --workspace"] --> release["release · tag vX.Y.Z<br/>crates.io + GitHub release"]
 ```
 
-| Stage | Job | Runs | Produces |
+| Workflow | Job | Runs | Produces |
 |---|---|---|---|
-| fmt | `fmt` | always | formatting check |
-| clippy | `clippy` | always | lint with warnings as errors |
-| test | `test` | always | unit and in-process integration tests |
-| docker | `docker` | only on tags `vX.Y.Z` | `gdamoreira/snodra-messaging-rs:vX.Y.Z` and `:latest` |
+| `ci` | `fmt` | every push and pull request | formatting check |
+| `ci` | `proto-sync` | every push and pull request | `hub.proto` equals the public server's |
+| `ci` | `clippy` | every push and pull request | lint with warnings as errors |
+| `ci` | `test` | every push and pull request | the workspace suite, container-backed tests included |
+| `release` | `publish` | only on tags `vX.Y.Z` | the core and the four add-ons on crates.io, then a GitHub release |
 
-The crate is consumed as a git dependency pinned to a tag, so the image job mainly proves the Dockerfile; the sandbox compose builds `examples/service-c` from source.
+Services take the crates from crates.io (`cargo add snodra-messaging-rs@0.6`). The sandbox compose builds
+`examples/service-c` from source.

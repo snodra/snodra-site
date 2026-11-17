@@ -120,7 +120,7 @@ SNODRA_SERVER_OAUTH2_CLIENT_SECRET_FILE=/run/secrets/orders-client-secret   # cl
 ```
 
 (`Config.hub_oauth2 = Some(HubOAuth2 { token_uri, client_id, client_secret, .. })` in code; the
-variables are in the table above.) One `TokenProvider` per `KrakenMessaging` fetches the token with
+variables are in the table above.) One `TokenProvider` per `SnodraMessaging` fetches the token with
 the `client_credentials` grant (`client_secret_basic`: id and secret form-urlencoded, then base64,
 RFC 6749 2.3.1; 10 s timeout; response capped at 1 MiB; `token_type` must be `Bearer`; a missing
 `expires_in` means 60 s, with one warning) and every hub connection shares it: N hubs, one token,
@@ -138,7 +138,7 @@ at least every 5 s to look at the wall clock again. A stream the hub ends with `
 `Register` or refresh refused, or a later close: "token expired", "unknown signing key", "credentials
 expired") retires the access token it presented (its `Register`'s, or the last refresh it sent; a newer token fetched meanwhile is kept), so the next stream fetches a new one, paced by the normal reconnect backoff; `PERMISSION_DENIED`
 (wrong `azp`, no ACL entry) does not, because a new token would not help and the IdP is not to be
-hammered. `KrakenMessaging::shutdown()` closes the provider (`TokenProvider::close`): the refresh loop
+hammered. `SnodraMessaging::shutdown()` closes the provider (`TokenProvider::close`): the refresh loop
 ends and no further request reaches the IdP even if a `Sender` is still held.
 
 If no token can be had (the endpoint answers 401 `invalid_client`, is unreachable or misbehaves) the
@@ -150,7 +150,7 @@ answers `UNAVAILABLE` "jwks not loaded yet": an ordinary retry, not a logged rej
 
 The client secret and the tokens never appear in logs, errors or `Debug` output (an endpoint that echoes the
 `Authorization` header or the secret in its error text has them masked as `***`). For what is
-running, `KrakenMessaging::hub_auth()` (also `HubPool::auth()`, `HubConnection::auth()`) gives the
+running, `SnodraMessaging::hub_auth()` (also `HubPool::auth()`, `HubConnection::auth()`) gives the
 `AuthKind` (`none`, `token`, `jwt`), the current token's expiry, the last token fetch error and
 `token_fetches`, the fetch counts by result (`ok`, `http_error`, `oauth_error`, `io_error`,
 `bad_response`; also `TokenProvider::stats()`); `hub_credentials_refreshes_sent()` counts the
@@ -194,7 +194,7 @@ service names (even equal ones), is `PERMISSION_DENIED` at the hub. The hub's `[
 that name gives the rights, as for a JWT. How to issue one (`openssl`, cert-manager) is in
 [06-security.md](../../server/configuration/mtls.md).
 
-**What is checked, and when.** At startup (`Config::validate`, so also `KrakenMessaging::builder`): both
+**What is checked, and when.** At startup (`Config::validate`, so also `SnodraMessaging::builder`): both
 files, no static token and no OAuth2 next to it, both files readable and holding a certificate and a
 key, the key belonging to the leaf, the leaf naming exactly this service, the leaf not yet expired.
 Each is a startup error that names the file and the problem (never the key). A certificate and a
@@ -257,7 +257,7 @@ attempts back off. When the certificate in use has less than a tenth
 of its lifetime (or 24 h, whichever is smaller) left and the files hold no other, one `warn` per
 certificate says so.
 
-**Status.** `KrakenMessaging::hub_auth()` (also `HubPool::auth()`, `HubConnection::auth()`) reports
+**Status.** `SnodraMessaging::hub_auth()` (also `HubPool::auth()`, `HubConnection::auth()`) reports
 `AuthKind::Certificate` (`"certificate"`) and `certificate: Some(CertificateStatus { service,
 fingerprint, not_after, rotations })`: the first 8 hex characters of the SHA-256 of the leaf presented
 (what the hub's logs and `/api/v1/topology` show), its `notAfter`, and how many times the presented certificate

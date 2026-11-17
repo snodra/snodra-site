@@ -36,7 +36,7 @@ The protocol and both client libraries stay fully open: the add-ons add capabili
 ## Talking to us
 
 The editions are being finalised. For support, a pilot or a partnership, open an issue in the
-[`snodra-site`](https://gitlab.damoreira.ml/snodra/snodra-site) repository or write to the maintainer listed there.
+[`snodra-site`](https://github.com/snodra/snodra-site) repository or write to the maintainer listed there.
 
 ## Licence
 

@@ -47,7 +47,7 @@ client                                   hub
 - Every session has every feature: flow control (ADR 0014),
   `InstanceStatus` reports ([High availability](operations.md#high-availability)), the query modes
   ([Query modes](protocol.md#query-modes)), credential refresh (`ClientMessage.credentials`;
-  [JWT credentials](https://snodra-server.readthedocs.io/latest/hub/configuration/jwt-keycloak/)), event processor status (`InstanceStatus.processors`;
+  [JWT credentials](https://snodra.damoreira.com/server/configuration/jwt-keycloak/)), event processor status (`InstanceStatus.processors`;
   [Event processors](event-processors.md)) and processor control (`ServerMessage.control` and
   `ClientMessage.control_reply`; [Processor control](processor-control.md)). The hub and the client
   libraries ship together: a hub and a client of different builds are not supported.
@@ -115,9 +115,9 @@ without client configuration.
 | Handler reconnects (new stream, same instance id) with requests queued | the new session takes over the queue | forwarded: `Error{HANDLER_DISCONNECTED}`; queued: served by the new stream |
 | Handler re-registers without types (graceful stop) | no longer a routing target; its queue is routed to the other instances | what it was forwarded it still answers |
 | All queues of the hub hold `SNODRA_SERVER_QUEUE_BYTES_TOTAL` | reply immediately | `Error{RESOURCE_EXHAUSTED}` |
-| Two services register the same type | second `Register` rejected, stream closed with `ALREADY_EXISTS` | the second service does not fail startup: it keeps reconnecting (at the backoff cap) and none of its handlers is reachable through that hub. Kotlin surfaces the rejection as `HubRegistrationRejectedException` from `awaitRegistered` (`lastRejection` on the connection); Rust keeps retrying with the reason in `last_rejection` ([02-messaging.md](https://snodra-server.readthedocs.io/latest/messaging/)) |
+| Two services register the same type | second `Register` rejected, stream closed with `ALREADY_EXISTS` | the second service does not fail startup: it keeps reconnecting (at the backoff cap) and none of its handlers is reachable through that hub. Kotlin surfaces the rejection as `HubRegistrationRejectedException` from `awaitRegistered` (`lastRejection` on the connection); Rust keeps retrying with the reason in `last_rejection` ([02-messaging.md](https://snodra.damoreira.com/messaging/)) |
 | A type registered exclusive by one registrant and shared by another | the later `Register` rejected, stream closed with `ALREADY_EXISTS` | as above: the later registrant keeps reconnecting and exposes the rejection; it does not fail startup |
-| `Register` without credentials, or with an unknown token (`enforce`) | stream closed with `UNAUTHENTICATED`; nothing is registered | the service's connection fails and retries at the backoff cap: a registration rejection (`lastRejection`, `HubRegistrationRejectedException` from `awaitRegistered`, `await_hub` false in Rust, one `ERROR` line; [Client configuration](https://snodra-server.readthedocs.io/latest/hub/configuration/mtls/)). `jwt` credentials on a hub with no `SNODRA_SERVER_JWT_ISSUER`: `UNAUTHENTICATED` "jwt credentials are not configured on this hub" |
+| `Register` without credentials, or with an unknown token (`enforce`) | stream closed with `UNAUTHENTICATED`; nothing is registered | the service's connection fails and retries at the backoff cap: a registration rejection (`lastRejection`, `HubRegistrationRejectedException` from `awaitRegistered`, `await_hub` false in Rust, one `ERROR` line; [Client configuration](https://snodra.damoreira.com/server/configuration/mtls/)). `jwt` credentials on a hub with no `SNODRA_SERVER_JWT_ISSUER`: `UNAUTHENTICATED` "jwt credentials are not configured on this hub" |
 | `Register` with an invalid JWT (`enforce`): expired, wrong issuer or audience, bad signature, `none`/`HS*`, an ID or refresh token | stream closed with `UNAUTHENTICATED` and a short reason ("token expired", "wrong token issuer", ...), never the token | as above (a registration rejection) |
 | `Register` with a JWT for another service (`azp` differs), or for a service with no `[[service]]` table (`enforce`) | stream closed with `PERMISSION_DENIED` "token azp `<a>` is not service `<b>`" or "no ACL entry for service `<a>`" | as above |
 | `Register` with a JWT before the first fetch of the signing keys succeeded | stream closed with `UNAVAILABLE` "jwks not loaded yet" | an ordinary stream closure: the client reconnects from the backoff floor |
@@ -146,4 +146,4 @@ sender of a stream or subscription that outlived its maximum duration; with acce
 `UNAUTHENTICATED` and `PERMISSION_DENIED` for a request it refuses.
 
 Nothing is retried by the hub. Retry policy belongs to the sender and is described in
-[02-messaging.md](https://snodra-server.readthedocs.io/latest/messaging/).
+[02-messaging.md](https://snodra.damoreira.com/messaging/).

@@ -42,7 +42,7 @@ does not answer is shown unreachable.
 
 Dead letters themselves (the `dead_letters` collection, the `topic` and `log` modes, the local `DeadLetters` admin API
 for list, retry and discard) belong to the libraries: [02-messaging.md, Event processors and dead
-letters](https://snodra-server.readthedocs.io/latest/messaging/). Pausing, resuming and replaying a processor and
+letters](https://snodra.damoreira.com/messaging/). Pausing, resuming and replaying a processor and
 working its letters through the hub: [Processor control](processor-control.md). A report also carries
 `replaying`, `operationId` and, per partition, `replayUntil`; an aggregate replays when any instance does and shows the
 operation id of the freshest report that names one.

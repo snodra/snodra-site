@@ -115,7 +115,7 @@ Decision record: umbrella `docs/adr/0014-hub-flow-control-and-priority.md`.
 ### Query modes
 
 Decision record: umbrella `docs/adr/0017-query-modes-and-shared-query-types.md`; details in
-umbrella `https://snodra-server.readthedocs.io/latest/hub/` (Query modes).
+umbrella `https://snodra.damoreira.com/server/` (Query modes).
 
 - **Shared query types.** `Register.shared_query_types` lists query types many services may own
   (exclusive `query_types` keep the one-owner rule). A point query on a shared type goes to one
@@ -181,8 +181,8 @@ umbrella `https://snodra-server.readthedocs.io/latest/hub/` (Query modes).
   `snodra_hub_streams_open{service,instance}` (the handler's) and
   `snodra_hub_stream_parts_total{service,type}`.
 - `tests/streaming.rs` drives it over gRPC with raw clients. The client APIs are in the
-  libraries' READMEs: [snodra-messaging, Streaming queries](https://snodra-server.readthedocs.io/latest/messaging/kotlin/api/#streaming-queries)
-  (Kotlin) and [snodra-messaging-rs, Streaming queries](https://snodra-server.readthedocs.io/latest/messaging/rust/api/#streaming-queries)
+  libraries' READMEs: [snodra-messaging, Streaming queries](https://snodra.damoreira.com/messaging/kotlin/api/#streaming-queries)
+  (Kotlin) and [snodra-messaging-rs, Streaming queries](https://snodra.damoreira.com/messaging/rust/api/#streaming-queries)
   (Rust).
 - **Subscription.** A sender sends a query with
   `Request.mode = SUBSCRIPTION` (and `initial_credit`, `max_results`, `timeout_ms`). The targets
@@ -251,8 +251,8 @@ umbrella `https://snodra-server.readthedocs.io/latest/hub/` (Query modes).
   per update relayed. A subscription that ends after its initial part counts nothing more.
 - `tests/subscription.rs` drives it over gRPC with raw clients. The client libraries implement
   the sender and handler sides; their READMEs:
-  [snodra-messaging, Subscription queries](https://snodra-server.readthedocs.io/latest/messaging/kotlin/api/#subscription-queries)
-  (Kotlin) and [snodra-messaging-rs, Subscription queries](https://snodra-server.readthedocs.io/latest/messaging/rust/api/#subscription-queries)
+  [snodra-messaging, Subscription queries](https://snodra.damoreira.com/messaging/kotlin/api/#subscription-queries)
+  (Kotlin) and [snodra-messaging-rs, Subscription queries](https://snodra.damoreira.com/messaging/rust/api/#subscription-queries)
   (Rust).
 
 ### Request timeouts

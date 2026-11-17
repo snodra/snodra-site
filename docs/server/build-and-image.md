@@ -51,7 +51,7 @@ services:
 `docker stop` sends SIGTERM to the hub (PID 1), which shuts down gracefully (see above).
 
 `snodra-server:dev` is the image name the Kotlin starter's integration tests use. CI publishes tagged
-releases (`<version>`) to `gdamoreira/snodra-server:<tag>` and `:latest`.
+releases (`<version>`) to `snodra/snodra-server:<tag>` and `:latest`.
 
 ## Image build notes
 
@@ -116,5 +116,5 @@ The generated Rust client is produced with `build_transport(false)`; clients bui
 `HubClient::new(channel)`. The local image name used by the Kotlin starter's integration tests is
 `snodra-server:dev`.
 
-Image name: `gdamoreira/snodra-server:<version>` (placeholder host). Compose
+Image name: `snodra/snodra-server:<version>` (placeholder host). Compose
 runs it with `restart: unless-stopped` and a gRPC healthcheck.

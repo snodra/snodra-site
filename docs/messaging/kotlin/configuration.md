@@ -167,7 +167,7 @@ fails startup with a hint.
 ## Hub security: token, ACL and TLS
 
 Since P5a the hub can authenticate services and restrict what they register and send, and serve its gRPC port over TLS
-(decision record: umbrella `docs/adr/0018-hub-access-control.md`, operator how-to: `https://snodra-server.readthedocs.io/latest/concepts/security/`). All of it is opt-in
+(decision record: umbrella `docs/adr/0018-hub-access-control.md`, operator how-to: `https://snodra.damoreira.com/concepts/security/`). All of it is opt-in
 on the hub (`SNODRA_SERVER_AUTH_MODE=off|permissive|enforce`, default `off`); this section is the client's side. It is
 unrelated to [Security](#security) above, which is about the **user's** forwarded JWT.
 
@@ -182,7 +182,7 @@ Snodra:
 ```
 
 The token goes in `Register.credentials.token` of every stream (read once per stream; the hub reads it from the first
-`Register` only). It is never logged, `HubSettings.toString()` and `KrakenMessagingProperties.toString()` print `****`, and with
+`Register` only). It is never logged, `HubSettings.toString()` and `SnodraMessagingProperties.toString()` print `****`, and with
 `spring-boot-actuator` on the classpath the starter contributes a `SanitizingFunction` that masks it (and
 `SNODRA_SERVER_TOKEN`) in `/actuator/configprops` and `/actuator/env` even with `show-values=ALWAYS` and whatever
 sanitization the application configured. An empty token is no token (a `Register` without credentials, which `off` and
@@ -299,7 +299,7 @@ its name is refused by the JDK's URI parser (the host would be null), so it fail
 ## Authenticating with a client certificate (mTLS)
 
 Since P5c the hub can take a **client certificate** as the service's credential (decision record: umbrella
-`docs/adr/0020-hub-mutual-tls.md`, issuing certificates and the hub's settings: `https://snodra-server.readthedocs.io/latest/concepts/security/`, "mTLS mode"). The TLS handshake
+`docs/adr/0020-hub-mutual-tls.md`, issuing certificates and the hub's settings: `https://snodra.damoreira.com/concepts/security/`, "mTLS mode"). The TLS handshake
 proves the service holds the key, the certificate names the service, and the rights are the hub's `[[service]]` table of that name, the
 same table a JWT uses. No secret crosses the wire and no identity provider is involved.
 
@@ -328,7 +328,7 @@ Environment names (relaxed binding): `SNODRA_MESSAGING_HUB_TLS_CLIENT_CERT_FILE`
   starter says so at startup instead. Also checked at startup: both files exist, are not empty and parse, the key belongs to the
   certificate, and the certificate has not ended. The key must be **PKCS#8 PEM** (`-----BEGIN PRIVATE KEY-----`); RSA (`BEGIN RSA PRIVATE KEY`), SEC1 (`BEGIN EC PRIVATE KEY`)
   and encrypted keys are refused with the conversion hint (`openssl pkcs8 -topk8 -nocrypt`). The JDK reads RSA, EC and Ed25519 keys.
-- **How to issue one.** Follow `https://snodra-server.readthedocs.io/latest/concepts/security/`, "mTLS mode" (`openssl`, or cert-manager with `uris:
+- **How to issue one.** Follow `https://snodra.damoreira.com/concepts/security/`, "mTLS mode" (`openssl`, or cert-manager with `uris:
   [snodra://service/billing-service]` and `usages: [client auth]`). Issue short-lived certificates (hours to days): there is no
   revocation list, so the lifetime is the revocation story.
 - **Failures at the handshake are transport errors.** With `SNODRA_SERVER_TLS_CLIENT_AUTH=required`, no certificate or one the hub does not

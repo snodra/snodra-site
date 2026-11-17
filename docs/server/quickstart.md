@@ -7,7 +7,7 @@ The hub running in five minutes. You need Docker; a routed command needs a servi
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
   -e SNODRA_SERVER_OTLP_ENDPOINT= \
-  gdamoreira/snodra-server:latest
+  snodra/snodra-server:latest
 ```
 
 - `7000` — gRPC, where services connect.
@@ -46,8 +46,8 @@ fun handle(command: PlaceOrder) { /* ... */ }
 
 The starter opens `Hub.Connect`, sends `Register` with every handled type, and reconnects on its
 own. The Rust crate does the same through one builder. See
-[the Kotlin quick start](https://snodra-server.readthedocs.io/latest/messaging/kotlin/quickstart/) and
-[the Rust quick start](https://snodra-server.readthedocs.io/latest/messaging/rust/quickstart/).
+[the Kotlin quick start](https://snodra.damoreira.com/messaging/kotlin/quickstart/) and
+[the Rust quick start](https://snodra.damoreira.com/messaging/rust/quickstart/).
 
 ## 5. Send a first request
 
@@ -66,4 +66,4 @@ The hub forwards it to a live `orders` instance, enforces the deadline, and retu
 
 - [The four authentication modes](configuration/index.md) — start `permissive`, move to `enforce`.
 - [Server settings](configuration/server.md) — timeouts, queues, dashboard, event browser.
-- [The protocol](https://snodra-server.readthedocs.io/latest/hub/protocol/) — the whole message contract.
+- [The protocol](https://snodra.damoreira.com/server/protocol/) — the whole message contract.

@@ -1,7 +1,7 @@
 # Snodra documentation
 
-The source of <https://snodra-server.readthedocs.io/latest/>: the hub, its Kotlin and Rust client
-libraries, and runnable examples.
+The source of <https://snodra.damoreira.com/>: the server, its Kotlin and Rust client libraries, and
+runnable examples. Built with Material for MkDocs and served by GitHub Pages.
 
 ## Local preview
 
@@ -11,19 +11,21 @@ python3 -m venv .venv-docs
 make docs-serve
 ```
 
-`make docs-build` runs the strict build; it is the same gate Read the Docs applies.
+`make docs-build` runs the strict build, the same gate the workflow applies.
 
 ## Publishing
 
-Read the Docs builds this repository; `.github/workflows/docs.yml` triggers a build on `main` and
-creates a version for each `v*` tag. Add the Read the Docs API token as the
-`READTHEDOCS_TOKEN` repository secret. The site configuration is `.readthedocs.yaml`; the
-navigation is `mkdocs.yml`.
+`.github/workflows/pages.yml` builds the site on every push and pull request and deploys it to GitHub
+Pages from `main`. `docs/CNAME` sets the custom domain; in Cloudflare `snodra` is a `CNAME` to
+`snodra.github.io` with the proxy off (Pages terminates TLS itself). Pull requests build only.
 
 ## Related repositories
 
-- [`snodra-server`](https://github.com/gdamoreira/snodra-server) — the router.
-- `snodra-messaging` and `snodra-messaging-rs` — the client libraries (private until v1.0.0).
+- [`snodra-server`](https://github.com/snodra/snodra-server) — the router and its dashboard.
+- [`snodra-messaging`](https://github.com/snodra/snodra-messaging) — the Kotlin library, on Maven Central.
+- [`snodra-messaging-rs`](https://github.com/snodra/snodra-messaging-rs) — the Rust library, on crates.io.
+- [`snodra-event-browser`](https://github.com/snodra/snodra-event-browser) and
+  [`snodra-conformance`](https://github.com/snodra/snodra-conformance).
 
 ## License
 

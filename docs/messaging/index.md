@@ -51,7 +51,7 @@ class CatalogueSearch {
 ```
 
 ```rust
-let app = KrakenMessaging::builder(config).await?
+let app = SnodraMessaging::builder(config).await?
     .shared_query::<SearchEverything, _, _>(|q, _ctx| async move { Ok(SearchHits { .. }) })
     .start().await?;
 ```
@@ -162,7 +162,7 @@ struct ExportWorkouts { owner_id: String }
 message_type!(ExportWorkouts, "workouts.ExportWorkouts");
 impl StreamingQuery for ExportWorkouts { type Item = WorkoutRow; }
 
-let app = KrakenMessaging::builder(config).await?
+let app = SnodraMessaging::builder(config).await?
     .streaming_query::<ExportWorkouts, _, _, _>(|q, _ctx| async move { Ok(repo.stream_by_owner(q.owner_id)) })
     // .shared_streaming_query::<Search, _, _, _>(..)   // many services may own it
     .start().await?;
@@ -363,7 +363,7 @@ struct WatchAccount { account_id: String }
 message_type!(WatchAccount, "accounts.WatchAccount");
 impl SubscriptionQuery for WatchAccount { type Initial = AccountView; type Update = AccountChanged; }
 
-let builder = KrakenMessaging::builder(config).await?;
+let builder = SnodraMessaging::builder(config).await?;
 let emitter = builder.emitter();                  // capture it before start(), in the code that changes the data
 let app = builder
     .subscription_query::<WatchAccount, _, _>(|q, _ctx| async move { Ok(repo.view(&q.account_id).await?) })
@@ -408,7 +408,7 @@ emitter.complete_exceptionally::<WatchAccount>(|_| true, &MessagingError::Storag
 
 | | Kotlin | Rust |
 |---|---|---|
-| The emitter | the auto-configured bean `QueryUpdateEmitter` | `QueryUpdateEmitter` (`Clone`), from `KrakenMessagingBuilder::emitter()` or `KrakenMessaging::emitter()` |
+| The emitter | the auto-configured bean `QueryUpdateEmitter` | `QueryUpdateEmitter` (`Clone`), from `SnodraMessagingBuilder::emitter()` or `SnodraMessaging::emitter()` |
 | Update | `emit(queryType: KClass<Q>, filter: (Q) -> Boolean, update: U)` and `emit<Q, U>(filter, update)` (reified) | `emit::<Q>(filter: impl Fn(&Q) -> bool, update: &Q::Update)` |
 | Clean end | `complete(queryType, filter)` / `complete<Q>(filter)` | `complete::<Q>(filter)` |
 | End with an error | `completeExceptionally(queryType, filter, cause: Throwable)` / `completeExceptionally<Q>(filter, cause)` | `complete_exceptionally::<Q>(filter, error: &MessagingError)` |
@@ -1050,7 +1050,7 @@ ADR 0022; the hub side:
   (log the failure and skip the record). A record whose handlers failed every attempt is parked (`HANDLER_FAILED`) before its offset is
   acknowledged; the later records of its key are parked behind it (`SEQUENCED`; sagas still see them); a malformed
   record is parked as `INVALID` and blocks nothing.
-- **Admin API** on every instance: Kotlin bean `DeadLetters`, Rust `KrakenMessaging::dead_letters()`, with `list`,
+- **Admin API** on every instance: Kotlin bean `DeadLetters`, Rust `SnodraMessaging::dead_letters()`, with `list`,
   `get`, `count`, `retry` (the processor's handlers in the marker transaction, together with the letter's deletion),
   `retryAll` (per key in offset order) and `discard` (which unblocks the key's next letter).
 - **Status.** Every 5 s each instance reports its processors to every live hub:
@@ -1139,7 +1139,7 @@ Rust (`snodra-messaging-rs`; the crate README's "Processor control" section is t
 ```rust
 use snodra_messaging::processors::{EventOptions, ResetContext, ResetTarget};
 
-let app = KrakenMessaging::builder(Config::from_env()?).await?
+let app = SnodraMessaging::builder(Config::from_env()?).await?
     .event_in::<OrderPlaced, _, _>("orders", |e, ctx| async move { insert_row(&e, &ctx).await })
     // Never again in a replay; its marker is still written.
     .event_with::<OrderPlaced, _, _>(
@@ -1399,10 +1399,10 @@ handler can detect duplicates.
   subscription query answers its initial result from the registered handler and takes its updates
   from `buses.emitter`, a local `QueryUpdateEmitter` (no credits, delivered at once).
 - `InProcessHub`: an in-JVM hub for tests.
-- `KrakenContainers`: Testcontainers 2.0.5 helpers `kafka()` (`apache/kafka:4.4.0`), `mongo()` (a
+- `SnodraContainers`: Testcontainers 2.0.5 helpers `kafka()` (`apache/kafka:4.4.0`), `mongo()` (a
   replica set), `hub()`, `hubAcl(...)`, `hubJwt(...)`, `hubMtls(...)` (the hub with access control) and
   `hubImageAvailable()`, all on the image under test.
-- `KrakenTestKafka(bootstrap, topic, typePrefix)`: reads events from the events topic.
+- `SnodraTestKafka(bootstrap, topic, typePrefix)`: reads events from the events topic.
 - `SagaTestFixture(SagaClass::class, beans…)`: drives one saga with events and time, in memory, on the library's own saga runtime
   (see [Sagas and deadlines](#sagas-and-deadlines)): `givenEvents`, `givenCurrentTime`, `whenEvent(event, headers)`,
   `whenCommandFailed(command, reason, message)`, `whenTimeElapses(duration)`, `expectActiveSagas`, `expectAssociation`,

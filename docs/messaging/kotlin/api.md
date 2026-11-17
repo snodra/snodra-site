@@ -403,7 +403,7 @@ MongoDB and its Kafka consumer; the hub is not involved except to carry the comm
 Everything starts and ends with Snodra messages. A saga never calls an external system itself: it sends a command, an
 **adapter** in the same service (an ordinary `@CommandHandler` made idempotent) makes the call, and the external system's answer
 comes back as an ordinary Snodra event through a partner topic, a webhook or polling. The full model, the delivery guarantees,
-the configuration and the metrics are in `../kraken/https://snodra-server.readthedocs.io/latest/messaging/` ("Sagas and deadlines"); the decision and every
+the configuration and the metrics are in `../kraken/https://snodra.damoreira.com/messaging/` ("Sagas and deadlines"); the decision and every
 builder ruling are in `../kraken/docs/adr/0021-sagas-in-the-library.md`; a working example with a fake partner is in
 `examples/README.md` ("The postcard saga").
 

@@ -162,7 +162,7 @@ use snodra_messaging::hub::{ScatterOptions, ScatterPart, ScatterResult};
 
 // Handler side: several services may own Search. A per-target request has the id `<id>#<n>`
 // and is served like any query.
-let app = KrakenMessaging::builder(config).await?
+let app = SnodraMessaging::builder(config).await?
     .shared_query::<Search, _, _>(|q, ctx| async move { Ok(Hits { .. }) })
     .start().await?;
 
@@ -182,7 +182,7 @@ while let Some(part) = parts.next().await { let part = part?; /* ... */ }
 
 | API | Signature |
 |---|---|
-| Register a shared query | `KrakenMessagingBuilder::shared_query::<Q, F, Fut>(handler) -> Self` (also `HandlerRegistry::shared_query`) |
+| Register a shared query | `SnodraMessagingBuilder::shared_query::<Q, F, Fut>(handler) -> Self` (also `HandlerRegistry::shared_query`) |
 | Registered types | `HandlerRegistry::query_types()` (every query, exclusive and shared), `exclusive_query_types()`, `shared_query_types()`; `registered_types() -> RegisteredTypes { commands, queries (exclusive), shared_queries }` is what the `Register` announces |
 | Gather | `Sender::scatter_gather<Q: Query>(&self, &Q, ScatterOptions) -> Result<ScatterResult<Q::Reply>, MessagingError>` |
 | Stream | `Sender::scatter_gather_stream<Q: Query>(&self, &Q, ScatterOptions) -> impl Stream<Item = Result<ScatterPart<Q::Reply>, MessagingError>>` |
@@ -237,7 +237,7 @@ impl StreamingQuery for Export { type Item = Row; }
 
 // Handler side: return any `Stream<Item = Result<Row, MessagingError>>`; it is pulled at most
 // one item ahead of the sender's credit. An `Err` item ends the stream with that error.
-let app = KrakenMessaging::builder(config).await?
+let app = SnodraMessaging::builder(config).await?
     .streaming_query::<Export, _, _, _>(|q, ctx| async move { Ok(rows_since(q.since)) })
     // .shared_streaming_query::<Search, _, _, _>(..)   // many services may own it
     .start().await?;
@@ -260,10 +260,10 @@ tokio::spawn(async move { rows.try_for_each(|row| async { Ok(()) }).await });
 | API | Signature |
 |---|---|
 | Trait | `trait StreamingQuery: MessageType + Serialize + DeserializeOwned + Send + Sync + 'static { type Item: Serialize + DeserializeOwned + Send + 'static; }` |
-| Register a handler | `KrakenMessagingBuilder::streaming_query::<Q, F, Fut, S>(handler) -> Self` and `shared_streaming_query` (also on `HandlerRegistry`), with `F: Fn(Q, MessageContext) -> Fut`, `Fut: Future<Output = Result<S, MessagingError>>`, `S: Stream<Item = Result<Q::Item, MessagingError>> + Send + 'static` (a `BoxStream` fits) |
+| Register a handler | `SnodraMessagingBuilder::streaming_query::<Q, F, Fut, S>(handler) -> Self` and `shared_streaming_query` (also on `HandlerRegistry`), with `F: Fn(Q, MessageContext) -> Fut`, `Fut: Future<Output = Result<S, MessagingError>>`, `S: Stream<Item = Result<Q::Item, MessagingError>> + Send + 'static` (a `BoxStream` fits) |
 | Registered types | `HandlerRegistry::streaming_query_types()` (exclusive and shared); `registered_types() -> RegisteredTypes { commands, queries, shared_queries, streaming_queries }`: `streaming_queries` are the exclusive streaming types, announced in `Register.query_types` with `queries`; a shared streaming type is in `shared_queries` like any shared query (the hub does not tell a streaming type from a unary one: the mode is the sender's choice) |
 | Stream | `Sender::stream<Q: StreamingQuery>(&self, &Q, StreamOptions) -> Result<BoxStream<'_, Result<Q::Item, MessagingError>>, MessagingError>` (`async`): the stream borrows the sender |
-| Owned stream | `Sender::stream_owned<Q: StreamingQuery>(self: &Arc<Self>, &Q, StreamOptions) -> Result<BoxStream<'static, Result<Q::Item, MessagingError>>, MessagingError>` (`async`): the stream holds a clone of the `Arc<Sender>`, so it can be returned or moved into a task; `KrakenMessaging::sender()` (and the builder's `sender()`) is that `Arc`. Same behaviour otherwise |
+| Owned stream | `Sender::stream_owned<Q: StreamingQuery>(self: &Arc<Self>, &Q, StreamOptions) -> Result<BoxStream<'static, Result<Q::Item, MessagingError>>, MessagingError>` (`async`): the stream holds a clone of the `Arc<Sender>`, so it can be returned or moved into a task; `SnodraMessaging::sender()` (and the builder's `sender()`) is that `Arc`. Same behaviour otherwise |
 | Options | `StreamOptions { timeout: Option<Duration>, max_results: u32, priority: Option<i32>, initial_credit: u32 }` (`Default`: `initial_credit` 64, `hub::DEFAULT_CREDIT`; 0 reads as 64) |
 | Errors | `MessagingError::NoHandler`, `InvalidMessage`, `Timeout`, `RemoteHandler`, `HandlerDisconnected`, `HandlerBusy`, `Cancelled` (the hub's max stream duration), `HubUnavailable`, `HubConnectionLost`, `Serialization` |
 
@@ -353,7 +353,7 @@ impl SubscriptionQuery for Prices { type Initial = Quote; type Update = Tick; }
 
 // Handler side: the handler answers the initial result; the updates are pushed through the
 // emitter by whatever changes the data. Capture the emitter before `start()`.
-let builder = KrakenMessaging::builder(config).await?;
+let builder = SnodraMessaging::builder(config).await?;
 let emitter = builder.emitter();
 let app = builder
     .subscription_query::<Prices, _, _>(|q, ctx| async move { Ok(latest_quote(&q.symbol).await?) })
@@ -381,9 +381,9 @@ while let Some(update) = updates.next().await { let tick = update?; /* in the hu
 | API | Signature |
 |---|---|
 | Trait | `trait SubscriptionQuery: MessageType + Serialize + DeserializeOwned + Send + Sync + 'static { type Initial: Serialize + DeserializeOwned + Send + 'static; type Update: Serialize + DeserializeOwned + Send + 'static; }` |
-| Register a handler | `KrakenMessagingBuilder::subscription_query::<Q, F, Fut>(handler) -> Self` and `shared_subscription_query` (also on `HandlerRegistry`), with `F: Fn(Q, MessageContext) -> Fut`, `Fut: Future<Output = Result<Q::Initial, MessagingError>>`: the handler answers the initial result |
+| Register a handler | `SnodraMessagingBuilder::subscription_query::<Q, F, Fut>(handler) -> Self` and `shared_subscription_query` (also on `HandlerRegistry`), with `F: Fn(Q, MessageContext) -> Fut`, `Fut: Future<Output = Result<Q::Initial, MessagingError>>`: the handler answers the initial result |
 | Registered types | `HandlerRegistry::subscription_query_types()` (exclusive and shared); `registered_types()` has `subscription_queries`, the exclusive ones, announced in `Register.query_types` with `queries`; a shared subscription type is in `shared_queries` like any shared query |
-| Emitter | `QueryUpdateEmitter` (`Clone`): `emit<Q: SubscriptionQuery>(&self, filter: impl Fn(&Q) -> bool, update: &Q::Update)`, `complete<Q>(&self, filter)`, `complete_exceptionally<Q>(&self, filter, error: &MessagingError)`. From `KrakenMessagingBuilder::emitter()` (to capture in handlers and in the code that changes the data) or `KrakenMessaging::emitter()`; also `open_subscriptions()` |
+| Emitter | `QueryUpdateEmitter` (`Clone`): `emit<Q: SubscriptionQuery>(&self, filter: impl Fn(&Q) -> bool, update: &Q::Update)`, `complete<Q>(&self, filter)`, `complete_exceptionally<Q>(&self, filter, error: &MessagingError)`. From `SnodraMessagingBuilder::emitter()` (to capture in handlers and in the code that changes the data) or `SnodraMessaging::emitter()`; also `open_subscriptions()` |
 | Subscribe | `Sender::subscribe<Q: SubscriptionQuery>(self: &Arc<Self>, &Q, SubscriptionOptions) -> Result<Subscription<Q>, MessagingError>` (`async`): owned, like `stream_owned` (`app.sender()` is the `Arc`); there is no borrowed variant |
 | Result | `Subscription<Q> { initial: Q::Initial, updates: BoxStream<'static, Result<Q::Update, MessagingError>> }` with `cancel(self)` |
 | Options | `SubscriptionOptions { timeout: Option<Duration>, max_results: u32, priority: Option<i32>, initial_credit: u32 }` (`Default`: `initial_credit` 64, `hub::DEFAULT_CREDIT`; 0 reads as 64; retry: `Config.hub_retry`) |
@@ -465,7 +465,7 @@ while let Some(update) = updates.next().await { let tick = update?; /* in the hu
   forgets the request: the hub cancels every owner instance, which removes the subscription.
   The owners also drop a subscription on a hub `Cancel` (the subscriber left, `max_results`, the
   buffer, the hub's limits) and every subscription that arrived on a hub stream that was lost
-  (the hub forgot it with the session). A shutdown (`KrakenMessaging::shutdown`) completes the
+  (the hub forgot it with the session). A shutdown (`SnodraMessaging::shutdown`) completes the
   subscriptions served here with a clean `ReplyEnd`, best effort and bounded to 2 s.
 - **Retry.** `Config.hub_retry` applies until the initial result, for the same errors as a unary
   query (`HubUnavailable`, `NoHandler`, `HandlerBusy`, `HandlerDisconnected`, `Timeout`,
@@ -486,7 +486,7 @@ Kotlin starter's `@ProcessingGroup`). A slow or failing handler in one processor
 another.
 
 ```rust,ignore
-let app = KrakenMessaging::builder(config).await?
+let app = SnodraMessaging::builder(config).await?
     .event::<OrderPlaced, _, _>(|e, ctx| async move { /* default */ Ok(()) })
     .event_in::<OrderPlaced, _, _>("projections", |e, ctx| async move { /* its own consumer */ Ok(()) })
     .event_in::<OrderShipped, _, _>("projections", |e, ctx| async move { Ok(()) })
@@ -621,7 +621,7 @@ not "nothing changed"**: their effects stay, and the message says what else happ
 ```rust,ignore
 use snodra_messaging::processors::{EventOptions, ResetContext};
 
-KrakenMessaging::builder(config).await?
+SnodraMessaging::builder(config).await?
     .event_in::<OrderPlaced, _, _>("projections", |e, ctx| async move { /* replayed */ Ok(()) })
     // Never runs again in a replay: an effect outside the service (Kotlin's @DisallowReplay).
     .event_with::<OrderPlaced, _, _>(

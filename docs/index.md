@@ -6,7 +6,7 @@
 
 One messaging stack for services that speak Kafka and gRPC — without a commercial messaging platform.
 
-[`snodra-server`](https://gitlab.damoreira.ml/snodra/snodra-server) is a stateless gRPC router for synchronous
+[`snodra-server`](https://github.com/snodra/snodra-server) is a stateless gRPC router for synchronous
 commands and queries. Events never pass through it: they go straight to Kafka, through a transactional outbox. You run
 the server, point your services at it, and stop maintaining a service registry, deadline handling and a control plane of
 your own.
@@ -24,7 +24,7 @@ your own.
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
   -e SNODRA_SERVER_OTLP_ENDPOINT= \
-  gdamoreira/snodra-server:latest
+  snodra/snodra-server:latest
 ```
 
 Open the dashboard at <http://localhost:7001/ui/>. That is a server with no services registered yet; [the quick

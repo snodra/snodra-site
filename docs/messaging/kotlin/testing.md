@@ -10,7 +10,7 @@
   (`emit`, `complete`, `completeExceptionally`, filtered like the real one; `buses.openSubscriptions` counts the open
   ones): no credits, and an emit is delivered at once, not after the commit of a surrounding transaction. `maxResults`,
   `cancel()` and `take(n)` end it as against a hub.
-- `KrakenContainers.hubMtls(directory, services, serverCertificate, serverKey, clientCa, clientAuth = "required")`: the hub image
+- `SnodraContainers.hubMtls(directory, services, serverCertificate, serverKey, clientCa, clientAuth = "required")`: the hub image
   (`SNODRA_SERVER_IMAGE`, default `snodra-server:dev`) in mode `enforce` with `[[service]]` tables and a client CA (P5c). Issue the hub's own
   pair from the client CA with both usages, so the image's health check (which presents it under `required`) passes. Generate the CA
   and the certificates at test time; the starter's own tests use BouncyCastle in test scope for that (the JDK's `keytool` cannot give a
@@ -60,18 +60,18 @@
   segments with an `azp` is `UNAUTHENTICATED`, and without `services` the hub answers "jwt credentials are not configured". The
   signature and `exp` are **not** checked (use the real hub image for that). `jwtsSeenFrom(instanceId)` lists the JWTs of the
   `Register`s and `credentialsSeenFrom(instanceId)` the `jwt` or `token` of every `ClientMessage.credentials`, and a refresh is judged
-  like a `Register`'s against the session's own service. `KrakenContainers.hubJwt(...)` starts the hub image under test with JWT
+  like a `Register`'s against the session's own service. `SnodraContainers.hubJwt(...)` starts the hub image under test with JWT
   authentication (issuer, JWKS URI, `[[service]]` ACL file, leeway 0 s, expiry grace 2 s).
 - `TestCertificates.generate(dir, names)`: a throwaway self-signed certificate made at test time with the JDK's `keytool`
   (PEM certificate, also the CA a client trusts, and PKCS#8 key; valid for `localhost` and `127.0.0.1` by default).
-- `KrakenContainers`: unstarted Testcontainers definitions. `kafka()`, `mongo()` (single-node replica set, needed for
+- `SnodraContainers`: unstarted Testcontainers definitions. `kafka()`, `mongo()` (single-node replica set, needed for
   transactions), `hub()` from the hub image under test, `snodra-server:dev` or the one named by `SNODRA_SERVER_IMAGE`, with ports 7000 and 7001
   (every hub test runs on it: the hub and this library ship together), `hub(env)` for it with extra `SNODRA_SERVER_*`
   settings, `hubAcl(dir, acl, authMode, tls, env)` for it with access control and TLS (it writes the ACL file, with the
   SHA-256 of each token, into `dir` and copies it and the `TestCertificates` into the container, with
   `SNODRA_SERVER_AUTH_MODE`, `SNODRA_SERVER_ACL_FILE`, `SNODRA_SERVER_TLS_CERT` and `SNODRA_SERVER_TLS_KEY` set), `hubJwt(...)` and
   `hubMtls(...)` (below), and `hubImageAvailable()`.
-- `KrakenTestKafka(bootstrap, typePrefix, topic).awaitEvent<T>()`: reads an event back from the topic.
+- `SnodraTestKafka(bootstrap, typePrefix, topic).awaitEvent<T>()`: reads an event back from the topic.
 - `SagaTestFixture(SagaClass::class, beans…)`: drives one saga with events and time, in memory; see [Testing a saga](api.md#testing-a-saga).
 
 ```kotlin

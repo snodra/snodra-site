@@ -5,7 +5,7 @@ runs idempotent handlers, publishes through an outbox, and runs sagas with deadl
 
 ```toml
 [dependencies]
-snodra-messaging-rs = { git = "https://gitlab.example.com/kraken-org/snodra-messaging-rs", tag = "vX.Y.Z" }
+snodra-messaging-rs = "0.6"
 ```
 
 ## What it gives you

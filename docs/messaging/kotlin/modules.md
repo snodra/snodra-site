@@ -6,7 +6,7 @@
 |---|---|---|
 | `snodra-messaging-api` | `com.damoreira.snodra:snodra-messaging-api:0.1.0-SNAPSHOT` | `@MessageType`, `Event`, `Command<R>`, `Query<R>`, `StreamingQuery<R>`. No Spring. Depended on by every `*-api` module. |
 | `snodra-messaging` | `com.damoreira.snodra:snodra-messaging:0.1.0-SNAPSHOT` | Spring Boot starter: buses, handler annotations, hub client, outbox, Kafka consumer, sagas, deadlines and the external-integration toolkit, auto-configuration. |
-| `snodra-messaging-test` | `com.damoreira.snodra:snodra-messaging-test:0.1.0-SNAPSHOT` | `InMemoryBuses`, `InProcessHub`, `KrakenContainers`, `KrakenTestKafka`, `SagaTestFixture`. |
+| `snodra-messaging-test` | `com.damoreira.snodra:snodra-messaging-test:0.1.0-SNAPSHOT` | `InMemoryBuses`, `InProcessHub`, `SnodraContainers`, `SnodraTestKafka`, `SagaTestFixture`. |
 | `examples/examples-api`, `examples/service-a`, `examples/service-b` | not published | Two sample services talking through the hub; see [Examples](#examples). |
 
 ## Requirements
