@@ -1,7 +1,20 @@
-# Snodra documentation
+<p align="center">
+  <img alt="Snodra mascot" src="docs/assets/brand/svg/snodra.svg" width="160">
+</p>
 
-The source of <https://snodra.damoreira.com/>: the server, its Kotlin and Rust client libraries, and
-runnable examples. Built with Material for MkDocs and served by GitHub Pages.
+<h1 align="center">Snodra Documentation</h1>
+
+<p align="center">
+  The documentation portal of the Snodra suite: concepts, installation, the server reference, both client libraries, the add-ons, operations and integrations.
+</p>
+
+<p align="center">
+  <a href="https://github.com/snodra/snodra-site/actions/workflows/pages.yml"><img alt="pages" src="https://github.com/snodra/snodra-site/actions/workflows/pages.yml/badge.svg"></a>
+  <a href="https://snodra.damoreira.com/"><img alt="site" src="https://img.shields.io/badge/site-snodra.damoreira.com-0B5FFF"></a>
+  <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
+</p>
+
+---
 
 ## Local preview
 
