@@ -51,4 +51,4 @@ The full contract is in [the protocol page](https://snodra.damoreira.com/server/
 
 ## Licence
 
-MIT. See [the licence](../concepts/license.md).
+Apache-2.0. See [the licence](../concepts/license.md).

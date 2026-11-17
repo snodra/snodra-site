@@ -8,4 +8,4 @@ Documentation changes are welcome as pull requests against `main`.
 - English, present tense, second person. Code spans for paths and variables.
 - No internal hostnames, tokens or private endpoints.
 
-By contributing you agree that your contribution is licensed under the MIT License.
+By contributing you agree that your contribution is licensed under the Apache License 2.0.

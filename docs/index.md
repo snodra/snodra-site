@@ -48,4 +48,4 @@ message store) carries state; the server only routes commands and queries to a l
 
 ## Licence
 
-[MIT](concepts/license.md). An Apache-2.0 relicence is planned before v1.0.0, together with the contributor terms.
+[Apache-2.0](concepts/license.md).

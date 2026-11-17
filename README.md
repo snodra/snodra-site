@@ -29,4 +29,4 @@ Pages from `main`. `docs/CNAME` sets the custom domain; in Cloudflare `snodra` i
 
 ## License
 
-[MIT](LICENSE) © 2026 Guilherme D'Amoreira.
+[Apache-2.0](LICENSE) © 2026 Guilherme D'Amoreira.

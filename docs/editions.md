@@ -40,6 +40,5 @@ The editions are being finalised. For support, a pilot or a partnership, open an
 
 ## Licence
 
-The open-source core is MIT today; an Apache-2.0 relicence is planned before v1.0.0, with a contributor licence
-agreement so the project keeps its options. The enterprise add-ons will be proprietary. See
+The open-source core is **Apache-2.0**. The enterprise add-ons will be proprietary. See
 [the licence page](concepts/license.md).
