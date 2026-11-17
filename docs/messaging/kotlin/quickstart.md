@@ -5,23 +5,21 @@
 ```kotlin
 // settings.gradle.kts / build.gradle.kts
 repositories {
-    mavenLocal()   // resolves the local build until v1.0.0
     mavenCentral()
 }
 
 dependencies {
-    implementation("com.damoreira.snodra:snodra-messaging:0.1.0-SNAPSHOT")
+    implementation("com.damoreira.snodra:snodra-messaging:0.5.0")
+    implementation("com.damoreira.snodra:snodra-messaging-kafka:0.5.0")   // or -rabbitmq
+    implementation("com.damoreira.snodra:snodra-messaging-mongo:0.5.0")   // or -jdbc
     // a service's *-api module depends on the api artifact only:
-    // api("com.damoreira.snodra:snodra-messaging-api:0.1.0-SNAPSHOT")
-    testImplementation("com.damoreira.snodra:snodra-messaging-test:0.1.0-SNAPSHOT")
+    // api("com.damoreira.snodra:snodra-messaging-api:0.5.0")
+    testImplementation("com.damoreira.snodra:snodra-messaging-test:0.5.0")
 }
 ```
 
-The artifacts are not published until v1.0.0. From a sibling checkout of this repository:
-
-```sh
-./gradlew publishToMavenLocal
-```
+Every artifact is on Maven Central. The store add-ons are only needed when the service handles
+events, runs sagas or publishes through the outbox; see [Add-ons](../../add-ons/index.md).
 
 Kotlin version note: a project that applies `io.spring.dependency-management` must set the Kotlin version
 in its build script, otherwise the Boot BOM pins the Kotlin compiler classpath to 2.3.x and `compileKotlin` fails with a
@@ -72,7 +70,7 @@ data class LogWorkout(val name: String) : Command<LogWorkoutResult>
 val logged = commandBus.send(LogWorkout("legs"))                 // suspend
 val loggedNow = commandBus.sendBlocking(LogWorkout("legs"))      // blocking, for MVC controllers
 val workout = queryBus.send(GetWorkout(id))
-eventBus.publish(WorkoutLogged(id, owner, at), key = id)         // inside the caller's Mongo transaction
+eventBus.publish(WorkoutLogged(id, owner, at), key = id)         // inside the caller's message-store transaction
 
 // Per call: priority, timeout (the total budget with retry), routing key, retry policy.
 val urgent = commandBus.send(

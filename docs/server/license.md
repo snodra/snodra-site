@@ -1,11 +1,11 @@
 # Licence
 
-`snodra-server` is released under the **MIT Licence**, © 2026 Guilherme D'Amoreira. The full text is
-`LICENSE` in the repository.
+`snodra-server` is released under the **Apache License 2.0**, © 2026 Guilherme D'Amoreira. The full
+text is `LICENSE` in the repository.
 
-MIT lets you use, modify, sublicense and redistribute the hub, commercially or privately, as long
-as the copyright notice and licence text travel with substantial copies. It comes with **no
-warranty**.
+Apache-2.0 lets you use, modify and redistribute the server, commercially or privately, and gives
+you an express patent grant from every contributor. It requires the copyright notice and the
+licence text to travel with substantial copies, and it comes with **no warranty**.
 
 The complete explanation, including third-party components and the brand assets, is on
 [the licence page](../concepts/license.md).

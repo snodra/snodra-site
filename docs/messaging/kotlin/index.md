@@ -13,7 +13,7 @@ testImplementation("com.damoreira.snodra:snodra-messaging-test:<version>")
 
 - One `@EventHandler`, `@CommandHandler` or `@QueryHandler` per method; discovery and registration are
   automatic.
-- Events on Kafka through an outbox in the same MongoDB transaction as your state; commands and
+- Events through an outbox in the same message-store transaction as your state; commands and
   queries over the hub.
 - Idempotent consumers (`processed_events` markers), dead letters, named event processors and sagas
   with deadlines.
@@ -30,9 +30,8 @@ testImplementation("com.damoreira.snodra:snodra-messaging-test:<version>")
 
 ## Limitations
 
-- Maven artifacts are published to a private registry until v1.0.0; use the repository checkout
-  meanwhile.
-- The starter targets Spring Boot 4 and Kotlin 2.4; older lines are untested.
+- Maven artifacts are on Maven Central; pin the version you deploy. The starter targets Spring Boot 4
+  and Kotlin 2.4; older lines are untested.
 - Events are JSON objects in one Kafka topic; very large payloads belong in object storage, not the
   event.
 - No event sourcing: state is a document, the outbox guarantees the event.

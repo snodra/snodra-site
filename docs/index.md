@@ -6,46 +6,102 @@
 
 One messaging stack for services that speak Kafka and gRPC — without a commercial messaging platform.
 
-[`snodra-server`](https://github.com/snodra/snodra-server) is a stateless gRPC router for synchronous
-commands and queries. Events never pass through it: they go straight to Kafka, through a transactional outbox. You run
-the server, point your services at it, and stop maintaining a service registry, deadline handling and a control plane of
-your own.
+Snodra gives a service commands, queries, events and sagas. Commands and queries go through
+**Snodra Server**, a stateless gRPC router. Events go to the event store you already run — Kafka or
+RabbitMQ Streams — through a transactional outbox, with the message store of your choice (MongoDB,
+PostgreSQL or MySQL) holding the outbox, the processed markers and the saga state. One protocol,
+first-class Kotlin and Rust libraries.
 
-- **No Axon Server, no event store.** The server keeps no state; kill it and clients reconnect and re-register.
-- **Horizontal by design.** Run several servers; clients connect to all of them, with no server-to-server traffic.
-- **Control plane included.** Pause, resume, reset and replay event processors, and work dead letters, from the
-  dashboard or the HTTP API.
-- **See what happens.** Topology, queue depth, processor lag, and an event browser that reads the event store.
-- **One protocol, two clients.** A single `.proto` with first-class Kotlin and Rust libraries.
-- **Four auth modes.** Anonymous, static token, Keycloak JWT or mTLS, with a permissive-first rollout.
+You run the server, point your services at it, and stop maintaining a service registry, deadline
+handling and a control plane of your own.
 
-## Start the server
+## Map of the documentation
+
+<div class="grid cards" markdown>
+
+-   :material-rocket-launch:{ .lg .middle } **[Getting started](getting-started/index.md)**
+
+    ---
+
+    Install the server, add a client library, and send a first command.
+
+-   :material-lightbulb-on-outline:{ .lg .middle } **[Core concepts](concepts/index.md)**
+
+    ---
+
+    CQRS, commands, queries, events, sagas and the guarantees behind them.
+
+-   :material-book-open-variant:{ .lg .middle } **[Reference](reference/index.md)**
+
+    ---
+
+    The server, the Kotlin library, the Rust library and the wire contract.
+
+-   :material-puzzle-outline:{ .lg .middle } **[Add-ons](add-ons/index.md)**
+
+    ---
+
+    Event stores and message stores: Kafka, RabbitMQ Streams, MongoDB and SQL.
+
+-   :material-server-network:{ .lg .middle } **[Operations](operations/index.md)**
+
+    ---
+
+    Monitoring, testing, tuning and upgrades for a running deployment.
+
+-   :material-connection:{ .lg .middle } **[Integrations](integrations/index.md)**
+
+    ---
+
+    Spring Boot, Keycloak, OpenTelemetry, containers and existing services.
+
+-   :material-tools:{ .lg .middle } **[Tools](tools/index.md)**
+
+    ---
+
+    The event browser and the conformance runner.
+
+-   :material-swap-horizontal:{ .lg .middle } **[Migration](migration/index.md)**
+
+    ---
+
+    Moving from `kraken`, and what the protocol version guarantees.
+
+-   :material-file-document-multiple-outline:{ .lg .middle } **[Examples and editions](examples/index.md)**
+
+    ---
+
+    Runnable starting points, the licence and the editions of Snodra.
+
+</div>
+
+## Where to go first
+
+| You are… | Start with | Then |
+|---|---|---|
+| new to CQRS and event-driven services | [CQRS](concepts/cqrs.md) | [Commands](concepts/commands.md), [Queries](concepts/queries.md) and [Events](concepts/events.md) |
+| adopting Snodra in an existing system | [Installation](getting-started/installation.md) | [Your first service](getting-started/first-service.md) and [Spring Boot](integrations/spring-boot.md) |
+| operating Snodra | [Operations](operations/index.md) | [Monitoring](operations/monitoring.md), [Tuning](operations/tuning.md) and [Upgrades](operations/upgrades.md) |
+
+## Try the server
 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
   -e SNODRA_SERVER_OTLP_ENDPOINT= \
-  snodra/snodra-server:latest
+  snodra/snodra-server:0.5.0
 ```
 
-Open the dashboard at <http://localhost:7001/ui/>. That is a server with no services registered yet; [the quick
-start](server/quickstart.md) takes it from there.
-
-## Where to go
-
-| If you want to… | Read |
-|---|---|
-| run the server and connect a first service | [Server quick start](server/quickstart.md) |
-| understand the protocol | [Protocol](server/protocol.md) · [Routing](server/routing.md) |
-| build a Kotlin service | [Kotlin](messaging/kotlin/quickstart.md) |
-| build a Rust service | [Rust](messaging/rust/quickstart.md) |
-| see a complete setup | [Examples](examples/index.md) |
-| know what is free and what is not | [Editions](editions.md) |
+The gRPC listener is on `7000`; the dashboard and its API are on <http://localhost:7001/ui/>. An
+empty topology is correct: the server learns ownership from the connections. [Installation](getting-started/installation.md)
+covers the client libraries, and [the quick start](server/quickstart.md) takes the server from there.
 
 ## What it is not
 
-A message broker, an event store, a durable queue, or a workflow engine. Kafka carries events and MongoDB (or another
-message store) carries state; the server only routes commands and queries to a live handler and relays the answer.
+A message broker, an event store, a durable queue, or a workflow engine. The server routes commands
+and queries to a live handler and relays the answer; events go to your event store and state lives
+in your database. [Core concepts](concepts/index.md) explains what each part owns.
 
 ## Licence
 
-[Apache-2.0](concepts/license.md).
+[Apache-2.0](concepts/license.md). See [Editions](editions.md) for what is open source and what is
+sold separately.
