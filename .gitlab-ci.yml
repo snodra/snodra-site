@@ -17,7 +17,7 @@ build:
   script:
     - python3 -m venv .venv
     - . .venv/bin/activate
-    - pip install --quiet -r requirements.txt
+    - pip install --quiet -r docs/requirements.txt
     - mkdocs build --strict
   artifacts:
     paths:
