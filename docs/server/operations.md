@@ -64,9 +64,9 @@ subscriptions are bound to one hub. Rules shared by both libraries:
 
 | | Kotlin starter | Rust crate |
 |---|---|---|
-| Hubs | `kraken.messaging.hub.address` (`SNODRA_SERVER_ADDRESS` in the services' yaml) | `SNODRA_SERVER_ADDRESS` (`Config.hub_address`) |
+| Hubs | `snodra.messaging.hub.address` (`SNODRA_SERVER_ADDRESS` in the services' yaml) | `SNODRA_SERVER_ADDRESS` (`Config.hub_address`) |
 | Forms | `host:port` (`static://` optional), a comma-separated list `static://hub:7000,hub-2:7000` (`static://` optional per entry), or one `dns:///name:port` (port required, alone) re-resolved every 30 s | the same (`http(s)://` also accepted per entry) |
-| Status period | `kraken.messaging.hub.status-interval`, default `5s`; also sent on every change of the live hubs | `SNODRA_SERVER_STATUS_INTERVAL_MS`, default `5000`; on the period only |
+| Status period | `snodra.messaging.hub.status-interval`, default `5s`; also sent on every change of the live hubs | `SNODRA_SERVER_STATUS_INTERVAL_MS`, default `5000`; on the period only |
 | Default | `static://snodra-server:7000` (one hub) | `static://snodra-server:7000` (one hub) |
 
 One target is the single-hub setup. The keyed-request hash, the permit split and top-up, and the

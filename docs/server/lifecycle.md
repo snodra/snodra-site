@@ -72,7 +72,7 @@ The hub echoes a client `Heartbeat` with `sent_at_ms` unchanged.
 | Handshake deadline | 10 s | `SNODRA_SERVER_HANDSHAKE_TIMEOUT`; stream closed with `DEADLINE_EXCEEDED` if no `Register` arrives |
 | HTTP/2 keepalive, hub side | ping every 10 s, timeout 20 s; TCP keepalive 30 s | fixed |
 | HTTP/2 keepalive, client side | ping every 10 s, timeout 5 s, also while idle | fixed in both client libraries |
-| Client reconnect backoff | 500 ms doubling to 5 s, ±20 % jitter (never above the maximum), back to 500 ms once an attempt reached the handshake | clients (`kraken.messaging.hub.reconnect-backoff.*`) |
+| Client reconnect backoff | 500 ms doubling to 5 s, ±20 % jitter (never above the maximum), back to 500 ms once an attempt reached the handshake | clients (`snodra.messaging.hub.reconnect-backoff.*`) |
 | Per-session send buffer | 1024 messages | `SNODRA_SERVER_SESSION_BUFFER`; when full, new requests to that instance get `RESOURCE_EXHAUSTED` |
 | Per-instance queue | 10 000 requests, 64 MiB | `SNODRA_SERVER_QUEUE_CAPACITY_PER_INSTANCE`, `SNODRA_SERVER_QUEUE_BYTES_PER_INSTANCE`; queued requests keep their own deadline |
 | All queues of the hub | 512 MiB | `SNODRA_SERVER_QUEUE_BYTES_TOTAL` |

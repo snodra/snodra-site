@@ -54,8 +54,8 @@ echo '<the token>' | docker run --rm -i --entrypoint /app/snodra-server \
 
 docker run --rm -p 7000:7000 -p 7001:7001 \
   -e SNODRA_SERVER_AUTH_MODE=permissive \
-  -e SNODRA_SERVER_ACL_FILE=/etc/kraken/kraken.acl.toml \
-  -v "$PWD/kraken.acl.toml:/etc/kraken/kraken.acl.toml:ro" \
+  -e SNODRA_SERVER_ACL_FILE=/etc/snodra/snodra.acl.toml \
+  -v "$PWD/snodra.acl.toml:/etc/snodra/snodra.acl.toml:ro" \
   snodra/snodra-server:latest
 ```
 

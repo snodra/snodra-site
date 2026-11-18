@@ -6,7 +6,7 @@ chooses where it goes:
 | Mode | What happens | Sequenced per key | Admin API |
 |---|---|---|---|
 | `collection` (default) | parked in the `dead_letters` collection, then the offset is committed | yes | `app.dead_letters()` |
-| `topic` | produced to `<topic>.dlt` (same key and value, the original headers plus `kraken-dlt-processor`, `kraken-dlt-reason`, `kraken-dlt-error` (`<type>: <message>`, at most 2000 characters), `kraken-dlt-original-topic`, `-partition`, `-offset`); the offset is committed once the broker acknowledged it. **The DLT must exist or broker auto-creation must be on** | no | none (the topic is the operator's) |
+| `topic` | produced to `<topic>.dlt` (same key and value, the original headers plus `snodra-dlt-processor`, `snodra-dlt-reason`, `snodra-dlt-error` (`<type>: <message>`, at most 2000 characters), `snodra-dlt-original-topic`, `-partition`, `-offset`); the offset is committed once the broker acknowledged it. **The DLT must exist or broker auto-creation must be on** | no | none (the topic is the operator's) |
 | `log` | logged and skipped | no | none |
 
 **Reasons** (per processor, stage 1 only; saga failures keep `saga_failures`):

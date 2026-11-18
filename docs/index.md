@@ -65,7 +65,7 @@ handling and a control plane of your own.
 
     ---
 
-    Moving from `kraken`, and what the protocol version guarantees.
+    The rename, and what the protocol version guarantees.
 
 -   :material-file-document-multiple-outline:{ .lg .middle } **[Examples and editions](examples/index.md)**
 

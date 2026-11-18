@@ -30,7 +30,7 @@ story. In cert-manager use `uris: [snodra://service/billing-service]` and `usage
 
 ```sh
 SNODRA_SERVER_AUTH_MODE=permissive
-SNODRA_SERVER_ACL_FILE=/etc/kraken/kraken.acl.toml
+SNODRA_SERVER_ACL_FILE=/etc/snodra/snodra.acl.toml
 SNODRA_SERVER_TLS_CERT=/certs/hub.pem
 SNODRA_SERVER_TLS_KEY=/certs/hub.key
 SNODRA_SERVER_TLS_CLIENT_CA=/certs/client-ca.pem
@@ -51,14 +51,14 @@ send   = ["orders.*"]
 ## Kotlin client
 
 ```yaml
-Snodra:
+snodra:
   messaging:
     service-name: billing-service
     hub:
       tls:
-        ca-file: /etc/kraken/hub-ca.pem
-        client-cert-file: /etc/kraken/tls/billing-service.pem
-        client-key-file: /etc/kraken/tls/billing-service.key
+        ca-file: /etc/snodra/hub-ca.pem
+        client-cert-file: /etc/snodra/tls/billing-service.pem
+        client-key-file: /etc/snodra/tls/billing-service.key
 ```
 
 The key must be unencrypted **PKCS#8 PEM** (`BEGIN PRIVATE KEY`). Environment names:
@@ -71,9 +71,9 @@ client sends no credentials with a certificate.
 
 ```sh
 SNODRA_SERVICE_NAME=billing-service
-SNODRA_SERVER_TLS_CLIENT_CERT=/etc/kraken/tls/billing-service.pem
-SNODRA_SERVER_TLS_CLIENT_KEY=/etc/kraken/tls/billing-service.key
-SNODRA_SERVER_TLS_CA=/etc/kraken/hub-ca.pem
+SNODRA_SERVER_TLS_CLIENT_CERT=/etc/snodra/tls/billing-service.pem
+SNODRA_SERVER_TLS_CLIENT_KEY=/etc/snodra/tls/billing-service.key
+SNODRA_SERVER_TLS_CA=/etc/snodra/hub-ca.pem
 ```
 
 ## Rotation and expiry

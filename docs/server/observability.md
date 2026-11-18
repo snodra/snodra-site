@@ -4,7 +4,7 @@ Traces, metrics, logs and the health endpoint.
 
 ## Implementation notes
 
-- Traces: one span `hub.route` per request, with the outcome in `kraken.outcome`; parent context
+- Traces: one span `hub.route` per request, with the outcome in `snodra.outcome`; parent context
   is taken from the request's trace headers. Exported over OTLP.
 - Dashboard: `http://localhost:7001/` for a live view of services, types and traffic (see
   [Dashboard](dashboard.md)); Grafana for history.
@@ -28,7 +28,7 @@ Traces, metrics, logs and the health endpoint.
   `snodra_hub_event_browser_scanned_records`, `snodra_hub_event_tails` and `snodra_hub_event_payload_views_total`. Queue depth and
   permits are refreshed by the watchdog every tick (at most a second), not per request.
 - Health: the standard `grpc.health.v1.Health` service on the same port (service
-  `kraken.hub.v1.Hub`, and `""` for the whole server). `snodra-server --health-check` probes it on
+  `snodra.hub.v1.Hub`, and `""` for the whole server). `snodra-server --health-check` probes it on
   `127.0.0.1:<port of SNODRA_SERVER_LISTEN>` within 3 s, prints one line and exits 0 when
   `SERVING`, 1 otherwise.
 - Logs: JSON on stdout, filtered by `SNODRA_SERVER_LOG`.
@@ -36,7 +36,7 @@ Traces, metrics, logs and the health endpoint.
 ## Observability
 
 Traces: the hub starts a span `hub.route` per request, parented from `headers.traceparent`, with
-attributes `kraken.type`, `kraken.kind`, `kraken.sender`, `kraken.handler`, `kraken.outcome`. The `hub.route`
+attributes `snodra.type`, `snodra.kind`, `snodra.sender`, `snodra.handler`, `snodra.outcome`. The `hub.route`
 span is parented on the request's `traceparent`. The
 forwarded `Request` keeps the original `traceparent` so the handler's span is a child of the sender's,
 not of the hub's.

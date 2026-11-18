@@ -6,7 +6,7 @@ Sagas, deadlines and the integration toolkit of ADR 0021 (S2): the model of the 
 collections and document shapes (`sagas`, `saga_dispatch`, `saga_dispatch_leases`, `deadlines`, `saga_failures`,
 `external_calls`, markers in `processed_events`), so a Kotlin and a Rust instance read each other's documents. The
 programming model, the delivery guarantees and the command-failure taxonomy are in
-[kraken/https://snodra.damoreira.com/messaging/, "Sagas and deadlines"](../index.md#sagas-and-deadlines) (its "Rust"
+[Sagas and deadlines](../index.md#sagas-and-deadlines) (its "Rust"
 subsection maps every Kotlin element to this crate); the decisions in
 ADR 0021, S2 rulings 47 to 67. The sandbox's banner saga
 (`examples/service-c/src/banner.rs`) is a complete example.
@@ -134,9 +134,9 @@ run out first reports `EXHAUSTED`). With `external_idempotent` the call is run a
 I/O timeouts under 15 s**, so its calls finish (or fail cleanly) within a deploy's shutdown.
 
 **Statistics.** `app.saga_stats()` has the Kotlin meters as counters and gauges with the same names and labels
-(`kraken.sagas.started{type}`, `kraken.sagas.ended{type}`, `kraken.saga.events{type,outcome}`,
-`kraken.deadlines.fired{name}`, `kraken.deadlines.due{name}`, `kraken.external.calls{handler,outcome}`,
-`kraken.saga.command.failures{type,reason}`, `kraken.sagas.active{type}`, `kraken.saga.dispatch.pending`): typed reads
+(`snodra.sagas.started{type}`, `snodra.sagas.ended{type}`, `snodra.saga.events{type,outcome}`,
+`snodra.deadlines.fired{name}`, `snodra.deadlines.due{name}`, `snodra.external.calls{handler,outcome}`,
+`snodra.saga.command.failures{type,reason}`, `snodra.sagas.active{type}`, `snodra.saga.dispatch.pending`): typed reads
 (`started`, `ended`, `events`, `deadlines_fired`, `deadlines_due`, `external_calls`, `command_failures`, `active`,
 `dispatch_pending`) and `snapshot()` for an exporter. The two database-counted gauges are sampled every 15 s. While a saga
 handles a message, a `tracing` span `saga` carries `saga_type`, `saga_id` and `correlation_id`.

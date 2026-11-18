@@ -14,7 +14,7 @@ This is the simplest credential for a small deployment without an identity provi
    snodra-server acl hash -                # paste the token; prints its SHA-256
    ```
 
-2. Write the ACL (`kraken.acl.toml`):
+2. Write the ACL (`snodra.acl.toml`):
 
    ```toml
    [[token]]
@@ -29,7 +29,7 @@ This is the simplest credential for a small deployment without an identity provi
 
    ```sh
    SNODRA_SERVER_AUTH_MODE=permissive \
-   SNODRA_SERVER_ACL_FILE=/etc/kraken/kraken.acl.toml \
+   SNODRA_SERVER_ACL_FILE=/etc/snodra/snodra.acl.toml \
    snodra/snodra-server:latest
    ```
 
@@ -39,7 +39,7 @@ Switch to `enforce` when the violation counter stays flat (see [the rollout](ind
 ## Kotlin client
 
 ```yaml
-Snodra:
+snodra:
   messaging:
     service-name: billing-service
     hub:

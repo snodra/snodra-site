@@ -19,8 +19,8 @@ not services that register handlers.
 
 ```sh
 SNODRA_SERVER_AUTH_MODE=permissive
-SNODRA_SERVER_ACL_FILE=/etc/kraken/kraken.acl.toml
-SNODRA_SERVER_JWT_ISSUER=https://keycloak.example.com/realms/kraken
+SNODRA_SERVER_ACL_FILE=/etc/snodra/snodra.acl.toml
+SNODRA_SERVER_JWT_ISSUER=https://keycloak.example.com/realms/snodra
 SNODRA_SERVER_JWT_AUDIENCE=snodra-server
 # SNODRA_SERVER_JWT_JWKS_URI defaults to <issuer>/protocol/openid-connect/certs
 ```
@@ -45,14 +45,14 @@ send   = ["orders.*"]
 ## Kotlin client
 
 ```yaml
-Snodra:
+snodra:
   messaging:
     service-name: billing-service
     hub:
       oauth2:
-        token-uri: https://keycloak.example.com/realms/kraken/protocol/openid-connect/token
+        token-uri: https://keycloak.example.com/realms/snodra/protocol/openid-connect/token
         client-secret-file: /run/secrets/billing-client-secret
-        # client-id defaults to kraken.messaging.service-name
+        # client-id defaults to snodra.messaging.service-name
 ```
 
 Environment forms: `SNODRA_SERVER_OAUTH2_TOKEN_URI`, `_CLIENT_ID`, `_CLIENT_SECRET`,
@@ -62,7 +62,7 @@ secret, fails startup.
 ## Rust client
 
 ```sh
-SNODRA_SERVER_OAUTH2_TOKEN_URI=https://keycloak.example.com/realms/kraken/protocol/openid-connect/token
+SNODRA_SERVER_OAUTH2_TOKEN_URI=https://keycloak.example.com/realms/snodra/protocol/openid-connect/token
 SNODRA_SERVER_OAUTH2_CLIENT_SECRET_FILE=/run/secrets/billing-client-secret
 # client id defaults to SNODRA_SERVICE_NAME
 ```

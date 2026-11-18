@@ -24,7 +24,7 @@
 | `SNODRA_SERVER_MAX_SUBSCRIPTIONS` | 1024 | the most subscription queries this instance serves at once (see [Subscription queries](api.md#subscription-queries)): a subscription request beyond it is refused with `ReplyEnd{error = RESOURCE_EXHAUSTED}` `subscription limit (N) reached`, which the subscriber sees as `HandlerBusy`; subscriptions hold no handler permit, so this is their only bound here; the hub has its own per-instance limit (`SNODRA_SERVER_MAX_SUBSCRIPTIONS_PER_INSTANCE`, 1024); at least 1 (`0` is rejected at startup, also when set in code) |
 | `SNODRA_SERVER_TOKEN` | none | the static access token sent in `Register.credentials.token` on every hub stream (`Config.hub_token`, a `SecretString` whose `Debug` prints `"***"`); needed when the hub runs `SNODRA_SERVER_AUTH_MODE=enforce`, ignored by a hub in `off` mode; an empty value is no token; never logged (see [Security](#security)) |
 | `SNODRA_SERVER_TOKEN_FILE` | none | a file holding the token, for container secrets (`Config.hub_token_file`); read at startup (an unreadable file is a startup error) and again before every reconnect, so a rotated secret needs no restart; **wins over `SNODRA_SERVER_TOKEN` when both are set**; surrounding whitespace is trimmed, an empty file is no token at startup, and after a good read it keeps the last token |
-| `SNODRA_SERVER_OAUTH2_TOKEN_URI` | none | turns JWT authentication on (`Config.hub_oauth2`): the Keycloak token endpoint, e.g. `https://keycloak/realms/kraken/protocol/openid-connect/token`; needs a client secret and excludes `SNODRA_SERVER_TOKEN` / `SNODRA_SERVER_TOKEN_FILE` (both set is a startup error); see [Authenticating with a JWT](#authenticating-with-a-jwt-keycloak-client-credentials) |
+| `SNODRA_SERVER_OAUTH2_TOKEN_URI` | none | turns JWT authentication on (`Config.hub_oauth2`): the Keycloak token endpoint, e.g. `https://keycloak/realms/snodra/protocol/openid-connect/token`; needs a client secret and excludes `SNODRA_SERVER_TOKEN` / `SNODRA_SERVER_TOKEN_FILE` (both set is a startup error); see [Authenticating with a JWT](#authenticating-with-a-jwt-keycloak-client-credentials) |
 | `SNODRA_SERVER_OAUTH2_CLIENT_ID` | `SNODRA_SERVICE_NAME` | the Keycloak client id; it must be the service name (the hub checks the token's `azp` against it) |
 | `SNODRA_SERVER_OAUTH2_CLIENT_SECRET`, `SNODRA_SERVER_OAUTH2_CLIENT_SECRET_FILE` | none | the client secret (`SecretString`, never logged), or a file holding it, **which wins** and is re-read on every token fetch so a rotated secret applies without a restart; one of them is required with the token URI |
 | `SNODRA_SERVER_OAUTH2_SCOPE`, `SNODRA_SERVER_OAUTH2_CA` | none | the `scope` sent with the grant (space-separated as sent); a PEM file with extra root certificates for an `https://` token endpoint, added to the platform roots (not the hub CA of `SNODRA_SERVER_TLS_CA`) |
@@ -103,7 +103,7 @@ serve TLS, and does its certificate match hub_tls ca_file and server_name?` with
 
 ```bash
 SNODRA_SERVER_TOKEN_FILE=/run/secrets/orders-hub-token \
-SNODRA_SERVER_TLS=true SNODRA_SERVER_TLS_CA=/etc/kraken/ca.pem SNODRA_SERVER_TLS_SERVER_NAME=snodra-server
+SNODRA_SERVER_TLS=true SNODRA_SERVER_TLS_CA=/etc/snodra/ca.pem SNODRA_SERVER_TLS_SERVER_NAME=snodra-server
 ```
 
 ### Authenticating with a JWT (Keycloak client credentials)
@@ -115,7 +115,7 @@ grants) whose **client id is the service name**: the hub checks the token's `azp
 `Register.service_name` and takes the rights from its `[[service]]` ACL table of that name. Then set
 
 ```bash
-SNODRA_SERVER_OAUTH2_TOKEN_URI=https://keycloak/realms/kraken/protocol/openid-connect/token \
+SNODRA_SERVER_OAUTH2_TOKEN_URI=https://keycloak/realms/snodra/protocol/openid-connect/token \
 SNODRA_SERVER_OAUTH2_CLIENT_SECRET_FILE=/run/secrets/orders-client-secret   # client id defaults to the service name
 ```
 
@@ -175,9 +175,9 @@ certificate in the TLS handshake of the hub connection, and the hub reads the se
 it. No secret crosses the wire and no identity provider is in the path. Set
 
 ```bash
-SNODRA_SERVER_TLS_CLIENT_CERT=/etc/kraken/orders.pem \
-SNODRA_SERVER_TLS_CLIENT_KEY=/etc/kraken/orders.key \
-SNODRA_SERVER_TLS_CA=/etc/kraken/ca.pem            # the CA of the hub's certificate (see TLS above)
+SNODRA_SERVER_TLS_CLIENT_CERT=/etc/snodra/orders.pem \
+SNODRA_SERVER_TLS_CLIENT_KEY=/etc/snodra/orders.key \
+SNODRA_SERVER_TLS_CA=/etc/snodra/ca.pem            # the CA of the hub's certificate (see TLS above)
 ```
 
 (`Config.hub_tls = Some(HubTls { client_cert_file, client_key_file, .. })` in code.) Setting them turns

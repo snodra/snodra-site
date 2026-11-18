@@ -10,7 +10,7 @@ and query types each instance handles, who owns each type, and how many requests
 three ways:
 
 ```sh
-grpcurl -plaintext -import-path proto -proto hub.proto localhost:7000 kraken.hub.v1.Hub/Topology   # gRPC, same port as Connect
+grpcurl -plaintext -import-path proto -proto hub.proto localhost:7000 snodra.hub.v1.Hub/Topology   # gRPC, same port as Connect
 curl localhost:7001/api/v1/topology                            # HTTP JSON (the dashboard API)
 snodra-server --topology [--json]                                 # CLI inside the container
 ```

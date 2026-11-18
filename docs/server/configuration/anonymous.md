@@ -11,7 +11,7 @@ That is the whole configuration. Services need no credential:
 
 ```yaml
 # Kotlin
-Snodra:
+snodra:
   messaging:
     hub:
       address: static://localhost:7000

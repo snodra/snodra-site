@@ -44,5 +44,5 @@ negotiation. Upgrade the server and all services in the same window, then confir
 - Export the current dashboards and record the metric names: a rename breaks queries silently.
 - Keep the previous image and the previous client artifact available for rollback.
 
-If you are coming from `kraken`, follow [From kraken](../migration/from-kraken.md); it lists the
+If you are upgrading from a pre-rename release, follow [From kraken](../migration/from-kraken.md); it lists the
 names, coordinates and settings that change and the data that does not.

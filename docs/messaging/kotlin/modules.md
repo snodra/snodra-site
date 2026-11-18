@@ -92,7 +92,7 @@ is a library; the example services are built from source by the sandbox compose.
 - Trace context is injected on outbound messages (hub requests, outbox events) but not yet extracted on inbound hub
   requests or Kafka records, so a handler's spans do not join the caller's trace.
 - No service-to-service identity yet: commands sent from event handlers, sagas or scheduled jobs carry no token, so they can
-  only reach handlers without `@RequiresAuthentication` (a `kraken-system` client-credentials token is future work).
+  only reach handlers without `@RequiresAuthentication` (a `snodra-system` client-credentials token is future work).
 - Sagas: Kotlin only (the Rust crate follows, S2); a new saga type does not see events from before its deployment (no replay);
   parked saga events are retried by a person through `SagaFailures`; a saga belongs to one service.
 - Sagas, reviewed and left as they are: `saga_dispatch` entries that failed for good and `saga_failures` documents have no TTL; a

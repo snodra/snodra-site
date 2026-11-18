@@ -3,7 +3,7 @@
 ## Configuration
 
 ```yaml
-Snodra:
+snodra:
   messaging:
     service-name: workouts          # Kafka consumer group, event source, hub registration
     type-prefix: workouts           # wire type prefix for classes without @MessageType
@@ -18,13 +18,13 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://keycloak.example/realms/kraken
+          issuer-uri: https://keycloak.example/realms/snodra
 ```
 
 The `issuer-uri` is only needed when the service also serves HTTP or wants forwarded tokens verified (see
 [Security](#security)); Kafka-only tools and services behind the hub start without any security configuration.
 
-All keys (`kraken.messaging.*`; durations accept `200ms`, `5s`, `7d`; relaxed binding, e.g. `SNODRA_MESSAGING_HUB_ADDRESS`):
+All keys (`snodra.messaging.*`; durations accept `200ms`, `5s`, `7d`; relaxed binding, e.g. `SNODRA_MESSAGING_HUB_ADDRESS`):
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -43,8 +43,8 @@ All keys (`kraken.messaging.*`; durations accept `200ms`, `5s`, `7d`; relaxed bi
 | `hub.tls.enabled` | `false` | Talk TLS to the hub, for every `hub.address` form (a list of targets and `dns:///`). Off: plain text. The hub must serve TLS on that port (`SNODRA_SERVER_TLS_CERT` / `SNODRA_SERVER_TLS_KEY`). |
 | `hub.tls.ca-file` | JVM system roots | PEM file with the CA certificate(s) that signed the hub's certificate (a self-signed hub certificate is its own CA). Read on every connection attempt; a file that cannot be used fails the startup. Set without `hub.tls.enabled` it is ignored with a warning. |
 | `hub.tls.server-name` | the address's host | Name to verify the hub's certificate against, for when the address is an IP or an alias the certificate does not list. |
-| `hub.oauth2.token-uri` | none | Setting it turns Keycloak client-credentials authentication on (P5b, [JWT](#authenticating-with-a-jwt-keycloak-client-credentials)): the token endpoint, for example `https://keycloak/realms/kraken/protocol/openid-connect/token`. `http` is allowed and warns once unless the host is loopback or a single-label name. Cannot be combined with `hub.token` or `hub.token-file` (the startup fails naming both). Environment: `SNODRA_MESSAGING_HUB_OAUTH2_TOKEN_URI`, or `SNODRA_SERVER_OAUTH2_TOKEN_URI` when this key is unset. |
-| `hub.oauth2.client-id` | `kraken.messaging.service-name` | The confidential client's id; it is the token's `azp`, which the hub requires to equal the service name. Environment: `SNODRA_SERVER_OAUTH2_CLIENT_ID`. |
+| `hub.oauth2.token-uri` | none | Setting it turns Keycloak client-credentials authentication on (P5b, [JWT](#authenticating-with-a-jwt-keycloak-client-credentials)): the token endpoint, for example `https://keycloak/realms/snodra/protocol/openid-connect/token`. `http` is allowed and warns once unless the host is loopback or a single-label name. Cannot be combined with `hub.token` or `hub.token-file` (the startup fails naming both). Environment: `SNODRA_MESSAGING_HUB_OAUTH2_TOKEN_URI`, or `SNODRA_SERVER_OAUTH2_TOKEN_URI` when this key is unset. |
+| `hub.oauth2.client-id` | `snodra.messaging.service-name` | The confidential client's id; it is the token's `azp`, which the hub requires to equal the service name. Environment: `SNODRA_SERVER_OAUTH2_CLIENT_ID`. |
 | `hub.oauth2.client-secret` | none | The client secret (sent as HTTP Basic, `client_secret_basic`). Never logged, redacted in `toString` and in the actuator's `configprops` and `env`. Prefer the file. Environment: `SNODRA_MESSAGING_HUB_OAUTH2_CLIENT_SECRET`, or `SNODRA_SERVER_OAUTH2_CLIENT_SECRET`. |
 | `hub.oauth2.client-secret-file` | none | File holding the client secret: read at startup (an unreadable or empty file fails it, naming the file) and **again on every token fetch**, so a rotated secret applies without a restart. Wins over `client-secret`. Environment: `SNODRA_MESSAGING_HUB_OAUTH2_CLIENT_SECRET_FILE`, or `SNODRA_SERVER_OAUTH2_CLIENT_SECRET_FILE`. A token URI with neither secret fails the startup. |
 | `hub.oauth2.scope` | none | `scope` of the token request, sent as written (space-separated). Environment: `SNODRA_SERVER_OAUTH2_SCOPE`. |
@@ -102,7 +102,7 @@ opts in:
 
 ```kotlin
 @CommandHandler
-@RequiresAuthentication(expression = "hasRole('kraken-user')")
+@RequiresAuthentication(expression = "hasRole('snodra-user')")
 suspend fun handle(cmd: LogWorkout, ctx: MessageContext): LogWorkoutResult = ...
 
 @QueryHandler
@@ -116,7 +116,7 @@ fun handle(cmd: RecomputeStats) { ... }   // no annotation: any caller, includin
 The expression is Spring Security SpEL evaluated by the **receiving** library before the handler runs:
 `isAuthenticated()`, `hasRole('x')`, `hasAnyRole(...)`, `hasAuthority('ROLE_x')`, `principal` (a `MessagePrincipal`
 with `userId`, `roles`, `verified`), plus `#message` (the decoded command or query) and `#ctx` (the `MessageContext`),
-e.g. `"hasRole('kraken-user') and #message.ownerId == #ctx.userId"`. Realm roles from the token's `realm_access.roles`
+e.g. `"hasRole('snodra-user') and #message.ownerId == #ctx.userId"`. Realm roles from the token's `realm_access.roles`
 become `ROLE_<role>` authorities. A syntax error fails startup naming the handler; `@RequiresAuthentication` is not
 allowed on `@EventHandler` (events carry no identity). Annotated handlers are listed at startup at `INFO`.
 
@@ -161,7 +161,7 @@ Notes:
 - An expression that throws (for example `#message.owner.id` on a null `owner`) is a denial, not a handler error.
 
 The resolved identity is installed in the `SecurityContext` while the handler runs, so `CallerContext` works inside
-handlers and nested sends re-forward the same token. `kraken.messaging.security.require-jwt` was removed; setting it
+handlers and nested sends re-forward the same token. `snodra.messaging.security.require-jwt` was removed; setting it
 fails startup with a hint.
 
 ## Hub security: token, ACL and TLS
@@ -175,7 +175,7 @@ unrelated to [Security](#security) above, which is about the **user's** forwarde
 (which holds only its SHA-256):
 
 ```yaml
-Snodra:
+snodra:
   messaging:
     hub:
       token: ${BILLING_HUB_TOKEN}            # or: token-file: /run/secrets/snodra-server-token
@@ -225,7 +225,7 @@ absent) and, if the address is not a name on the certificate, `hub.tls.server-na
 Plain text against a TLS hub (or TLS against a plain-text one) never hangs: the stream fails at once as
 `UNAVAILABLE (io exception)` or `INTERNAL (http2 exception)` and the first `WARN` line that applies (not
 necessarily the very first attempt: a hub that was still starting is a plain refusal, which carries no hint) says to check
-`kraken.messaging.hub.tls.enabled` and `tls.ca-file`; later attempts log it at `DEBUG`. A client certificate (mTLS, P5c) is
+`snodra.messaging.hub.tls.enabled` and `tls.ca-file`; later attempts log it at `DEBUG`. A client certificate (mTLS, P5c) is
 [its own section](#authenticating-with-a-client-certificate-mtls); `DefaultHubChannelFactory.customizeTls` stays a hook for a subclass.
 
 **Turning it on.** `enforce` last: (1) run the hub with `SNODRA_SERVER_AUTH_MODE=permissive` and an ACL file; (2) give every service its
@@ -245,12 +245,12 @@ flow, no direct access grants), its **client id = the service name**; add an aud
 `SNODRA_SERVER_JWT_AUDIENCE`. Never give a `[[service]]` table to the user-facing client.
 
 ```yaml
-Snodra:
+snodra:
   messaging:
     hub:
       oauth2:
-        token-uri: https://keycloak.example/realms/kraken/protocol/openid-connect/token
-        client-secret-file: /run/secrets/kraken-client-secret   # client-id defaults to kraken.messaging.service-name
+        token-uri: https://keycloak.example/realms/snodra/protocol/openid-connect/token
+        client-secret-file: /run/secrets/snodra-client-secret   # client-id defaults to snodra.messaging.service-name
 ```
 
 The environment forms are `SNODRA_SERVER_OAUTH2_TOKEN_URI`, `_CLIENT_ID`, `_CLIENT_SECRET`, `_CLIENT_SECRET_FILE`, `_SCOPE` and `_CA`
@@ -304,14 +304,14 @@ proves the service holds the key, the certificate names the service, and the rig
 same table a JWT uses. No secret crosses the wire and no identity provider is involved.
 
 ```yaml
-Snodra:
+snodra:
   messaging:
     service-name: billing-service
     hub:
       tls:
-        ca-file: /etc/kraken/hub-ca.pem                 # the CA that signed the hub's certificate (or the system roots)
-        client-cert-file: /etc/kraken/tls/client.pem    # certificate chain, leaf first
-        client-key-file: /etc/kraken/tls/client.key     # unencrypted PKCS#8 PEM
+        ca-file: /etc/snodra/hub-ca.pem                 # the CA that signed the hub's certificate (or the system roots)
+        client-cert-file: /etc/snodra/tls/client.pem    # certificate chain, leaf first
+        client-key-file: /etc/snodra/tls/client.key     # unencrypted PKCS#8 PEM
 ```
 
 Environment names (relaxed binding): `SNODRA_MESSAGING_HUB_TLS_CLIENT_CERT_FILE`, `SNODRA_MESSAGING_HUB_TLS_CLIENT_KEY_FILE`.
@@ -324,7 +324,7 @@ Environment names (relaxed binding): `SNODRA_MESSAGING_HUB_TLS_CLIENT_CERT_FILE`
   token next to a good certificate would be refused by the hub. With a certificate the library sends no credentials at all.
 - **The SAN rule.** The leaf must carry exactly one URI SAN `snodra://service/<name>` (the name is 1 to 128 characters of
   `[A-Za-z0-9._-]`; DNS, IP and other URI SANs are ignored; two such SANs, even equal ones, are refused as the hub refuses them), and
-  `<name>` must be `kraken.messaging.service-name`. The hub would refuse anything else with `PERMISSION_DENIED` at `Register`; the
+  `<name>` must be `snodra.messaging.service-name`. The hub would refuse anything else with `PERMISSION_DENIED` at `Register`; the
   starter says so at startup instead. Also checked at startup: both files exist, are not empty and parse, the key belongs to the
   certificate, and the certificate has not ended. The key must be **PKCS#8 PEM** (`-----BEGIN PRIVATE KEY-----`); RSA (`BEGIN RSA PRIVATE KEY`), SEC1 (`BEGIN EC PRIVATE KEY`)
   and encrypted keys are refused with the conversion hint (`openssl pkcs8 -topk8 -nocrypt`). The JDK reads RSA, EC and Ed25519 keys.
@@ -391,45 +391,45 @@ PKIX validation rules apply to the hub's certificate (the Rust library uses rust
 
 | Key | Default | Meaning |
 |---|---|---|
-| `kraken.messaging.service-name` | required | Logical name; Kafka consumer group; `Register.service_name` |
-| `kraken.messaging.type-prefix` | required | Prefix for classes without `@MessageType` |
-| `kraken.messaging.hub.enabled` | `true` | Set false to skip the hub connection (publish-only tools, unit tests) |
-| `kraken.messaging.hub.address` | `static://snodra-server:7000` | The hub or hubs (plaintext gRPC): one target (`host:port`, `static://` optional), a comma-separated list (`static://hub:7000,hub-2:7000`; `static://` optional per entry, blanks and repeats dropped), or one `dns:///name:port` (port required, not combinable with other entries) whose addresses are re-resolved every 30 s. One connection per hub, see [Several hubs](api.md#several-hubs). A malformed value fails startup |
-| `kraken.messaging.hub.status-interval` | `5s` | Period of the `InstanceStatus` report (connected hub ids, handlers in flight) to every live hub; also sent whenever the set of live hubs changes. Must be positive |
-| `kraken.messaging.hub.request-timeout` | unset | Per-request timeout chosen by this service. Unset: the hub decides (`timeout_ms = 0`: its default, 5 s, or the type's override) and the client guards with the hub's bound for the type + 1 s. Set: sent as `timeout_ms` (the hub still clamps it, and its per-type override can then only shorten it), so leave it unset unless the service needs its own deadline; `0s` counts as unset |
-| `kraken.messaging.hub.reconnect-backoff.min` | `500ms` | Exponential backoff floor when the stream drops; the backoff returns to it once an attempt reached the handshake |
-| `kraken.messaging.hub.reconnect-backoff.max` | `5s` | Exponential backoff ceiling; every wait gets ±20 % jitter and never exceeds this (at the ceiling: 80-100 % of it) |
-| `kraken.messaging.hub.max-concurrent-handlers` | `256` | Incoming requests handled at once by this instance over all hubs (at least 1, else startup fails); also sent as `Register.initial_permits` to every hub (split over N hubs, see [Several hubs](api.md#several-hubs)), which queues the excess. One permit goes back per completed handler: at once while the hub holds `min(16, max-concurrent-handlers / 2)` or fewer of them, else batched at 16 or after 50 ms |
-| `kraken.messaging.hub.load-factor` | `100` | Relative capacity of this instance (`Register.load_factor`; 0 reads as 100, negative fails startup): weights its share of keyed commands (saturating at 800 on the ring) and its load score once instances are busy |
-| `kraken.messaging.hub.tags.<name>` | none | `Register.tags`; unkeyed requests prefer instances whose tags match the sender's |
-| `kraken.messaging.hub.priorities.<type>` | none (0) | Default `Request.priority` per message type; `SendOptions.priority` wins |
-| `kraken.messaging.hub.max-subscriptions` | `1024` | Subscription queries this instance serves at once, over every hub (at least 1, else startup fails). The next one is refused with `ReplyEnd{RESOURCE_EXHAUSTED, "subscription limit (N) reached"}`, which the subscriber sees as a `HandlerBusyException`. A subscription holds no handler permit, so `max-concurrent-handlers` does not bound it; the default equals the hub's `SNODRA_SERVER_MAX_SUBSCRIPTIONS_PER_INSTANCE`. See [Subscription queries](api.md#subscription-queries) |
-| `kraken.messaging.hub.token` | none | Static token sent in `Register.credentials.token` of every hub stream (hub access control, Hub token and TLS). An empty or blank value is no token. Never logged, redacted in `toString` and in the actuator's `configprops` and `env`. Environment: `SNODRA_MESSAGING_HUB_TOKEN`, or `SNODRA_SERVER_TOKEN` when the key is unset |
-| `kraken.messaging.hub.token-file` | none | File holding the token (a container secret such as `/run/secrets/snodra-server-token`). Read at startup (an unreadable file fails it) and again on every reconnect; if a later read fails the last good token is kept. **Wins over `hub.token` when both are set.** Environment: `SNODRA_MESSAGING_HUB_TOKEN_FILE`, or `SNODRA_SERVER_TOKEN_FILE` when the key is unset |
-| `kraken.messaging.hub.tls.enabled` | `false` | TLS to every hub of `hub.address` (every address form). The hub must serve TLS (`SNODRA_SERVER_TLS_CERT` / `SNODRA_SERVER_TLS_KEY`). Environment: `SNODRA_MESSAGING_HUB_TLS_ENABLED` |
-| `kraken.messaging.hub.tls.ca-file` | JVM trust store | PEM file with the CA that signed the hub's certificate; read on every connection attempt. Set without `tls.enabled` it is ignored with a warning. Environment: `SNODRA_MESSAGING_HUB_TLS_CA_FILE` |
-| `kraken.messaging.hub.tls.server-name` | the address's host | Name the hub's certificate must carry (and the SNI), for an address that is an IP or an alias the certificate does not list. Environment: `SNODRA_MESSAGING_HUB_TLS_SERVER_NAME` |
-| `kraken.messaging.hub.retry.enabled` | `false` | Opt-in retry of the transient errors (see "Send options, priority and retry"); `SendOptions.retry` overrides per call. The `retry.*` values below are validated at startup even while this is `false` (attempts >= 1, multiplier >= 1, no negative backoff) |
-| `kraken.messaging.hub.retry.max-attempts` | `3` | Total attempts, the first one included |
-| `kraken.messaging.hub.retry.initial-backoff` | `100ms` | Wait before the second attempt |
-| `kraken.messaging.hub.retry.multiplier` | `2` | Growth of the wait per further attempt |
-| `kraken.messaging.hub.retry.max-backoff` | `2s` | Upper bound of a single wait |
-| `kraken.messaging.kafka.bootstrap-servers` | `broker:19092` | Kafka |
-| `kraken.messaging.kafka.topic` | `kraken.events` | Events topic |
-| `kraken.messaging.kafka.consumer.enabled` | `true` | Set false in tools that only publish |
-| `kraken.messaging.kafka.consumer.max-attempts` | `5` | Handler attempts per record before it is logged and skipped |
-| `kraken.messaging.outbox.enabled` | `true` | Outbox collection + publisher |
-| `kraken.messaging.outbox.poll-interval` | `200ms` | Publisher poll period |
-| `kraken.messaging.outbox.batch-size` | `100` | Documents per poll |
-| `kraken.messaging.outbox.retention` | `7d` | Delete sent documents older than this |
-| `kraken.messaging.idempotency.retention` | `30d` | Delete `processed_events` older than this |
-| `kraken.messaging.security.forward-jwt` | `true` | Put the current request's bearer token in `headers.authorization` |
+| `snodra.messaging.service-name` | required | Logical name; Kafka consumer group; `Register.service_name` |
+| `snodra.messaging.type-prefix` | required | Prefix for classes without `@MessageType` |
+| `snodra.messaging.hub.enabled` | `true` | Set false to skip the hub connection (publish-only tools, unit tests) |
+| `snodra.messaging.hub.address` | `static://snodra-server:7000` | The hub or hubs (plaintext gRPC): one target (`host:port`, `static://` optional), a comma-separated list (`static://hub:7000,hub-2:7000`; `static://` optional per entry, blanks and repeats dropped), or one `dns:///name:port` (port required, not combinable with other entries) whose addresses are re-resolved every 30 s. One connection per hub, see [Several hubs](api.md#several-hubs). A malformed value fails startup |
+| `snodra.messaging.hub.status-interval` | `5s` | Period of the `InstanceStatus` report (connected hub ids, handlers in flight) to every live hub; also sent whenever the set of live hubs changes. Must be positive |
+| `snodra.messaging.hub.request-timeout` | unset | Per-request timeout chosen by this service. Unset: the hub decides (`timeout_ms = 0`: its default, 5 s, or the type's override) and the client guards with the hub's bound for the type + 1 s. Set: sent as `timeout_ms` (the hub still clamps it, and its per-type override can then only shorten it), so leave it unset unless the service needs its own deadline; `0s` counts as unset |
+| `snodra.messaging.hub.reconnect-backoff.min` | `500ms` | Exponential backoff floor when the stream drops; the backoff returns to it once an attempt reached the handshake |
+| `snodra.messaging.hub.reconnect-backoff.max` | `5s` | Exponential backoff ceiling; every wait gets ±20 % jitter and never exceeds this (at the ceiling: 80-100 % of it) |
+| `snodra.messaging.hub.max-concurrent-handlers` | `256` | Incoming requests handled at once by this instance over all hubs (at least 1, else startup fails); also sent as `Register.initial_permits` to every hub (split over N hubs, see [Several hubs](api.md#several-hubs)), which queues the excess. One permit goes back per completed handler: at once while the hub holds `min(16, max-concurrent-handlers / 2)` or fewer of them, else batched at 16 or after 50 ms |
+| `snodra.messaging.hub.load-factor` | `100` | Relative capacity of this instance (`Register.load_factor`; 0 reads as 100, negative fails startup): weights its share of keyed commands (saturating at 800 on the ring) and its load score once instances are busy |
+| `snodra.messaging.hub.tags.<name>` | none | `Register.tags`; unkeyed requests prefer instances whose tags match the sender's |
+| `snodra.messaging.hub.priorities.<type>` | none (0) | Default `Request.priority` per message type; `SendOptions.priority` wins |
+| `snodra.messaging.hub.max-subscriptions` | `1024` | Subscription queries this instance serves at once, over every hub (at least 1, else startup fails). The next one is refused with `ReplyEnd{RESOURCE_EXHAUSTED, "subscription limit (N) reached"}`, which the subscriber sees as a `HandlerBusyException`. A subscription holds no handler permit, so `max-concurrent-handlers` does not bound it; the default equals the hub's `SNODRA_SERVER_MAX_SUBSCRIPTIONS_PER_INSTANCE`. See [Subscription queries](api.md#subscription-queries) |
+| `snodra.messaging.hub.token` | none | Static token sent in `Register.credentials.token` of every hub stream (hub access control, Hub token and TLS). An empty or blank value is no token. Never logged, redacted in `toString` and in the actuator's `configprops` and `env`. Environment: `SNODRA_MESSAGING_HUB_TOKEN`, or `SNODRA_SERVER_TOKEN` when the key is unset |
+| `snodra.messaging.hub.token-file` | none | File holding the token (a container secret such as `/run/secrets/snodra-server-token`). Read at startup (an unreadable file fails it) and again on every reconnect; if a later read fails the last good token is kept. **Wins over `hub.token` when both are set.** Environment: `SNODRA_MESSAGING_HUB_TOKEN_FILE`, or `SNODRA_SERVER_TOKEN_FILE` when the key is unset |
+| `snodra.messaging.hub.tls.enabled` | `false` | TLS to every hub of `hub.address` (every address form). The hub must serve TLS (`SNODRA_SERVER_TLS_CERT` / `SNODRA_SERVER_TLS_KEY`). Environment: `SNODRA_MESSAGING_HUB_TLS_ENABLED` |
+| `snodra.messaging.hub.tls.ca-file` | JVM trust store | PEM file with the CA that signed the hub's certificate; read on every connection attempt. Set without `tls.enabled` it is ignored with a warning. Environment: `SNODRA_MESSAGING_HUB_TLS_CA_FILE` |
+| `snodra.messaging.hub.tls.server-name` | the address's host | Name the hub's certificate must carry (and the SNI), for an address that is an IP or an alias the certificate does not list. Environment: `SNODRA_MESSAGING_HUB_TLS_SERVER_NAME` |
+| `snodra.messaging.hub.retry.enabled` | `false` | Opt-in retry of the transient errors (see "Send options, priority and retry"); `SendOptions.retry` overrides per call. The `retry.*` values below are validated at startup even while this is `false` (attempts >= 1, multiplier >= 1, no negative backoff) |
+| `snodra.messaging.hub.retry.max-attempts` | `3` | Total attempts, the first one included |
+| `snodra.messaging.hub.retry.initial-backoff` | `100ms` | Wait before the second attempt |
+| `snodra.messaging.hub.retry.multiplier` | `2` | Growth of the wait per further attempt |
+| `snodra.messaging.hub.retry.max-backoff` | `2s` | Upper bound of a single wait |
+| `snodra.messaging.kafka.bootstrap-servers` | `broker:19092` | Kafka |
+| `snodra.messaging.kafka.topic` | `kraken.events` | Events topic |
+| `snodra.messaging.kafka.consumer.enabled` | `true` | Set false in tools that only publish |
+| `snodra.messaging.kafka.consumer.max-attempts` | `5` | Handler attempts per record before it is logged and skipped |
+| `snodra.messaging.outbox.enabled` | `true` | Outbox collection + publisher |
+| `snodra.messaging.outbox.poll-interval` | `200ms` | Publisher poll period |
+| `snodra.messaging.outbox.batch-size` | `100` | Documents per poll |
+| `snodra.messaging.outbox.retention` | `7d` | Delete sent documents older than this |
+| `snodra.messaging.idempotency.retention` | `30d` | Delete `processed_events` older than this |
+| `snodra.messaging.security.forward-jwt` | `true` | Put the current request's bearer token in `headers.authorization` |
 
-The keys under `kraken.messaging.sagas.*`, `deadlines.*` and `external.*` are listed with their meaning in
+The keys under `snodra.messaging.sagas.*`, `deadlines.*` and `external.*` are listed with their meaning in
 [Sagas and deadlines](../index.md#saga-configuration).
 
 Environment variable form follows Spring's relaxed binding, for example
 `SNODRA_MESSAGING_HUB_ADDRESS`. Map keys taken from environment variables are lowercased with `_` read
-as `.`, so `kraken.messaging.hub.priorities.<type>` cannot be set that way for a mixed-case type name
+as `.`, so `snodra.messaging.hub.priorities.<type>` cannot be set that way for a mixed-case type name
 (`orders.CancelOrder`): put it in `application.yaml`, or in `SPRING_APPLICATION_JSON` when only the
 environment is available.

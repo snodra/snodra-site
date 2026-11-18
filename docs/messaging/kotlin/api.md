@@ -91,7 +91,7 @@ snodra-server reaches high availability through several independent hubs that ne
 umbrella repo): every instance connects to every hub, and the client decides where each request goes.
 
 ```yaml
-kraken.messaging.hub.address: static://hub-1:7000,static://hub-2:7000   # or: dns:///snodra-server:7000
+snodra.messaging.hub.address: static://hub-1:7000,static://hub-2:7000   # or: dns:///snodra-server:7000
 ```
 
 - **One connection per hub.** `HubConnections` opens one `Connect` stream per target, each with its own handshake,
@@ -403,7 +403,7 @@ MongoDB and its Kafka consumer; the hub is not involved except to carry the comm
 Everything starts and ends with Snodra messages. A saga never calls an external system itself: it sends a command, an
 **adapter** in the same service (an ordinary `@CommandHandler` made idempotent) makes the call, and the external system's answer
 comes back as an ordinary Snodra event through a partner topic, a webhook or polling. The full model, the delivery guarantees,
-the configuration and the metrics are in `../kraken/https://snodra.damoreira.com/messaging/` ("Sagas and deadlines"); the decision and every
+the configuration and the metrics are in [Sagas and deadlines](../index.md#sagas-and-deadlines); the decision and every
 builder ruling are in `../kraken/docs/adr/0021-sagas-in-the-library.md`; a working example with a fake partner is in
 `examples/README.md` ("The postcard saga").
 
@@ -503,7 +503,7 @@ class PaymentAdapter(private val gateway: PaymentGateway) {
 - `@IdempotentHandler(key = "'poll:' + message.jobId + ':' + message.attempt")` takes a SpEL key over `message` and `headers`.
 - The handler must not be `suspend`. Use `eventBus.publishBlocking(...)` to publish a result.
 - The interceptor and its collection exist when a class in the application's packages has an `@IdempotentHandler` method; set
-  `kraken.messaging.external.calls.enabled=true` for an adapter outside them.
+  `snodra.messaging.external.calls.enabled=true` for an adapter outside them.
 - A saga command carries **no user token**: it only reaches handlers without `@RequiresAuthentication` (the same limit as events
   published from handlers, see [Known limitations](modules.md#known-limitations)); otherwise the saga hears `SagaCommandFailed(DENIED)`.
 
@@ -530,7 +530,7 @@ message)`, delivered locally (never published to `kraken.events`). `reason` is `
 saga instance that sent the command **by its id**: the saga needs no association, only a handler
 (`@SagaEventHandler(associationProperty = "sagaId")`, the name of the event's property; a saga that also associated itself with
 `sagaId` keeps working). When the saga type has no handler for it, or the saga has ended, and no ordinary `@EventHandler` took
-it either, it is logged at error and counted in `kraken.saga.command.failures`. A permanently failed step does not hold back
+it either, it is logged at error and counted in `snodra.saga.command.failures`. A permanently failed step does not hold back
 the saga's later steps.
 
 ## Hearing from the partner: a topic of its own
@@ -538,14 +538,14 @@ the saga's later steps.
 When the partner produces to **its own Kafka topic** (not `kraken.events`):
 
 ```yaml
-Snodra:
+snodra:
   messaging:
     external:
       kafka:
         sources:
           printer:                       # the source's name
             topic: printer.events
-            # bootstrap-servers: partner-kafka:9092   # default: kraken.messaging.kafka.bootstrap-servers
+            # bootstrap-servers: partner-kafka:9092   # default: snodra.messaging.kafka.bootstrap-servers
             # properties: { security.protocol: SSL }  # extra consumer properties
 ```
 
@@ -585,8 +585,8 @@ class PartnerWebhook(private val verifier: WebhookSignatureVerifier, private val
 }
 ```
 
-- `verify(secret, previousSecret, headers, body)` accepts the shared secret in `X-Kraken-Webhook-Secret` or the HMAC-SHA256 of the
-  **raw** body in `X-Kraken-Signature` (hex, or `sha256=<hex>`); the previous secret is accepted during a rotation; constant-time
+- `verify(secret, previousSecret, headers, body)` accepts the shared secret in `X-Snodra-Webhook-Secret` or the HMAC-SHA256 of the
+  **raw** body in `X-Snodra-Signature` (hex, or `sha256=<hex>`); the previous secret is accepted during a rotation; constant-time
   comparison; an empty secret verifies nothing. Verify the raw bytes before parsing.
 - `accept(source, dedupeKey, event, headers = emptyMap())` dispatches locally and **synchronously** (handlers, then sagas) under
   the id `<source>:<dedupeKey>`, so the partner's retries apply once (`DUPLICATE`). Use the partner's own delivery or event id as
@@ -666,12 +666,12 @@ adapter against a fake of the partner, the controller with a mock request and a 
 ## Operating sagas
 
 - **A parked event.** An event whose saga handler failed all its attempts is written to `saga_failures` (with its marker, so the
-  consumer moves on), counted in `kraken.saga.events{outcome="parked"}` and logged at error. Inject `SagaFailures` and call
+  consumer moves on), counted in `snodra.saga.events{outcome="parked"}` and logged at error. Inject `SagaFailures` and call
   `list(type?)`, `retry(id)`, `retryAll(type)` or `discard(id)` once the cause is fixed. Nothing retries a parked event by itself.
-- **Metrics** (Micrometer, with a `MeterRegistry` bean in a service that uses sagas or idempotent handlers): `kraken.sagas.started`,
-  `kraken.sagas.ended`, `kraken.sagas.active`, `kraken.saga.events{type,outcome}` (`handled`, `no_match`, `conflict`, `parked`),
-  `kraken.saga.dispatch.pending`, `kraken.saga.command.failures`, `kraken.deadlines.fired`, `kraken.deadlines.due`,
-  `kraken.external.calls{handler,outcome}`. A `no_match` count that grows means an association that does not line up. Logs carry
+- **Metrics** (Micrometer, with a `MeterRegistry` bean in a service that uses sagas or idempotent handlers): `snodra.sagas.started`,
+  `snodra.sagas.ended`, `snodra.sagas.active`, `snodra.saga.events{type,outcome}` (`handled`, `no_match`, `conflict`, `parked`),
+  `snodra.saga.dispatch.pending`, `snodra.saga.command.failures`, `snodra.deadlines.fired`, `snodra.deadlines.due`,
+  `snodra.external.calls{handler,outcome}`. A `no_match` count that grows means an association that does not line up. Logs carry
   `sagaType`, `sagaId` and `correlationId` in the MDC while a saga handles a message.
 - **Deadlines** fire at least once, after their due time, from any instance of the service (a lease makes each fire on one), also
   after a restart, and never for a cancelled deadline or an ended saga.
@@ -732,7 +732,7 @@ class Notifier {                         // no annotation: processor "default"
   bad name fails the startup naming the handler. Classes without the annotation are in processor `default`. Command and query
   handlers of an annotated class are not affected.
 - **Groups.** Every processor, `default` included, uses `<service group>.<name>`, the service group being
-  `kraken.messaging.kafka.group-id`, else the service name (`orders-service.default`, `orders-service.orders`), so a processor
+  `snodra.messaging.kafka.group-id`, else the service name (`orders-service.default`, `orders-service.orders`), so a processor
   starts from the earliest offset the first time it runs.
 - **Markers.** Every processor, `default` included, writes `processor:<name>:<eventId>` in `processed_events`, so one event type
   handled in two processors is handled by both, each exactly once. A marker a processor writes for a Kafka record also carries
@@ -755,7 +755,7 @@ projection that rebuilds idempotently may want exactly that; a handler with effe
 call) repeats every one of them. For such code either leave the handler where it is and put only new handlers in the named
 processor, or commit the new group's offsets at the end of the topic before you deploy it:
 `kafka-consumer-groups --bootstrap-server <broker> --group <group>.<name> --topic <events topic> --reset-offsets --to-latest --execute`
-(`<group>` is `kraken.messaging.kafka.group-id` or the service name; the group must have no running member). Records produced
+(`<group>` is `snodra.messaging.kafka.group-id` or the service name; the group must have no running member). Records produced
 between that reset and the moment the old instances stop are handled twice, once by the old `default` and once by the new
 processor, so reset right before the rollout. Once it runs, a reset to `latest` through the hub does the same without a shell
 ([Processor control](#processor-control)), but by then it has already run once over the topic.
@@ -786,7 +786,7 @@ application that wants it.
 
 ## Dead letters
 
-A record a processor cannot handle is not only logged: by default (`kraken.messaging.kafka.dead-letter.mode: collection`)
+A record a processor cannot handle is not only logged: by default (`snodra.messaging.kafka.dead-letter.mode: collection`)
 it is **parked** in the service's MongoDB collection `dead_letters`, the later records of the same Kafka key wait behind it, and an
 operator retries or discards it through the `DeadLetters` bean.
 
@@ -839,8 +839,8 @@ or discarded. Any instance of the service can serve the calls for the processors
 of one) is an `IllegalArgumentException` naming it. In modes `topic` and `log` every call is an `IllegalStateException` naming the
 mode.
 
-**Mode `topic`** produces the failed or `INVALID` record to `<topic>.dlt` (same key, value and headers, plus `kraken-dlt-processor`,
-`kraken-dlt-reason`, `kraken-dlt-error`, `kraken-dlt-original-topic`, `-partition` and `-offset`) and acknowledges it only after the
+**Mode `topic`** produces the failed or `INVALID` record to `<topic>.dlt` (same key, value and headers, plus `snodra-dlt-processor`,
+`snodra-dlt-reason`, `snodra-dlt-error`, `snodra-dlt-original-topic`, `-partition` and `-offset`) and acknowledges it only after the
 broker did. Nothing is sequenced and there is no admin API: the topic belongs to your tooling. **The DLT must exist, or broker
 auto-creation must be on.** **Mode `log`** logs (never the payload) and skips: nothing is parked.
 
@@ -981,11 +981,11 @@ data class SendOptions(                      // every field null = the configure
 
 ## Send options, priority and retry
 
-- **Priority** (`SendOptions.priority`, default per type from `kraken.messaging.hub.priorities.<type>`,
+- **Priority** (`SendOptions.priority`, default per type from `snodra.messaging.hub.priorities.<type>`,
   else 0) only matters when the hub queues requests for a busy, flow-controlled handler: higher
   first, equal priorities keep arrival order (ADR 0014).
   Old hubs ignore it. Local handlers (same instance) ignore it.
-- **Retry** is opt-in (`kraken.messaging.hub.retry.enabled=false`; per call `SendOptions.retry`). One
+- **Retry** is opt-in (`snodra.messaging.hub.retry.enabled=false`; per call `SendOptions.retry`). One
   classification decides what may be retried, used by the buses
   (`RetryClassification.isRetryable(kind, error)` in Kotlin, `retry::is_retryable(kind, &err)` in Rust; the saga relay has its own
   table, because its commands carry an idempotency key, see [Command failures](../index.md#command-failures)):
@@ -1129,7 +1129,7 @@ An ack with an empty `hub_id` is identified by its target id: the bare `host:por
 `HubConnections.awaitRegistered` (Kotlin) is true only once every kept hub confirmed the
 registration.
 
-**Breaking (Kotlin):** the `krakenHubChannelFactory` override bean is now a
+**Breaking (Kotlin):** the `snodraHubChannelFactory` override bean is now a
 `com.damoreira.snodra.messaging.hub.HubChannelFactory` (`target -> ManagedChannel`, called once per
 connection attempt to each hub) instead of a `() -> ManagedChannel`, and the exposed bean is
 `HubConnections` (one `HubConnection` per hub; `awaitRegistered`, `connections()`) instead of

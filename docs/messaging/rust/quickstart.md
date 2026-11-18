@@ -41,7 +41,7 @@ async fn main() -> Result<(), MessagingError> {
                 Ok(Shouted { text })
             }
         })
-        .requires::<Shout>(Guard::role("kraken-user"))              // optional, like @RequiresAuthentication
+        .requires::<Shout>(Guard::role("snodra-user"))              // optional, like @RequiresAuthentication
         .start()                                                      // registers in the background
         .await?;
     app.await_hub(std::time::Duration::from_secs(30)).await;

@@ -109,5 +109,5 @@ Next: [the Rust quick start](../messaging/rust/quickstart.md), then
 ## After installation
 
 [Your first service](first-service.md) walks through the shortest path from a running server to a
-registered handler. If you are replacing an existing `kraken` deployment, read
+registered handler. If you are replacing an existing deployment, read
 [Migration](../migration/from-kraken.md) before you change coordinates.
