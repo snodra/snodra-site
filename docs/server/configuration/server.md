@@ -32,6 +32,21 @@ snodra-server --listen 0.0.0.0:7000 --log-format json --auth-mode enforce --acl-
 
 The rest of the settings on this page are environment variables only.
 
+### Probing a hub
+
+`--health-check` and `--topology` talk to the local hub by default: the port of `SNODRA_SERVER_LISTEN`
+(7000) on `127.0.0.1`, or whatever `--listen` names, so a hub started with `--listen 0.0.0.0:7010` is
+found with the same flag:
+
+```sh
+snodra-server --listen 0.0.0.0:7010 --log-format json     # one terminal
+snodra-server --health-check --listen 0.0.0.0:7010        # another: SERVING
+snodra-server --topology --listen 0.0.0.0:7010
+```
+
+`--address host:port` reaches a hub elsewhere. On macOS port 7000 belongs to AirPlay, so a probe that
+answers with an HTTP/2 frame error is talking to it — pass `--listen` or `--address`.
+
 ## Identity and listeners
 
 | Variable | Default | Meaning |
