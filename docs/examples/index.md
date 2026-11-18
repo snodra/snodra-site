@@ -6,7 +6,6 @@ Runnable starting points for the hub and its clients. Full reference: [the serve
 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
-  -e SNODRA_SERVER_OTLP_ENDPOINT= \
   snodra/snodra-server:latest
 ```
 
@@ -18,7 +17,6 @@ services:
     image: snodra/snodra-server:latest
     ports: ["7000:7000", "7001:7001"]
     environment:
-      SNODRA_SERVER_OTLP_ENDPOINT: ""
     healthcheck:
       test: ["CMD", "/app/snodra-server", "--health-check"]
 ```

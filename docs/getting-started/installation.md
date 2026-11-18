@@ -9,7 +9,6 @@ The published image contains the gRPC listener, the dashboard, the HTTP API and 
 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
-  -e SNODRA_SERVER_OTLP_ENDPOINT= \
   snodra/snodra-server:0.5.0
 ```
 
@@ -18,8 +17,8 @@ docker run --rm -p 7000:7000 -p 7001:7001 \
 | `7000` | gRPC, where services connect |
 | `7001` | HTTP: the dashboard at `/ui/`, the API at `/api/v1/` |
 
-`SNODRA_SERVER_OTLP_ENDPOINT=` disables trace export for this run; the default points at
-`http://otel-lgtm:4317`. Pin the tag you deploy. Replace `0.5.0` with another release when you
+Nothing else is needed: telemetry is off unless `SNODRA_SERVER_OTLP_ENDPOINT` names a collector.
+Pin the tag you deploy. Replace `0.5.0` with another release when you
 upgrade; `latest` exists, but a fixed tag keeps a restart reproducible.
 
 Check it:

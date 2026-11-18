@@ -16,7 +16,6 @@ reference for handlers and buses.
 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
-  -e SNODRA_SERVER_OTLP_ENDPOINT= \
   snodra/snodra-server:0.5.0
 ```
 

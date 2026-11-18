@@ -1,6 +1,6 @@
 # Server settings
 
-Every setting is an environment variable. An empty value means *unset* for all of them except `SNODRA_SERVER_OTLP_ENDPOINT`, where an empty value disables export. Durations accept `30`, `30s`, `500ms` and `5m`.
+Every setting is an environment variable. An empty value means *unset* for all of them; `SNODRA_SERVER_OTLP_ENDPOINT` is unset by default, so a server exports no telemetry until you name a collector. Durations accept `30`, `30s`, `500ms` and `5m`.
 
 ## Identity and listeners
 
@@ -9,7 +9,7 @@ Every setting is an environment variable. An empty value means *unset* for all o
 | `SNODRA_SERVER_ID` | hostname + `-` + 8 random hex digits | identifies this hub process in `RegisterAck.hub_id` and the topology (`hubId`) |
 | `SNODRA_SERVER_LISTEN` | `0.0.0.0:7000` | gRPC bind address |
 | `SNODRA_SERVER_HTTP_LISTEN` | `0.0.0.0:7001` | HTTP bind address for the dashboard and its API; empty disables the HTTP listener |
-| `SNODRA_SERVER_OTLP_ENDPOINT` | `http://otel-lgtm:4317` | OTLP gRPC endpoint for traces and metrics |
+| `SNODRA_SERVER_OTLP_ENDPOINT` | none | OTLP gRPC endpoint for traces and metrics; unset exports nothing |
 | `SNODRA_SERVER_LOG` | `info` | `tracing` filter, for example `snodra_hub=debug,info` |
 | `SNODRA_SERVER_JWKS_REFRESH` | `5m` | how often the signing keys are fetched again (an unknown `kid` fetches at most once per 30 s on top); positive |
 
