@@ -26,6 +26,9 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
 
+not_in_nav: |
+  404.md
+
 nav:
   - Home: index.md
   - Getting started:
