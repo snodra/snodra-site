@@ -18,7 +18,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://keycloak.example/realms/snodra
+          issuer-uri: https://auth.example/realms/snodra
 ```
 
 The `issuer-uri` is only needed when the service also serves HTTP or wants forwarded tokens verified (see
@@ -43,7 +43,7 @@ All keys (`snodra.messaging.*`; durations accept `200ms`, `5s`, `7d`; relaxed bi
 | `hub.tls.enabled` | `false` | Talk TLS to the hub, for every `hub.address` form (a list of targets and `dns:///`). Off: plain text. The hub must serve TLS on that port (`SNODRA_SERVER_TLS_CERT` / `SNODRA_SERVER_TLS_KEY`). |
 | `hub.tls.ca-file` | JVM system roots | PEM file with the CA certificate(s) that signed the hub's certificate (a self-signed hub certificate is its own CA). Read on every connection attempt; a file that cannot be used fails the startup. Set without `hub.tls.enabled` it is ignored with a warning. |
 | `hub.tls.server-name` | the address's host | Name to verify the hub's certificate against, for when the address is an IP or an alias the certificate does not list. |
-| `hub.oauth2.token-uri` | none | Setting it turns Keycloak client-credentials authentication on (P5b, [JWT](#authenticating-with-a-jwt-keycloak-client-credentials)): the token endpoint, for example `https://keycloak/realms/snodra/protocol/openid-connect/token`. `http` is allowed and warns once unless the host is loopback or a single-label name. Cannot be combined with `hub.token` or `hub.token-file` (the startup fails naming both). Environment: `SNODRA_MESSAGING_HUB_OAUTH2_TOKEN_URI`, or `SNODRA_SERVER_OAUTH2_TOKEN_URI` when this key is unset. |
+| `hub.oauth2.token-uri` | none | Setting it turns OAuth2 client-credentials authentication on (P5b, [JWT](#authenticating-with-a-jwt-oauth2-client-credentials)): the token endpoint, for example `https://auth.example/realms/snodra/protocol/openid-connect/token`. `http` is allowed and warns once unless the host is loopback or a single-label name. Cannot be combined with `hub.token` or `hub.token-file` (the startup fails naming both). Environment: `SNODRA_MESSAGING_HUB_OAUTH2_TOKEN_URI`, or `SNODRA_SERVER_OAUTH2_TOKEN_URI` when this key is unset. |
 | `hub.oauth2.client-id` | `snodra.messaging.service-name` | The confidential client's id; it is the token's `azp`, which the hub requires to equal the service name. Environment: `SNODRA_SERVER_OAUTH2_CLIENT_ID`. |
 | `hub.oauth2.client-secret` | none | The client secret (sent as HTTP Basic, `client_secret_basic`). Never logged, redacted in `toString` and in the actuator's `configprops` and `env`. Prefer the file. Environment: `SNODRA_MESSAGING_HUB_OAUTH2_CLIENT_SECRET`, or `SNODRA_SERVER_OAUTH2_CLIENT_SECRET`. |
 | `hub.oauth2.client-secret-file` | none | File holding the client secret: read at startup (an unreadable or empty file fails it, naming the file) and **again on every token fetch**, so a rotated secret applies without a restart. Wins over `client-secret`. Environment: `SNODRA_MESSAGING_HUB_OAUTH2_CLIENT_SECRET_FILE`, or `SNODRA_SERVER_OAUTH2_CLIENT_SECRET_FILE`. A token URI with neither secret fails the startup. |
@@ -234,13 +234,13 @@ it stays flat; (4) switch the hub to `enforce`; (5) turn on TLS before tokens cr
 whose token is missing or wrong in `enforce` fails visibly (`HubRegistrationRejectedException`, an `ERROR` line) instead of
 reconnecting in a tight loop.
 
-## Authenticating with a JWT (Keycloak client credentials)
+## Authenticating with a JWT (OAuth2 client credentials)
 
-Since P5b a service can present a short-lived Keycloak access token instead of a static token (decision record: ADR 0019,
+Since P5b a service can present a short-lived OAuth2 access token instead of a static token (decision record: ADR 0019,
 hub JWT authentication). The hub validates it against the realm's keys (`SNODRA_SERVER_JWT_ISSUER`, ...), requires
 its `azp` to equal the service name and takes the rights from the `[[service]]` table of that name in its ACL file.
 
-**Keycloak, in two lines.** One confidential client per service with *service accounts enabled and nothing else* (no standard
+**The provider, in two lines.** One confidential client per service with *service accounts enabled and nothing else* (no standard
 flow, no direct access grants), its **client id = the service name**; add an audience mapper and set the hub's
 `SNODRA_SERVER_JWT_AUDIENCE`. Never give a `[[service]]` table to the user-facing client.
 
@@ -249,7 +249,7 @@ snodra:
   messaging:
     hub:
       oauth2:
-        token-uri: https://keycloak.example/realms/snodra/protocol/openid-connect/token
+        token-uri: https://auth.example/realms/snodra/protocol/openid-connect/token
         client-secret-file: /run/secrets/snodra-client-secret   # client-id defaults to snodra.messaging.service-name
 ```
 

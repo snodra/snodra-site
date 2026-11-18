@@ -54,7 +54,7 @@ nav:
               - server/configuration/index.md
               - Anonymous: server/configuration/anonymous.md
               - Static token: server/configuration/token.md
-              - Keycloak JWT: server/configuration/jwt-keycloak.md
+              - OAuth2 / OIDC JWT: server/configuration/jwt-oauth2.md
               - mTLS: server/configuration/mtls.md
           - Server settings: server/configuration/server.md
           - Topology: server/topology.md
@@ -102,7 +102,7 @@ nav:
   - Integrations:
       - integrations/index.md
       - Spring Boot: integrations/spring-boot.md
-      - Keycloak: integrations/keycloak.md
+      - OAuth2 provider: integrations/oauth2.md
       - OpenTelemetry: integrations/opentelemetry.md
       - Containers: integrations/containers.md
       - Existing services: integrations/existing-service.md

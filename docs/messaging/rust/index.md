@@ -14,7 +14,7 @@ snodra-messaging-rs = "0.6"
 - Annotated-free, closure handlers: `event`, `event_in`, `command`, `query`, `saga`.
 - Idempotent consumption with `processed_events`, named processors, dead letters and the admin API.
 - Query modes: unary, scatter-gather, streaming and subscription.
-- Static token, Keycloak JWT and mTLS credentials, with rotation.
+- Static token, OAuth2 / OIDC JWT and mTLS credentials, with rotation.
 - `SagaTestFixture` behind the `testing` feature.
 
 ## Pages

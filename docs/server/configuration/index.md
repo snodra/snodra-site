@@ -7,7 +7,7 @@ choose one of four credential types, or none.
 |---|---|---|---|
 | [Anonymous](anonymous.md) | none | Local development, a trusted network segment | none |
 | [Static token](token.md) | `SNODRA_SERVER_TOKEN` | A small deployment without an identity provider | yes |
-| [Keycloak JWT](jwt-keycloak.md) | OAuth2 client credentials | A deployment that already runs Keycloak | yes, short-lived |
+| [OAuth2 / OIDC JWT](jwt-oauth2.md) | OAuth2 client credentials | A deployment with an OAuth2 provider | yes, short-lived |
 | [mTLS](mtls.md) | client certificate | Zero shared secrets, a CA you already operate | no |
 
 TLS is independent of the mode: the gRPC listener can serve TLS while authentication stays `off`.
@@ -62,4 +62,4 @@ connection keeps retrying, so fixing the token or the ACL is enough and no resta
 | `AccessDenied` (client error) | A request type is outside `send`; never retried |
 
 Next: pick a mode — [anonymous](anonymous.md), [static token](token.md),
-[Keycloak JWT](jwt-keycloak.md) or [mTLS](mtls.md).
+[OAuth2 / OIDC JWT](jwt-oauth2.md) or [mTLS](mtls.md).

@@ -6,7 +6,7 @@ pages carry the exact settings.
 | Integration | What it gives you | Page |
 |---|---|---|
 | Spring Boot | A starter that is native to Boot: auto-configuration, annotations, Actuator | [Spring Boot](spring-boot.md) |
-| Keycloak | OAuth2 client-credentials authentication with short-lived JWTs | [Keycloak](keycloak.md) |
+| OAuth2 provider | Client-credentials authentication with short-lived JWTs; Keycloak, Entra ID, Okta, Auth0, Authentik and Dex | [OAuth2 provider](oauth2.md) |
 | OpenTelemetry | OTLP metrics and traces from the server and the libraries | [OpenTelemetry](opentelemetry.md) |
 | Docker Compose and Kubernetes | The image, ports, probes and graceful shutdown | [Containers](containers.md) |
 | An existing service | Speak `snodra.hub.v1` directly, without a Snodra library | [Existing services](existing-service.md) |

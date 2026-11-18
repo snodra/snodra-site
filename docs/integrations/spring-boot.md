@@ -61,5 +61,5 @@ mix service and hub series.
 
 - [Kotlin quick start](../messaging/kotlin/quickstart.md) and [API](../messaging/kotlin/api.md).
 - [Kotlin configuration](../messaging/kotlin/configuration.md), including security and retries.
-- [Keycloak](keycloak.md) for the identity provider side.
+- [OAuth2 provider](oauth2.md) for the identity provider side.
 - [Monitoring](../operations/monitoring.md) for the metrics to expect.

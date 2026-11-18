@@ -906,7 +906,7 @@ calls `ExternalEventIngress.accept(source, dedupeKey, event, headers = emptyMap(
 - `verify(secret, previousSecret, headers, body)`: `X-Snodra-Webhook-Secret` holds the secret itself, or `X-Snodra-Signature`
   holds the HMAC-SHA256 of the **raw** body keyed by the secret, as hex or `sha256=<hex>` (either case). The current or, during
   a rotation, the previous secret verifies. Header names are case-insensitive, every comparison is constant time, an empty
-  secret is ignored (a service with none configured verifies nothing). The same rules as the Keycloak webhook of the
+  secret is ignored (a service with none configured verifies nothing). The same rules as the provider's webhook of the
   the service. Verify the raw bytes before parsing.
 - `accept` dispatches locally and **synchronously** on the calling thread (ordinary handlers, then sagas, committed when it
   returns) under the dedupe id `<source>:<dedupeKey>`, and answers `ACCEPTED` or `DUPLICATE`. `dedupeKey` is the partner's
@@ -1222,7 +1222,7 @@ and mirrored as serde structs.
 | header `correlationId` | propagated from the originating request, new UUID if absent |
 | header `timestamp` | ISO 8601 UTC, when the event was created (not when sent) |
 | header `source` | publishing service name |
-| header `userId` | Keycloak subject of the acting user, empty for system events |
+| header `userId` | the OAuth2 subject of the acting user, empty for system events |
 | header `traceparent` | W3C trace context |
 
 Only `userId` crosses into events; the JWT itself never does, because events are consumed later

@@ -72,8 +72,8 @@ is a library; the example services are built from source by the sandbox compose.
 
 ## Known limitations
 
-- Hub authentication is a static token per service (P5a), a Keycloak client-credentials JWT (P5b) or a client certificate (P5c, mTLS).
-  A static token is a long-lived secret: rotate it through `hub.token-file`. An access token that Keycloak revokes keeps working until
+- Hub authentication is a static token per service (P5a), a OAuth2 client-credentials JWT (P5b) or a client certificate (P5c, mTLS).
+  A static token is a long-lived secret: rotate it through `hub.token-file`. An access token that the provider revokes keeps working until
   it expires (minutes); a certificate until its `notAfter` or until the hub's `[[service]]` table is removed (no CRL, no OCSP: issue
   short-lived certificates). A client key must be unencrypted PKCS#8 PEM. With a single hub, a certificate rotation leaves the instance
   without a stream for a moment (see the rotation notes above).

@@ -47,7 +47,7 @@ client                                   hub
 - Every session has every feature: flow control (ADR 0014),
   `InstanceStatus` reports ([High availability](operations.md#high-availability)), the query modes
   ([Query modes](protocol.md#query-modes)), credential refresh (`ClientMessage.credentials`;
-  [JWT credentials](https://snodra.damoreira.com/server/configuration/jwt-keycloak/)), event processor status (`InstanceStatus.processors`;
+  [JWT credentials](https://snodra.damoreira.com/server/configuration/jwt-oauth2/)), event processor status (`InstanceStatus.processors`;
   [Event processors](event-processors.md)) and processor control (`ServerMessage.control` and
   `ClientMessage.control_reply`; [Processor control](processor-control.md)). The hub and the client
   libraries ship together: a hub and a client of different builds are not supported.

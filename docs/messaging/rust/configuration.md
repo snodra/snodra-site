@@ -24,8 +24,8 @@
 | `SNODRA_SERVER_MAX_SUBSCRIPTIONS` | 1024 | the most subscription queries this instance serves at once (see [Subscription queries](api.md#subscription-queries)): a subscription request beyond it is refused with `ReplyEnd{error = RESOURCE_EXHAUSTED}` `subscription limit (N) reached`, which the subscriber sees as `HandlerBusy`; subscriptions hold no handler permit, so this is their only bound here; the hub has its own per-instance limit (`SNODRA_SERVER_MAX_SUBSCRIPTIONS_PER_INSTANCE`, 1024); at least 1 (`0` is rejected at startup, also when set in code) |
 | `SNODRA_SERVER_TOKEN` | none | the static access token sent in `Register.credentials.token` on every hub stream (`Config.hub_token`, a `SecretString` whose `Debug` prints `"***"`); needed when the hub runs `SNODRA_SERVER_AUTH_MODE=enforce`, ignored by a hub in `off` mode; an empty value is no token; never logged (see [Security](#security)) |
 | `SNODRA_SERVER_TOKEN_FILE` | none | a file holding the token, for container secrets (`Config.hub_token_file`); read at startup (an unreadable file is a startup error) and again before every reconnect, so a rotated secret needs no restart; **wins over `SNODRA_SERVER_TOKEN` when both are set**; surrounding whitespace is trimmed, an empty file is no token at startup, and after a good read it keeps the last token |
-| `SNODRA_SERVER_OAUTH2_TOKEN_URI` | none | turns JWT authentication on (`Config.hub_oauth2`): the Keycloak token endpoint, e.g. `https://keycloak/realms/snodra/protocol/openid-connect/token`; needs a client secret and excludes `SNODRA_SERVER_TOKEN` / `SNODRA_SERVER_TOKEN_FILE` (both set is a startup error); see [Authenticating with a JWT](#authenticating-with-a-jwt-keycloak-client-credentials) |
-| `SNODRA_SERVER_OAUTH2_CLIENT_ID` | `SNODRA_SERVICE_NAME` | the Keycloak client id; it must be the service name (the hub checks the token's `azp` against it) |
+| `SNODRA_SERVER_OAUTH2_TOKEN_URI` | none | turns JWT authentication on (`Config.hub_oauth2`): the provider's token endpoint, e.g. `https://auth.example/realms/snodra/protocol/openid-connect/token`; needs a client secret and excludes `SNODRA_SERVER_TOKEN` / `SNODRA_SERVER_TOKEN_FILE` (both set is a startup error); see [Authenticating with a JWT](#authenticating-with-a-jwt-oauth2-client-credentials) |
+| `SNODRA_SERVER_OAUTH2_CLIENT_ID` | `SNODRA_SERVICE_NAME` | the OAuth2 client id; it must be the service name (the hub checks the token's `azp` against it) |
 | `SNODRA_SERVER_OAUTH2_CLIENT_SECRET`, `SNODRA_SERVER_OAUTH2_CLIENT_SECRET_FILE` | none | the client secret (`SecretString`, never logged), or a file holding it, **which wins** and is re-read on every token fetch so a rotated secret applies without a restart; one of them is required with the token URI |
 | `SNODRA_SERVER_OAUTH2_SCOPE`, `SNODRA_SERVER_OAUTH2_CA` | none | the `scope` sent with the grant (space-separated as sent); a PEM file with extra root certificates for an `https://` token endpoint, added to the platform roots (not the hub CA of `SNODRA_SERVER_TLS_CA`) |
 | `SNODRA_SERVER_TLS` | `false` | `true` makes every hub channel TLS (`Config.hub_tls = Some(HubTls { .. })`), for a static list and for `dns:///`; needed when the hub sets `SNODRA_SERVER_TLS_CERT`. An `https://` address turns TLS on by itself (system roots) |
@@ -106,16 +106,16 @@ SNODRA_SERVER_TOKEN_FILE=/run/secrets/orders-hub-token \
 SNODRA_SERVER_TLS=true SNODRA_SERVER_TLS_CA=/etc/snodra/ca.pem SNODRA_SERVER_TLS_SERVER_NAME=snodra-server
 ```
 
-### Authenticating with a JWT (Keycloak client credentials)
+### Authenticating with a JWT (OAuth2 client credentials)
 
-Instead of a static token a service can register with a short-lived Keycloak access token (roadmap
-P5b, hub ADR 0019). In Keycloak, make the
+Instead of a static token a service can register with a short-lived OAuth2 access token (roadmap
+P5b, hub ADR 0019). On the provider side, make the
 service a **confidential client with service accounts only** (no standard flow, no direct access
 grants) whose **client id is the service name**: the hub checks the token's `azp` against
 `Register.service_name` and takes the rights from its `[[service]]` ACL table of that name. Then set
 
 ```bash
-SNODRA_SERVER_OAUTH2_TOKEN_URI=https://keycloak/realms/snodra/protocol/openid-connect/token \
+SNODRA_SERVER_OAUTH2_TOKEN_URI=https://auth.example/realms/snodra/protocol/openid-connect/token \
 SNODRA_SERVER_OAUTH2_CLIENT_SECRET_FILE=/run/secrets/orders-client-secret   # client id defaults to the service name
 ```
 
@@ -160,7 +160,7 @@ and `snodra_messaging_hub_credentials_refreshes_sent_total`. A static token sess
 `SNODRA_SERVER_TOKEN_FILE` changes also sends a refresh (checked once per heartbeat) on its handshaken
 streams, so a token rotation needs no reconnect.
 
-`http://` token URIs are accepted (the sandbox uses `http://keycloak:8080`) with one warning unless the
+`http://` token URIs are accepted with one warning unless the
 host is loopback or a single-label name: the secret then crosses the network in the clear.
 
 Differences from the Kotlin starter: the Rust configuration has no relaxed `SNODRA_MESSAGING_*`

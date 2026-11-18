@@ -42,4 +42,4 @@ Nothing about identity. Two behaviours differ from a secured hub:
 TLS is independent: you can serve the gRPC port over TLS (`SNODRA_SERVER_TLS_CERT`/`_KEY`) and still
 authenticate nobody. The handshake then protects the bytes, not the identity.
 
-Next: [static token](token.md), [Keycloak JWT](jwt-keycloak.md) or [mTLS](mtls.md).
+Next: [static token](token.md), [OAuth2 / OIDC JWT](jwt-oauth2.md) or [mTLS](mtls.md).

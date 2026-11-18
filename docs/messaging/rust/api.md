@@ -28,7 +28,7 @@
 - **Mongo documents** use the Kotlin field names and BSON types; no `_class` field is written.
 - **Mongo access**: `builder.client()` / `app.client()` and `database()` expose the crate's client; sessions passed to
   `events.publish_in` must come from it (the driver rejects sessions of another client).
-- **Verified identity** checks signature, `exp`, `nbf` and `iss`; `aud` is not validated (Keycloak sets it, Spring's
+- **Verified identity** checks signature, `exp`, `nbf` and `iss`; `aud` is not validated (some providers set it, Spring's
   decoder ignores it too). A JWKS outage is `UNAUTHENTICATED` for the caller, never an internal error with a URL.
 - **Shutdown** drains in-flight handlers (10 s bound), closes every hub stream, fails this instance's outgoing requests still in flight with `HubConnectionLost`, stops the publisher and the consumer.
 - **Start** does not wait for the hub. `await_hub(timeout)` tells you when the registration was

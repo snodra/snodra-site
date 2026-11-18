@@ -53,7 +53,7 @@ handling and a control plane of your own.
 
     ---
 
-    Spring Boot, Keycloak, OpenTelemetry, containers and existing services.
+    Spring Boot, an OAuth2 provider, OpenTelemetry, containers and existing services.
 
 -   :material-tools:{ .lg .middle } **[Tools](tools/index.md)**
 

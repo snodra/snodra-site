@@ -62,7 +62,7 @@ Every setting is an environment variable. An empty value means *unset* for all o
 | `SNODRA_SERVER_AUTH_MODE` | `off` | `off`, `permissive` (evaluate every rule, log and count violations, allow everything) or `enforce` (refuse them); anything but `off` needs `SNODRA_SERVER_ACL_FILE`. See Security |
 | `SNODRA_SERVER_ACL_FILE` | none | TOML ACL: SHA-256 of each static token to its service, `handle` and `send` patterns; reloaded when it changes |
 | `SNODRA_SERVER_JWT_ISSUER` | none | the `iss` a JWT credential must carry, exact match; unset: JWT credentials are off and refused as "not configured". Needs an auth mode other than `off`. See Security |
-| `SNODRA_SERVER_JWT_JWKS_URI` | `<issuer>/protocol/openid-connect/certs` | where the signing keys are fetched from (Keycloak's path, no OIDC discovery); separate from the issuer so a hub can fetch internally and validate the public issuer. `http://` warns once unless loopback or a single-label name. Without an issuer it is a startup error |
+| `SNODRA_SERVER_JWT_JWKS_URI` | `<issuer>/protocol/openid-connect/certs` | where the signing keys are fetched from (the default OpenID Connect path; there is no discovery); separate from the issuer so a hub can fetch internally and validate the public issuer. `http://` warns once unless loopback or a single-label name. Without an issuer it is a startup error |
 | `SNODRA_SERVER_JWT_AUDIENCE` | none | when set, a JWT's `aud` (string or array) must contain it |
 | `SNODRA_SERVER_JWT_LEEWAY` | `30s` | clock skew tolerated on `exp`, `nbf` and `iat` |
 | `SNODRA_SERVER_JWT_EXPIRY_GRACE` | `30s` | how long after `exp` a JWT session stays open without a refresh |
