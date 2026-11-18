@@ -18,7 +18,16 @@ docker run --rm -p 7000:7000 -p 7001:7001 \
 | `7001` | HTTP: the dashboard at `/ui/`, the API at `/api/v1/` |
 
 Nothing else is needed: telemetry is off unless `SNODRA_SERVER_OTLP_ENDPOINT` names a collector.
-Pin the tag you deploy. Replace `0.5.0` with another release when you
+Pin the tag you deploy.
+
+No Docker? Every [release](https://github.com/snodra/snodra-server/releases) ships the binary for
+Linux (static musl, and gnu), macOS and Windows, on amd64 and arm64:
+
+```sh
+curl -fsSL -o snodra-server.tar.gz \
+  https://github.com/snodra/snodra-server/releases/download/v0.5.2/snodra-server-v0.5.2-x86_64-unknown-linux-musl.tar.gz
+tar xzf snodra-server.tar.gz && ./snodra-server
+``` Replace `0.5.0` with another release when you
 upgrade; `latest` exists, but a fixed tag keeps a restart reproducible.
 
 Check it:
