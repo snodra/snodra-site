@@ -1,6 +1,6 @@
 # The messaging model
 
-This document specifies the messaging layer that replaces Axon in Snodra: the Kotlin starter
+This document specifies the messaging layer in Snodra: the Kotlin starter
 `snodra-messaging`, the Rust crate `snodra-messaging-rs`, the wire format, the Kafka layout, the
 outbox, and the hub protocol. 
 
@@ -602,7 +602,7 @@ left subscribed afterwards, and the initial result for an unknown name (see
 ## Sagas and deadlines
 
 A **saga** is a long-running process that reacts to events, keeps its own state, sends commands and events, waits, and
-ends. It is the Axon feature (`@Saga`, `@StartSaga`, `@SagaEventHandler`, `@EndSaga`, deadlines), built for what Snodra
+ends. It is the saga model: `@Saga`, `@StartSaga`, `@SagaEventHandler`, `@EndSaga`, deadlines, built for what Snodra
 needs it for: driving **integrations with external systems**, that is asking an outside system to do something, waiting
 for its answer and handling the answer that never comes. Sagas live in the Kotlin library, inside each service, against
 that service's MongoDB and Kafka consumer; the hub only carries the commands a saga sends to another service. Decision and
@@ -687,7 +687,7 @@ live instance matched any handler, the first `@StartSaga` handler (in that order
 value is present creates one, with that association and the start key `"<type>|<key>=<value>"`, and the new instance then runs every handler of
 that event whose key and value are that association; every `forceNew` start handler creates its own instance as well. The start key lives with its association: when a handler
 removes that association (`removeAssociationWith` of the start handler's key and value) the instance's start key is released,
-so a later start event for the same value creates a new instance, as in Axon; the old instance goes on under its other
+so a later start event for the same value creates a new instance; the old instance goes on under its other
 associations.
 
 ### Delivery and consistency
@@ -1256,8 +1256,8 @@ JWKS, expiry, required realm role). See 06-security.md.
 | Offset commit | after the handler's transaction commits (manual ack) |
 
 Why one topic: ordering per aggregate across event types, a single place to look, and a single
-subscription per service; consumers skip records whose `type` they do not handle. This mirrors
-Axon's `Axon.Events`. Trade-off: every service reads every event. At Snodra's scale this is
+subscription per service; consumers skip records whose `type` they do not handle. Trade-off: every
+service reads every event. At Snodra's scale this is
 negligible; if it ever matters, per-service topics are the escape hatch recorded in
 ADR 0003.
 
@@ -1383,7 +1383,7 @@ Reference: ``protocol/hub.proto``, hub internals in
 | `CANCELLED` | hub: a streaming query outlived `SNODRA_SERVER_MAX_STREAM_DURATION`, or a subscription `SNODRA_SERVER_MAX_SUBSCRIPTION_DURATION` | `StreamCancelledException` / `MessagingError::Cancelled` | Do not retry; the parts received stay valid, open a new stream for the rest |
 
 How fast each of these surfaces when the owning service is stopped, killed or partitioned, and
-what Axon Server does in the same cases, is documented with the planned improvements in
+the planned improvements, are documented in
 [05-services/hub.md](../server/limitations.md).
 
 Commands are not durable anywhere. A `TIMEOUT` does not tell the sender whether the handler ran.

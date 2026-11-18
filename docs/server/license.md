@@ -9,6 +9,3 @@ licence text to travel with substantial copies, and it comes with **no warranty*
 
 The complete explanation, including third-party components and the brand assets, is on
 [the licence page](../concepts/license.md).
-
-Snodra is not affiliated with Axon Framework, Axon Server or AxonIQ; those names appear only to
-describe the problem the project addresses.

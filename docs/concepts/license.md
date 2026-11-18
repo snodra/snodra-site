@@ -34,8 +34,3 @@ The stack uses Apache Kafka, MongoDB, RustFS, Spring Boot, tonic and librdkafka,
 its own licence. The server image contains those dependencies; redistributing it means honouring their
 notices. Run `cargo metadata` or the dependency report of each repository for the exact set at a
 given tag.
-
-## No affiliation
-
-Snodra is not affiliated with Axon Framework, Axon Server or AxonIQ. Those names appear only to
-explain which problem the project addresses and why it is built differently.

@@ -52,41 +52,35 @@ What the hub deliberately does not do, and what is planned next.
   client's next renewal. Certificate revocation checks (CRL, OCSP) if short-lived certificates turn
   out not to be enough.
 - Optional Kafka-backed command buffering for `NO_HANDLER` cases.
-- The resilience gap to Axon Server, below.
+- The resilience improvements, below.
 
-### Future features: closing the resilience gap to Axon Server
+### Resilience
 
 Measured on 2026-10-30 with the examples sandbox (`snodra-messaging/examples`, see
 [07-local-development.md](quickstart.md)): service A calling
 service B through the hub while B was stopped, killed mid-request, and cut off the network. The
-three failure shapes match Axon Server's, the timings and one structural feature do not. Axon Server
-values are the documented defaults of Axon Server 4.x / 2026.x (sources at the end of this section).
-The "snodra-server" column shows the hub and libraries as they are now.
+table shows how the hub and libraries behave now.
 
-| Scenario | Axon Server | snodra-server | Gap |
-|---|---|---|---|
-| Handler stopped cleanly | `AXONIQ-4000 NO HANDLER FOR COMMAND` (`AXONIQ-5000` for queries), immediate; nothing queued | `NO_HANDLER`, immediate; nothing queued | none |
-| Handler lost mid-request | `AXONIQ-4001 CONNECTION TO HANDLER LOST`; outcome unknown, caller decides | `HANDLER_DISCONNECTED`; same semantics | none |
-| Handler alive but unreachable (partition, frozen JVM) | detected by gRPC keep-alive (ping 2.5 s, timeout 5 s) plus a client application heartbeat (every 10 s, 7.5 s to answer): dead peer gone in ~5-10 s | heartbeat every 3 s, evicted after 10 s (checked every second); HTTP/2 keepalive from the client too (10 s / 5 s, while idle) | **closed (F1)**: same order as Axon; a call whose timeout exceeds 10 s ends with `HANDLER_DISCONNECTED` after ~10-11 s instead of waiting 30 s |
-| Client reconnect after a drop | fixed ~2 s between attempts | exponential backoff 500 ms → 5 s with ±20 % jitter, reset once an attempt reaches the handshake | **closed (F2)**: a healed service is back within 5 s of the hub being reachable |
-| Request timeout default | 300 000 ms, enforced server-side, one knob | 5 s hub default, per-type overrides (`SNODRA_SERVER_TIMEOUT_OVERRIDES`), clamp 60 s; clients send 0 unless the caller chose a timeout | different philosophy, not a defect: short timeouts suit a BFF-driven system; long-running types get an override (F4) |
-| Busy handler (no free capacity) | flow control: handlers grant permits; the server caches up to 10 000 requests per client waiting for permits (`command-queue-capacity-per-client`), rejects beyond that | flow control (P1): handlers grant `max-concurrent-handlers` permits and one per completed handler; the hub queues up to 10 000 requests or 64 MiB per instance, by priority then age, each with its own deadline; beyond that `RESOURCE_EXHAUSTED` (`HandlerBusyException`) | **closed (F3)** |
-| Caller-side retry | optional `RetryScheduler` in the caller, retries transient errors only | opt-in `RetryPolicy` in both libraries (P1), transient codes only, fresh request id per attempt, within the caller's time budget | **closed (F5)** |
+| Scenario | Snodra Server | Notes |
+|---|---|---|
+| Handler stopped cleanly | `NO_HANDLER`, immediate; nothing queued | The handler never ran, so a command may be retried at once. |
+| Handler lost mid-request | `HANDLER_DISCONNECTED`; outcome unknown, the caller decides | The handler may have run; retry only with an idempotent handler and the same business command id. |
+| Handler alive but unreachable (partition, frozen JVM) | heartbeat every 3 s, evicted after 10 s (checked every second); HTTP/2 keepalive from the client too (10 s / 5 s, while idle) | **closed (F1)**: a call whose timeout exceeds 10 s ends with `HANDLER_DISCONNECTED` after ~10-11 s instead of waiting 30 s. |
+| Client reconnect after a drop | exponential backoff 500 ms → 5 s with ±20 % jitter, reset once an attempt reaches the handshake | **closed (F2)**: a healed service is back within 5 s of the hub being reachable. |
+| Request timeout default | 5 s hub default, per-type overrides (`SNODRA_SERVER_TIMEOUT_OVERRIDES`), clamp 60 s; clients send 0 unless the caller chose a timeout | Short timeouts suit a BFF-driven system; long-running types get an override (F4). |
+| Busy handler (no free capacity) | flow control (P1): handlers grant `max-concurrent-handlers` permits and one per completed handler; the hub queues up to 10 000 requests or 64 MiB per instance, by priority then age, each with its own deadline; beyond that `RESOURCE_EXHAUSTED` (`HandlerBusyException`) | **closed (F3)** |
+| Caller-side retry | opt-in `RetryPolicy` in both libraries (P1), transient codes only, fresh request id per attempt, within the caller's time budget | **closed (F5)** |
 
-Features, in the order they are worth doing:
+Improvements, in the order they are worth doing:
 
 | Id | Feature | Change | Notes |
 |---|---|---|---|
 | F1 | **Faster dead-peer detection** — **done in P0** | Hub: sessions are evicted after 10 s (`SNODRA_SERVER_HEARTBEAT_TIMEOUT`) and told to heartbeat every 3 s (`SNODRA_SERVER_HEARTBEAT_INTERVAL`, `RegisterAck`). Clients: interval from the ack, HTTP/2 keepalive pings 10 s / 5 s also while idle. | Costs one tiny frame every 3 s per instance and a higher false-positive risk under long GC pauses: with a 3 s cadence and a 10 s timeout, a pause of about 7-10 s (depending on where in the heartbeat cycle it starts) can already evict, which is why the timeout stays at three intervals or more. Sandbox smoke step 10 pauses service-b and expects the failure in about 10 s. |
-| F2 | **Bounded reconnect backoff** — **done in P0** | Clients: `reconnect-backoff.max` 30 s → 5 s, ±20 % jitter (the jittered wait never exceeds the maximum), backoff back to the floor once an attempt reached the handshake (the ack). | Axon reconnects every ~2 s flat. A 5 s cap keeps the thundering-herd protection for a hub restart while bringing a healed service back within seconds; the client libraries' tests assert re-registration within 5 s of a hub restart. |
+| F2 | **Bounded reconnect backoff** — **done in P0** | Clients: `reconnect-backoff.max` 30 s → 5 s, ±20 % jitter (the jittered wait never exceeds the maximum), backoff back to the floor once an attempt reached the handshake (the ack). | A 5 s cap keeps the thundering-herd protection for a hub restart while bringing a healed service back within seconds; the client libraries' tests assert re-registration within 5 s of a hub restart. |
 | F3 | **Per-handler flow control (permits)** — **done in P1** | Protocol: `Register.initial_permits`, `Permits{count}`, `Request.priority`, `ErrorCode.RESOURCE_EXHAUSTED`. Hub: per-instance queue (priority, then age) with `SNODRA_SERVER_QUEUE_CAPACITY_PER_INSTANCE` (10 000) and `SNODRA_SERVER_QUEUE_BYTES_PER_INSTANCE` (64 MiB); forwards only with a permit; queued requests keep their deadline; a full queue answers `RESOURCE_EXHAUSTED`. Clients grant `max-concurrent-handlers` permits up front and one per completed handler (at once when few are left at the hub, else batched: 16 or 50 ms). Queued requests are routed again when their instance leaves, taken over when it reconnects; a hub-wide byte cap `SNODRA_SERVER_QUEUE_BYTES_TOTAL` (512 MiB). Topology shows `permitsAvailable` and `queued`. | ADR 0014. The sandbox smoke's flow-demo steps run 20 parallel calls into a one-permit, slowed service-b and expect all to succeed. |
 | F4 | **Server-side default and maximum timeout alignment** — **done in P0** | Hub: per-type override `SNODRA_SERVER_TIMEOUT_OVERRIDES=type=ms,...`; effective timeout `min(timeout_ms, override or max)` for `timeout_ms > 0`, `override or default` for 0. Clients: send `timeout_ms = 0` unless the caller chose a timeout, guard locally with the ack's per-type or maximum timeout + 1 s. | The 5 s default stays; overrides are for the few long-running types. |
-| F5 | **Caller-side retry policy in the starter** — **done in P1** | Both libraries: opt-in `RetryPolicy` (`hub.retry.enabled=false`, 3 attempts, 100 ms doubling to 2 s) per bus and per call (`SendOptions.retry`). Commands retry `HubUnavailable`, `NO_HANDLER`, `RESOURCE_EXHAUSTED` (the handler never ran); queries also `HANDLER_DISCONNECTED`, `TIMEOUT`, `HubConnectionLost`; never a command after `TIMEOUT` or `HubConnectionLost`. Fresh request id per attempt, all attempts within the caller's time budget; waits get ±20 % jitter and a retry starts only with at least `max(initial backoff, 250 ms)` of the budget left after its wait; the classification is one function, reused later by the saga relay. | Mirrors Axon's transient/non-transient split; off by default, so the semantics in `02-messaging.md` stay exact. |
+| F5 | **Caller-side retry policy in the starter** — **done in P1** | Both libraries: opt-in `RetryPolicy` (`hub.retry.enabled=false`, 3 attempts, 100 ms doubling to 2 s) per bus and per call (`SendOptions.retry`). Commands retry `HubUnavailable`, `NO_HANDLER`, `RESOURCE_EXHAUSTED` (the handler never ran); queries also `HANDLER_DISCONNECTED`, `TIMEOUT`, `HubConnectionLost`; never a command after `TIMEOUT` or `HubConnectionLost`. Fresh request id per attempt, all attempts within the caller's time budget; waits get ±20 % jitter and a retry starts only with at least `max(initial backoff, 250 ms)` of the budget left after its wait; the classification is one function, reused later by the saga relay. | Splits errors into transient and non-transient; off by default, so the semantics in `02-messaging.md` stay exact. |
 
-Not planned: Axon Server's 5 minute default timeout and in-memory command cache sized from JVM
+Not planned: a multi-minute default timeout and an in-memory command cache sized from JVM
 memory. The hub keeps short, caller-chosen deadlines; long work belongs behind an event.
 
-Sources: [Axon Server error codes](https://docs.axoniq.io/axon-server-reference/v2024.2/axon-server/administration/error-codes/),
-[Axon Server system properties](https://docs.axoniq.io/axon-server-reference/v2026.1/axon-server/administration/admin-configuration/configuration/),
-[Heartbeat monitoring](https://docs.axoniq.io/axon-server-reference/v2026.0/axon-server/administration/monitoring/heartbeat-monitoring/),
-[Framework `HeartbeatConfiguration`](https://apidocs.axoniq.io/4.13/org/axonframework/axonserver/connector/AxonServerConfiguration.HeartbeatConfiguration.html).

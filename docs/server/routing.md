@@ -133,13 +133,13 @@ Consequences of these rules:
   sender gets `RESOURCE_EXHAUSTED` (`handler busy: <reason>`).
 
 > routing granularity is per service. All live instances of the owning service
-> are routing targets, on the Axon-style assumption that every instance of a service handles the
+> are routing targets, on the assumption that every instance of a service handles the
 > same types (homogeneity). During a mixed-version rollout a request may reach an instance that no
 > longer handles the type; that instance's library answers `NO_HANDLER` and the sender sees a
 > transient `NoHandlerException`.
 
 Why hash commands: it lets a service keep per-aggregate in-memory state or locks safely when it runs
-more than one instance, which is what Axon's routing key provided. Queries have no such need.
+more than one instance, which is what the routing key provides. Queries have no such need.
 
 Scatter-gather, streaming queries, subscription queries and shared query types: see
 [Query modes](protocol.md#query-modes) and the client APIs in [Client APIs](protocol.md). A screen that

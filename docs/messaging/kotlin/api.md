@@ -396,7 +396,7 @@ result.updates.collect { change -> render(change) }   // completes when the hand
 ## Sagas
 
 A saga is a long-running process that reacts to events, keeps its own state, sends commands and events, waits for an answer and
-handles the answer that never comes. It is Axon's `@Saga` model (`@StartSaga`, `@SagaEventHandler` with association properties,
+handles the answer that never comes. It is the saga model (`@StartSaga`, `@SagaEventHandler` with association properties,
 `@EndSaga`, deadlines), built mainly to drive **integrations with external systems**. Sagas run inside your service, against its
 MongoDB and its Kafka consumer; the hub is not involved except to carry the commands a saga sends to another service.
 

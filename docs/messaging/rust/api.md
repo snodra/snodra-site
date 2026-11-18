@@ -481,7 +481,7 @@ while let Some(update) = updates.next().await { let tick = update?; /* in the hu
 ## Event processors
 
 Each **event processor** is its own Kafka consumer on the events topic, with its own consumer
-group, position, markers, dead letters and failure domain (ADR 0022; Axon's processing groups, the
+group, position, markers, dead letters and failure domain (ADR 0022; processing groups, the
 Kotlin starter's `@ProcessingGroup`). A slow or failing handler in one processor never holds
 another.
 

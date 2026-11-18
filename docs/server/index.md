@@ -7,7 +7,7 @@ straight to Kafka.
 
 ## Why run it
 
-- **No Axon Server and no event store.** The hub keeps only an in-memory registry. Kill it and
+- **No external event store.** The hub keeps only an in-memory registry. Kill it and
   clients reconnect and re-register; there is nothing to back up.
 - **No per-service plumbing.** Registration, health, request deadlines, retries and flow control
   live in the hub and in one client library, not in every service.
