@@ -1,6 +1,36 @@
 # Server settings
 
-Every setting is an environment variable. An empty value means *unset* for all of them; `SNODRA_SERVER_OTLP_ENDPOINT` is unset by default, so a server exports no telemetry until you name a collector. Durations accept `30`, `30s`, `500ms` and `5m`.
+Every setting is an environment variable **and** a flag: `SNODRA_SERVER_LISTEN` is `--listen`, and a flag
+wins over the variable. An empty value means *unset* for all of them; `SNODRA_SERVER_OTLP_ENDPOINT` is
+unset by default, so a server exports no telemetry until you name a collector. Durations accept `30`,
+`30s`, `500ms` and `5m`.
+
+`snodra-server --help` lists the flags; `snodra-server --version` prints the release.
+The common ones, with their variables:
+
+| Flag | Variable | Default |
+|---|---|---|
+| `--listen <addr>` | `SNODRA_SERVER_LISTEN` | `0.0.0.0:7000` |
+| `--http-listen <addr\|"">` | `SNODRA_SERVER_HTTP_LISTEN` | `0.0.0.0:7001`; empty disables it |
+| `--id <id>` | `SNODRA_SERVER_ID` | hostname + 8 random hex digits |
+| `--log <filter>` | `SNODRA_SERVER_LOG` | `info` |
+| `--log-format <text\|json>` | `SNODRA_SERVER_LOG_FORMAT` | `text`; `json` for a collector |
+| `--otlp-endpoint <url\|"">` | `SNODRA_SERVER_OTLP_ENDPOINT` | off |
+| `--auth-mode <off\|permissive\|enforce>` | `SNODRA_SERVER_AUTH_MODE` | `permissive` |
+| `--acl-file <path>` | `SNODRA_SERVER_ACL_FILE` | none |
+| `--dashboard-token-file <path>` | `SNODRA_SERVER_DASHBOARD_TOKEN_FILE` | none |
+| `--write-token-file <path>` | `SNODRA_SERVER_DASHBOARD_WRITE_TOKEN_FILE` | none |
+| `--jwt-issuer <iss>`, `--jwt-jwks-uri <url>`, `--jwt-audience <aud>` | `SNODRA_SERVER_JWT_*` | none |
+| `--tls-cert <pem>` `--tls-key <pem>` | `SNODRA_SERVER_TLS_CERT` / `_TLS_KEY` | none |
+| `--http-tls-cert <pem>` `--http-tls-key <pem>` | `SNODRA_SERVER_HTTP_TLS_CERT` / `_KEY` | the gRPC pair |
+| `--grafana-url <url>` | `SNODRA_SERVER_GRAFANA_URL` | none |
+| `--peers <url[,url]>` | `SNODRA_SERVER_PEERS` | none |
+
+```sh
+snodra-server --listen 0.0.0.0:7000 --log-format json --auth-mode enforce --acl-file /etc/snodra/acl.toml
+```
+
+The rest of the settings on this page are environment variables only.
 
 ## Identity and listeners
 
