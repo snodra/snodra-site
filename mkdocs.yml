@@ -122,6 +122,9 @@ markdown_extensions:
   - attr_list
   - md_in_html
   - tables
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
   - toc:
       permalink: true
   - pymdownx.highlight
