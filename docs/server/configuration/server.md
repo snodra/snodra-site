@@ -83,7 +83,7 @@ Every setting is an environment variable. An empty value means *unset* for all o
 | Variable | Default | Meaning |
 |---|---|---|
 | `SNODRA_SERVER_KAFKA_BOOTSTRAP` | none | Kafka bootstrap servers the event browser reads (plaintext); unset: the event browser and the consumer groups are off (404) and their pages hidden |
-| `SNODRA_SERVER_EVENT_TOPICS` | `kraken.events` | the only topics the event browser and its tail read, comma-separated, the first the default; a `<topic>.dlt` is browsable when listed |
+| `SNODRA_SERVER_EVENT_TOPICS` | `snodra.events` | the only topics the event browser and its tail read, comma-separated, the first the default; a `<topic>.dlt` is browsable when listed |
 | `SNODRA_SERVER_EVENT_BROWSER_PAYLOADS` | `false` | serve event payloads (record detail, `q`) to a request that presents the dashboard or write token (a token must be configured too) |
 | `SNODRA_SERVER_EVENT_SEARCH_MAX_SCANNED` | `50000` | records one search reads from Kafka at most |
 | `SNODRA_SERVER_EVENT_SEARCH_MAX_RESULTS` | `100` | results one search page returns at most (1 to 1000) |

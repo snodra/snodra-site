@@ -11,8 +11,7 @@ server and a client of different builds are not supported. Every session has eve
 control, query modes, status reports, credential refresh, processor control.
 
 The package name is the boundary. A change that is not compatible belongs in a new package, and a
-server and its clients must be on the same side of it. The rename from `kraken.hub.v1` is exactly
-such a boundary; a 0.5 server and a `kraken` client do not talk.
+server and its clients must be on the same side of it.
 
 ## What the package guarantees
 
@@ -41,15 +40,14 @@ such a boundary; a 0.5 server and a `kraken` client do not talk.
 
 ## Data compatibility
 
-Within `snodra.hub.v1` and across the rename, the stored data keeps its shape:
+Within `snodra.hub.v1`, the stored data keeps its shape:
 
-- **Event store**: the record's key, headers and value; the topic `kraken.events` and its `.dlt`
+- **Event store**: the record's key, headers and value; the topic `snodra.events` and its `.dlt`
   companion; consumer groups `<service>.<processor>`.
 - **MongoDB**: collections `outbox`, `processed_events`, `dead_letters`, `processor_control`,
   `external_calls`, `sagas`, `saga_dispatch`, `deadlines`, `saga_failures`, with explicit fields and
   no `_class`.
-- **SQL**: schema version `1`; the tables are `snodra_*` after the rename, with the same columns,
-  indexes and values as the `kraken_*` tables.
+- **SQL**: schema version `1`; the tables are `snodra_*`, with explicit columns, indexes and values.
 
 A Kotlin and a Rust instance can share one event store and one message store. That is a supported
 layout, not a compatibility accident: the two libraries are tested against the same record and
@@ -59,4 +57,3 @@ document contracts.
 
 - The complete contract: [Protocol](../server/protocol.md).
 - The failure table: [Lifecycle](../server/lifecycle.md).
-- The rename: [From kraken](from-kraken.md).

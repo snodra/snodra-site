@@ -24,7 +24,7 @@ services:
     environment:
       SNODRA_SERVER_ADDRESS: static://snodra-server:7000
       SNODRA_KAFKA_BOOTSTRAP: kafka:19092
-      SNODRA_EVENT_BROWSER_SOURCES: kraken.events
+      SNODRA_EVENT_BROWSER_SOURCES: snodra.events
       SNODRA_OTLP_ENDPOINT: http://otel-lgtm:4317
     stop_grace_period: 30s
     depends_on:
@@ -54,7 +54,7 @@ The server-side settings are `SNODRA_SERVER_EVENT_*` and `SNODRA_SERVER_KAFKA_BO
 | Variable | Default | Meaning |
 |---|---|---|
 | `SNODRA_EVENT_STORE` | `kafka` | The store to read |
-| `SNODRA_EVENT_BROWSER_SOURCES` | `kraken.events` | Comma-separated sources; the first is the default |
+| `SNODRA_EVENT_BROWSER_SOURCES` | `snodra.events` | Comma-separated sources; the first is the default |
 | `SNODRA_EVENT_BROWSER_MAX_SCANNED` | `50000` | Records one search reads at most |
 | `SNODRA_EVENT_BROWSER_MAX_RESULTS` | `100` | Results one page returns at most |
 | `SNODRA_EVENT_BROWSER_TIMEOUT_MS` | `10000` | Time budget of one call |

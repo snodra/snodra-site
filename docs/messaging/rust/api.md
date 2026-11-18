@@ -566,7 +566,7 @@ time, started later) converges:
 ```text
 { _id: "audit", paused: false, pausedAt: null, pausedBy: null,
   operation: { id: "<uuid>", kind: "reset", leaseUntil: Date, preparedAt: Date } | null,
-  replay: [ { topic: "kraken.events", partition: 0, from: 120, until: 450 } ],
+  replay: [ { topic: "snodra.events", partition: 0, from: 120, until: 450 } ],
   updatedAt: Date }
 ```
 

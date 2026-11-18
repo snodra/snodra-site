@@ -20,8 +20,8 @@ the container); `tests/hub_pool.rs` runs
 the multi-hub rules against in-process fake hubs. Without Docker the integration tests print a notice and skip; with Docker but no hub
 image they fail with the build command. On Rancher Desktop export
 `DOCKER_HOST=unix://$HOME/.rd/docker.sock` first. A unit test and `scripts/check-proto-sync.sh` (CI
-job `proto-sync`) check that `proto/hub.proto` is byte-identical to `../kraken/protocol/hub.proto`
-whenever the umbrella checkout exists.
+job `proto-sync`) check that `proto/hub.proto` is byte-identical to the server's
+`protocol/hub.proto` in `../snodra-server` whenever that checkout exists.
 
 ## Example
 

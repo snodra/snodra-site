@@ -6,8 +6,8 @@ The embedded UI: topology, processors, dead letters and the event browser.
 
 A web dashboard is compiled into the binary and served on the HTTP port: open
 `http://localhost:7001/` (it redirects to `/ui/`). It shows what the topology view shows, plus who
-calls whom and how that goes, and controls the services' event processors. Decision record:
-umbrella `docs/adr/0015-embedded-hub-dashboard.md`.
+calls whom and how that goes, and controls the services' event processors. Decision record: ADR 0015,
+embedded hub dashboard.
 
 > **Authentication is opt-in for reads.** Without `SNODRA_SERVER_DASHBOARD_TOKEN` the dashboard and
 > the reads of `/api/v1/` are open to anyone who reaches port 7001: keep the
@@ -202,7 +202,7 @@ package manager and no build step; the files are compiled into the binary with `
 
 ### Multiple hubs
 
-Decision record: umbrella `docs/adr/0016-multi-hub-ha-without-hub-to-hub-traffic.md`. Hubs never
+Decision record: ADR 0016, multi-hub HA without hub-to-hub traffic. Hubs never
 talk to each other; each instance connects to every hub. The hub side:
 
 - **Instance status.** A client sends `ClientMessage.status`

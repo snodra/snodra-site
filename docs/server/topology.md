@@ -121,7 +121,7 @@ two additions to the registry rules.
   type that the owner holds as a command) is rejected with `ALREADY_EXISTS`. A type's kind cannot
   change while it is owned; change it only after every instance of the owner has left and the
   owner grace sweep has removed the type.
-- Shared query types (`Register.shared_query_types`, umbrella ADR 0017): a type registered
+- Shared query types (`Register.shared_query_types`, ADR 0017): a type registered
   exclusive by one registrant and shared by another (even of the same service) fails the later
   `Register` with `ALREADY_EXISTS`; a type listed as shared and as a command or exclusive query in
   one `Register` is `INVALID_ARGUMENT`. Like a kind, the flag changes only once the type is gone.

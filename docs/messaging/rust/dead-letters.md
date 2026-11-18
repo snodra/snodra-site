@@ -41,16 +41,16 @@ use snodra_messaging::processors::{RetryResult, DEFAULT_LIST_LIMIT};
 
 let letters = app.dead_letters();
 for letter in letters.list(Some("projections"), DEFAULT_LIST_LIMIT).await? { /* parkedAt, then _id */ }
-let one = letters.get("projections:kraken.events:1:42").await?;           // Option<DeadLetterDocument>
+let one = letters.get("projections:snodra.events:1:42").await?;           // Option<DeadLetterDocument>
 let n = letters.count(None).await?;                                        // every processor
-match letters.retry("projections:kraken.events:1:42").await? {
+match letters.retry("projections:snodra.events:1:42").await? {
     RetryResult::Retried | RetryResult::Duplicate => {}                    // deleted
     RetryResult::Failed(message) => {}                                     // attempts + 1, kept
     RetryResult::Blocked(head_id) => {}                                    // retry or discard the head first
     RetryResult::NotRetriable | RetryResult::NotFound => {}                // INVALID / no such letter
 }
 let all = letters.retry_all("projections").await?;                         // RetryAllResult { retried, failed, blocked, skipped }
-let gone = letters.discard("projections:kraken.events:1:43").await?;       // true when deleted
+let gone = letters.discard("projections:snodra.events:1:43").await?;       // true when deleted
 ```
 
 - **Any instance** of the service serves it, for the processors with handlers there (whether or

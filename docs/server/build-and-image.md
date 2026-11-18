@@ -59,7 +59,7 @@ releases (`<version>`) to `snodra/snodra-server:<tag>` and `:latest`.
 snodra-server/
 ├── Cargo.toml            # bin "snodra-server"; deps tonic, prost, tokio, tracing, opentelemetry, snodra-messaging (codec feature only)
 ├── build.rs              # tonic-build over protocol/hub.proto (git submodule at ./protocol)
-├── protocol/             # git submodule -> kraken/protocol
+├── protocol/             # git submodule: the server's proto
 ├── src/
 │   ├── main.rs           # config, telemetry init, server start
 │   ├── config.rs         # SNODRA_SERVER_* settings, effective request timeout
@@ -84,7 +84,7 @@ snodra-server/
 │   └── telemetry.rs
 ├── ui/                   # the dashboard: index.html, app.css, plain JavaScript modules, no third-party code
 ├── tests/                # integration tests over a real tonic server (connect.rs, topology.rs, http.rs, dashboard_api.rs, dashboard_ui.rs, cli.rs, auth.rs, tls.rs, dashboard_auth.rs among them); event_browser.rs against a Kafka Testcontainer
-├── scripts/check-proto-sync.sh   # SHA-256 of proto/hub.proto against kraken/protocol/hub.proto
+├── scripts/check-proto-sync.sh   # SHA-256 of proto/hub.proto against the published server's proto
 └── Dockerfile
 ```
 

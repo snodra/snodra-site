@@ -89,20 +89,20 @@ An instance's answer, wherever it appears: `{"result":"ok"|"refused"|"timeout"|"
 
 // GET .../dead-letters?limit=50  (200)
 { "service": "service-b", "processor": "audit", "instanceId": "b-1", "total": 3,
-  "letters": [ { "id": "audit:kraken.events:1:141", "processor": "audit", "topic": "kraken.events",
+  "letters": [ { "id": "audit:snodra.events:1:141", "processor": "audit", "topic": "snodra.events",
                  "partition": 1, "offset": 141, "key": "order-7", "eventId": "...", "eventType": "examples.OrderPlaced",
                  "reason": "HANDLER_FAILED", "errorType": "IllegalStateException", "errorMessage": "boom",
                  "blockedBy": "", "attempts": 3, "parkedAtMs": 1762250000000, "lastAttemptAtMs": 1762250001000 } ] }
 
 // POST .../dead-letters/{id}/retry  (200; Blocked or NotRetriable 409, NotFound 404, same body)
-{ "service": "service-b", "processor": "audit", "instanceId": "b-1", "letterId": "audit:kraken.events:1:141",
+{ "service": "service-b", "processor": "audit", "instanceId": "b-1", "letterId": "audit:snodra.events:1:141",
   "result": "Retried", "detail": "" }
 
 // POST .../dead-letters/retry-all  (200)
 { "service": "service-b", "processor": "audit", "instanceId": "b-1", "retried": 2, "failed": 0, "blocked": 1, "skipped": 0 }
 
 // DELETE .../dead-letters/{id}  (200; a missing letter 404)
-{ "service": "service-b", "processor": "audit", "instanceId": "b-1", "letterId": "audit:kraken.events:1:141", "discarded": true }
+{ "service": "service-b", "processor": "audit", "instanceId": "b-1", "letterId": "audit:snodra.events:1:141", "discarded": true }
 ```
 
 `Failed` from a retry is a 200: the retry ran and the handler threw again (`detail` says what); the letter stays. A
@@ -121,9 +121,9 @@ curl -s -X POST -H "$W" -H 'Content-Type: application/json' -d '{"to":{"timestam
 curl -s -X POST -H "$W" -H 'Content-Type: application/json' \
   -d '{"to":{"offsets":[{"partition":0,"offset":120},{"partition":1,"offset":98}]}}' "$HUB/reset"
 curl -s -H "Authorization: Bearer $SNODRA_SERVER_DASHBOARD_TOKEN" "$HUB/dead-letters?limit=20"
-curl -s -X POST -H "$W" "$HUB/dead-letters/audit:kraken.events:1:141/retry"
+curl -s -X POST -H "$W" "$HUB/dead-letters/audit:snodra.events:1:141/retry"
 curl -s -X POST -H "$W" "$HUB/dead-letters/retry-all"
-curl -s -X DELETE -H "$W" "$HUB/dead-letters/audit:kraken.events:1:141"
+curl -s -X DELETE -H "$W" "$HUB/dead-letters/audit:snodra.events:1:141"
 ```
 
 With an ACL credential instead of the write token, its entry needs `control = true`:

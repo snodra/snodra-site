@@ -20,8 +20,8 @@ The library never creates them. The source is a super stream, and the dead-lette
 stream:
 
 ```sh
-rabbitmq-streams add_super_stream kraken.events --partitions 6
-rabbitmqadmin declare queue --name kraken.events.dlt --type stream --durable true
+rabbitmq-streams add_super_stream snodra.events --partitions 6
+rabbitmqadmin declare queue --name snodra.events.dlt --type stream --durable true
 ```
 
 A missing super stream fails publishes (the relay retries) and subscriptions (they retry after a

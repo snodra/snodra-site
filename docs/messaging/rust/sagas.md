@@ -51,7 +51,7 @@ let app = SnodraMessaging::builder(Config::from_env()?).await?
         let printer = printer.clone();
         async move { printer.submit(&c, &ctx.headers["idempotency-key"]).await }
     })
-    // A partner's Kafka topic: records become local events (never republished to kraken.events).
+    // A partner's Kafka topic: records become local events (never republished to snodra.events).
     .external_source("printer-banner", ExternalSource::new("printer.banner.events"), |record| {
         // Malformed never heals: InvalidMessage skips the record at once (a bare `?` is Serialization, retried first).
         let n: Notification = serde_json::from_slice(record.payload().unwrap_or_default())

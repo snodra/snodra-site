@@ -9,7 +9,7 @@
 | `SNODRA_SERVER_ADDRESS` | `static://snodra-server:7000` | the hub's gRPC target (`static://` optional), a comma-separated list of them, or one `dns:///name:port` re-resolved every 30 s (see [Multiple hubs](api.md#multiple-hubs)); one target is the single-hub setup |
 | `SNODRA_SERVER_STATUS_INTERVAL_MS` | 5000 | how often `InstanceStatus` goes to every hub (at least 1) |
 | `SNODRA_KAFKA_BOOTSTRAP` | `kafka:19092` | |
-| `SNODRA_KAFKA_TOPIC` | `kraken.events` | |
+| `SNODRA_KAFKA_TOPIC` | `snodra.events` | |
 | `SNODRA_JWKS_URL`, `SNODRA_ISSUER` | unset | set both to verify forwarded tokens (RS256, `exp`, `iss`); unset = read signed tokens unverified, warned once |
 | `SNODRA_SERVER_REQUEST_TIMEOUT_MS` | unset | default request timeout, sent as `timeout_ms` (`SendOptions.timeout` wins per call). Unset: the hub gets `timeout_ms = 0` and applies its per-type override or its default (5 s). `0` counts as unset (here and for `SendOptions.timeout`) |
 | `SNODRA_RECONNECT_BACKOFF_MIN_MS` / `_MAX_MS` | 500 / 5000 | exponential, each wait ±20 % jitter and never above the max (at the max: 80-100 % of it); back to the min once a connect reached the handshake; the min and the max must each be at least 1 ms and the max not below the min (a startup error otherwise) |

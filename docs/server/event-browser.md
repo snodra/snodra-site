@@ -66,10 +66,10 @@ curl -s -H "$H" 'http://localhost:7001/api/v1/events?type=orders.*&from=2026-11-
 
 ```json
 {
-  "topic": "kraken.events",
+  "topic": "snodra.events",
   "results": [
     {
-      "topic": "kraken.events", "partition": 3, "offset": 1841, "timestamp": 1793871062114,
+      "topic": "snodra.events", "partition": 3, "offset": 1841, "timestamp": 1793871062114,
       "key": "order-42",
       "headers": {
         "type": "orders.OrderShipped", "id": "0193e6f0-...", "correlationId": "c-7f1e...",
@@ -78,7 +78,7 @@ curl -s -H "$H" 'http://localhost:7001/api/v1/events?type=orders.*&from=2026-11-
       },
       "size": 212
     },
-    { "topic": "kraken.events", "partition": 0, "offset": 977, "timestamp": 1793871060020, "key": "order-42",
+    { "topic": "snodra.events", "partition": 0, "offset": 977, "timestamp": 1793871060020, "key": "order-42",
       "headers": { "type": "orders.OrderPlaced", "id": "0193e6ef-...", "source": "service-a" }, "size": 388 }
   ],
   "scanned": 1500,
@@ -92,13 +92,13 @@ A result is a **summary**, never a payload: where the record is, its timestamp (
 without one; at most 128 bytes, `keyTruncated: true` when cut), the library headers it carries (at most 256 bytes each)
 and the payload's size in bytes. The next page: the same query plus `&cursor=<cursor>`.
 
-**Record**: `GET /api/v1/events/kraken.events/3/1841` answers the summary plus `allHeaders` (every header in record
+**Record**: `GET /api/v1/events/snodra.events/3/1841` answers the summary plus `allHeaders` (every header in record
 order, at most 64, `headersOmitted` counts the rest: `name` at most 128 bytes, `value` at most 1 KiB, or `valueHex` when
 the value is not UTF-8, `truncated` when cut) and the payload:
 
 ```json
 {
-  "topic": "kraken.events", "partition": 3, "offset": 1841, "timestamp": 1793871062114, "key": "order-42",
+  "topic": "snodra.events", "partition": 3, "offset": 1841, "timestamp": 1793871062114, "key": "order-42",
   "headers": { "type": "orders.OrderShipped", "id": "0193e6f0-...", "source": "service-b" },
   "size": 212,
   "allHeaders": [
@@ -121,10 +121,10 @@ and answers `text/event-stream` (the page reads it with `fetch`, so the token st
 
 ```text
 event: start
-data: {"topic":"kraken.events","partitions":6,"endsAtMs":1793872800000}
+data: {"topic":"snodra.events","partitions":6,"endsAtMs":1793872800000}
 
 event: record
-data: {"topic":"kraken.events","partition":1,"offset":5310,"timestamp":1793871903001,"key":"order-43","headers":{"type":"orders.OrderPlaced"},"size":390}
+data: {"topic":"snodra.events","partition":1,"offset":5310,"timestamp":1793871903001,"key":"order-43","headers":{"type":"orders.OrderPlaced"},"size":390}
 
 event: heartbeat
 data: {"nowMs":1793871915000}
@@ -138,21 +138,21 @@ data: {"reason":"maxDuration"}
 `maxDuration` (`SNODRA_SERVER_EVENT_TAIL_DURATION`), `slowReader` (the reader fell 256 records behind; Kafka reading never
 waits for a reader) or `shutdown`.
 
-**Consumer groups**: `GET /api/v1/consumer-groups?topic=kraken.events`:
+**Consumer groups**: `GET /api/v1/consumer-groups?topic=snodra.events`:
 
 ```json
 {
-  "topic": "kraken.events",
+  "topic": "snodra.events",
   "groups": [
     {
-      "groupId": "service-c.audit", "state": "Empty", "members": 0, "topic": "kraken.events",
+      "groupId": "service-c.audit", "state": "Empty", "members": 0, "topic": "snodra.events",
       "partitions": [
         { "partition": 0, "committed": 120, "highWatermark": 131, "lag": 11 },
         { "partition": 1, "committed": null, "highWatermark": 4, "lag": null }
       ],
       "lag": 11
     },
-    { "groupId": "service-b.default", "state": "Stable", "members": 2, "topic": "kraken.events",
+    { "groupId": "service-b.default", "state": "Stable", "members": 2, "topic": "snodra.events",
       "partitions": [ { "partition": 0, "committed": 131, "highWatermark": 131, "lag": 0 } ], "lag": 0 }
   ],
   "truncated": false

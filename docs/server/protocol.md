@@ -66,14 +66,14 @@ with `HubClient::new(channel)`.
 
 ### Flow control
 
-Decision record: umbrella `docs/adr/0014-hub-flow-control-and-priority.md`.
+Decision record: ADR 0014, hub flow control and priority.
 
 - Every session is **flow-controlled** with the `Register.initial_permits` it sent (at least 1):
   the hub forwards it a request only while it has a permit (one per
   forward) and adds permits on every `Permits{count}` it sends, never beyond its cap. The cap
   starts at `initial_permits`; a `Permits.grant > 0` from the session first raises it to
   `max(cap, grant)` (a grant never lowers it), which is how a multi-hub client moves a departed
-  hub's share to the surviving hubs (umbrella ADR 0016). A stream opens its flow state before its
+  hub's share to the surviving hubs (ADR 0016). A stream opens its flow state before its
   session becomes current, so a
   request for the session always finds it; a request for a session whose flow is gone fails with
   `HANDLER_DISCONNECTED` instead of going out unmetered. Of two concurrent handshakes of one
@@ -114,8 +114,8 @@ Decision record: umbrella `docs/adr/0014-hub-flow-control-and-priority.md`.
 
 ### Query modes
 
-Decision record: umbrella `docs/adr/0017-query-modes-and-shared-query-types.md`; details in
-umbrella `https://snodra.damoreira.com/server/` (Query modes).
+Decision record: ADR 0017, query modes and shared query types; details in
+[Query modes](https://snodra.damoreira.com/server/) on this site.
 
 - **Shared query types.** `Register.shared_query_types` lists query types many services may own
   (exclusive `query_types` keep the one-owner rule). A point query on a shared type goes to one

@@ -59,7 +59,7 @@ All keys (`snodra.messaging.*`; durations accept `200ms`, `5s`, `7d`; relaxed bi
 | `hub.retry.multiplier` | `2` | Growth of the wait per further attempt. |
 | `hub.retry.max-backoff` | `2s` | Upper bound of a single wait. |
 | `kafka.bootstrap-servers` | `broker:19092` | Kafka bootstrap servers. |
-| `kafka.topic` | `kraken.events` | Events topic. |
+| `kafka.topic` | `snodra.events` | Events topic. |
 | `kafka.consumer.enabled` | `true` | Set `false` in tools that only publish. |
 | `kafka.group-id` | `service-name` | The service's consumer group: every event processor, `default` included, uses `<this>.<name>`. See [Event processors](api.md#event-processors). |
 | `kafka.consumer.max-attempts` | `5` | Handler invocations per record (first try included, 1 s apart) before the record goes to the dead letters; shared by every processor. |
@@ -87,7 +87,7 @@ All keys (`snodra.messaging.*`; durations accept `200ms`, `5s`, `7d`; relaxed bi
 | `external.calls.enabled` | unset | Whether the idempotency interceptor and the `external_calls` indexes exist. Unset: they exist when a class in the application's packages has an `@IdempotentHandler` method. `true` when the adapter lives outside those packages, `false` to switch it off. |
 | `external.calls.lease` | `5m` | How long an `IN_PROGRESS` external call may take before its outcome counts as unknown (a crash in the middle of the call). Must be positive. |
 | `external.calls.retention` | `30d` | `external_calls` documents older than this are deleted (TTL index on `updatedAt`). Must be positive. |
-| `external.kafka.sources.<name>.topic` | required | A partner's topic, consumed into local Snodra events (never republished to `kraken.events`). Each source needs an `ExternalRecordTranslator` bean named `<name>`; a source without one fails the startup naming it. |
+| `external.kafka.sources.<name>.topic` | required | A partner's topic, consumed into local Snodra events (never republished to `snodra.events`). Each source needs an `ExternalRecordTranslator` bean named `<name>`; a source without one fails the startup naming it. |
 | `external.kafka.sources.<name>.bootstrap-servers` | `kafka.bootstrap-servers` | The partner's cluster. |
 | `external.kafka.sources.<name>.group-id` | `<service-name>.external.<name>` | The source's consumer group. |
 | `external.kafka.sources.<name>.properties.*` | none | Extra consumer properties (for example `security.protocol`); bootstrap servers, group id, deserializers and auto-commit are fixed by the library: an entry for one of those keys fails the startup, naming it. `auto.offset.reset` is `earliest` unless set here. Record retries use `kafka.consumer.max-attempts`. |
@@ -167,7 +167,7 @@ fails startup with a hint.
 ## Hub security: token, ACL and TLS
 
 Since P5a the hub can authenticate services and restrict what they register and send, and serve its gRPC port over TLS
-(decision record: umbrella `docs/adr/0018-hub-access-control.md`, operator how-to: `https://snodra.damoreira.com/concepts/security/`). All of it is opt-in
+(decision record: ADR 0018, hub access control; operator how-to: `https://snodra.damoreira.com/concepts/security/`). All of it is opt-in
 on the hub (`SNODRA_SERVER_AUTH_MODE=off|permissive|enforce`, default `off`); this section is the client's side. It is
 unrelated to [Security](#security) above, which is about the **user's** forwarded JWT.
 
@@ -236,8 +236,8 @@ reconnecting in a tight loop.
 
 ## Authenticating with a JWT (Keycloak client credentials)
 
-Since P5b a service can present a short-lived Keycloak access token instead of a static token (decision record: umbrella
-`docs/adr/0019-hub-jwt-authentication.md`). The hub validates it against the realm's keys (`SNODRA_SERVER_JWT_ISSUER`, ...), requires
+Since P5b a service can present a short-lived Keycloak access token instead of a static token (decision record: ADR 0019,
+hub JWT authentication). The hub validates it against the realm's keys (`SNODRA_SERVER_JWT_ISSUER`, ...), requires
 its `azp` to equal the service name and takes the rights from the `[[service]]` table of that name in its ACL file.
 
 **Keycloak, in two lines.** One confidential client per service with *service accounts enabled and nothing else* (no standard
@@ -298,8 +298,8 @@ its name is refused by the JDK's URI parser (the host would be null), so it fail
 
 ## Authenticating with a client certificate (mTLS)
 
-Since P5c the hub can take a **client certificate** as the service's credential (decision record: umbrella
-`docs/adr/0020-hub-mutual-tls.md`, issuing certificates and the hub's settings: `https://snodra.damoreira.com/concepts/security/`, "mTLS mode"). The TLS handshake
+Since P5c the hub can take a **client certificate** as the service's credential (decision record: ADR 0020,
+hub mutual TLS; issuing certificates and the hub's settings: `https://snodra.damoreira.com/concepts/security/`, "mTLS mode"). The TLS handshake
 proves the service holds the key, the certificate names the service, and the rights are the hub's `[[service]]` table of that name, the
 same table a JWT uses. No secret crosses the wire and no identity provider is involved.
 
@@ -415,7 +415,7 @@ PKIX validation rules apply to the hub's certificate (the Rust library uses rust
 | `snodra.messaging.hub.retry.multiplier` | `2` | Growth of the wait per further attempt |
 | `snodra.messaging.hub.retry.max-backoff` | `2s` | Upper bound of a single wait |
 | `snodra.messaging.kafka.bootstrap-servers` | `broker:19092` | Kafka |
-| `snodra.messaging.kafka.topic` | `kraken.events` | Events topic |
+| `snodra.messaging.kafka.topic` | `snodra.events` | Events topic |
 | `snodra.messaging.kafka.consumer.enabled` | `true` | Set false in tools that only publish |
 | `snodra.messaging.kafka.consumer.max-attempts` | `5` | Handler attempts per record before it is logged and skipped |
 | `snodra.messaging.outbox.enabled` | `true` | Outbox collection + publisher |

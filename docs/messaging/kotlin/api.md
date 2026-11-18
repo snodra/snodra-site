@@ -87,8 +87,8 @@
 
 ## Multiple hubs
 
-snodra-server reaches high availability through several independent hubs that never talk to each other (ADR 0016 in the
-umbrella repo): every instance connects to every hub, and the client decides where each request goes.
+snodra-server reaches high availability through several independent hubs that never talk to each other (ADR 0016):
+every instance connects to every hub, and the client decides where each request goes.
 
 ```yaml
 snodra.messaging.hub.address: static://hub-1:7000,static://hub-2:7000   # or: dns:///snodra-server:7000
@@ -149,7 +149,7 @@ snodra.messaging.hub.address: static://hub-1:7000,static://hub-2:7000   # or: dn
 
 ## Scatter-gather
 
-A query type can be **shared** by several services (ADR 0017 in the umbrella repo): any number of services may own it.
+A query type can be **shared** by several services (ADR 0017): any number of services may own it.
 A point query (`queryBus.send`) on a shared type goes to one instance of any owner (the hub round-robins over all of
 them, also when the sender is itself an owner: a shared type is never short-circuited to the local handler); a
 **scatter-gather** asks every live instance of every owner and returns what they answered.
@@ -404,8 +404,8 @@ Everything starts and ends with Snodra messages. A saga never calls an external 
 **adapter** in the same service (an ordinary `@CommandHandler` made idempotent) makes the call, and the external system's answer
 comes back as an ordinary Snodra event through a partner topic, a webhook or polling. The full model, the delivery guarantees,
 the configuration and the metrics are in [Sagas and deadlines](../index.md#sagas-and-deadlines); the decision and every
-builder ruling are in `../kraken/docs/adr/0021-sagas-in-the-library.md`; a working example with a fake partner is in
-`examples/README.md` ("The postcard saga").
+builder ruling are in ADR 0021 (sagas in the library); a working example with a fake partner is in
+`snodra-messaging/examples/README.md` ("The postcard saga").
 
 ## A minimal saga
 
@@ -525,7 +525,7 @@ Two more things about the adapter:
 ## Failed commands: `SagaCommandFailed`
 
 A command that failed for good comes back to the saga as the event `SagaCommandFailed(sagaId, commandType, idempotencyKey, reason,
-message)`, delivered locally (never published to `kraken.events`). `reason` is `NO_HANDLER`, `DENIED`, `INVALID`, `FAILED`,
+message)`, delivered locally (never published to `snodra.events`). `reason` is `NO_HANDLER`, `DENIED`, `INVALID`, `FAILED`,
 `UNKNOWN_OUTCOME` or `EXHAUSTED` (transient failures that outlasted `sagas.relay.max-attempts`). The runtime delivers it to the
 saga instance that sent the command **by its id**: the saga needs no association, only a handler
 (`@SagaEventHandler(associationProperty = "sagaId")`, the name of the event's property; a saga that also associated itself with
@@ -535,7 +535,7 @@ the saga's later steps.
 
 ## Hearing from the partner: a topic of its own
 
-When the partner produces to **its own Kafka topic** (not `kraken.events`):
+When the partner produces to **its own Kafka topic** (not `snodra.events`):
 
 ```yaml
 snodra:
@@ -560,7 +560,7 @@ class PrinterTranslator(private val codec: JsonCodec) : ExternalRecordTranslator
 ```
 
 The library runs one consumer per source (group `<service-name>.external.<name>`, `earliest` for a new group), translates each
-record and dispatches the event **locally**: the service's `@EventHandler`s and sagas, never `kraken.events`. The `dedupeKey` (the
+record and dispatches the event **locally**: the service's `@EventHandler`s and sagas, never `snodra.events`. The `dedupeKey` (the
 partner's own id) makes two records for one event apply once; without it the key is `<name>:<partition>:<offset>`. A translator
 exception retries the record up to `kafka.consumer.max-attempts` times, then logs and skips it. `properties` cannot set the
 servers, the group id, the deserializers or auto-commit: such an entry fails the startup, naming it. `kafka-clients` is an `api` dependency of the starter, so the
@@ -710,7 +710,7 @@ adapter against a fake of the partner, the controller with a mock request and a 
 
 ## Event processors
 
-Every `@EventHandler` belongs to an **event processor** (P6a, ADR 0022 in the umbrella repo). A processor is its own Kafka
+Every `@EventHandler` belongs to an **event processor** (P6a, ADR 0022). A processor is its own Kafka
 consumer, in its own consumer group, on the events topic: its own position, its own failure domain, its own idempotency markers
 and dead letters. A slow projection in one processor never holds a notifier in another.
 
@@ -866,7 +866,7 @@ Indexes: `dead_letters_processor_key_offset`, `dead_letters_processor_parked`, `
 
 ## Processor control
 
-The hub (ADR 0023 in the umbrella repo) pauses, resumes and resets a processor of a service **on every
+The hub (ADR 0023) pauses, resumes and resets a processor of a service **on every
 instance**, and lists, retries and discards its dead letters, from its dashboard or HTTP API (writes need the hub's write token
 or an ACL credential with `control = true`; see the hub's documentation). The hub keeps nothing: the state of each processor is a
 document in the service's own MongoDB, `processor_control`, which every instance reads at start (before its consumers poll) and

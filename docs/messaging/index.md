@@ -694,7 +694,7 @@ associations.
 
 In plain words, for a service with a saga:
 
-- **Where events come from.** The service's Kafka consumer on `kraken.events`, and the three inbound channels below. All of
+- **Where events come from.** The service's Kafka consumer on `snodra.events`, and the three inbound channels below. All of
   them go through one local dispatcher that runs the ordinary `@EventHandler`s first, in the transaction they always had, and
   then each saga type, each in its own transaction; the saga stage runs even when an ordinary handler failed (the failure is
   then thrown, so the consumer retries or skips the record by its own rules). All of it finishes before the Kafka offset is
@@ -751,7 +751,7 @@ In plain words, for a service with a saga:
 
 A saga does not wait for a reply. A command the relay could not deliver, or that failed, comes back as the library event
 `SagaCommandFailed(sagaId, commandType, idempotencyKey, reason, message)` (`@MessageType("snodra.SagaCommandFailed")`),
-dispatched **locally** (never published to `kraken.events`; dedupe id `failed:<sagaId>:<seq>`). A saga handles it with
+dispatched **locally** (never published to `snodra.events`; dedupe id `failed:<sagaId>:<seq>`). A saga handles it with
 `@SagaEventHandler(associationProperty = "sagaId")`. The runtime routes it to the saga instance that sent the command **by its
 id** (load by `sagaId`, check that the type has a `SagaCommandFailed` handler): no association is needed, and a saga that
 also associated itself with `sagaId` keeps working. When the saga type has no such handler or the saga has ended, and no
@@ -884,7 +884,7 @@ class PrinterTranslator(private val codec: JsonCodec) : ExternalRecordTranslator
 
 The library runs one consumer per source (one thread; a partner topic is read in order, group `<service-name>.external.<name>`).
 Each record is translated and dispatched **locally**: the service's `@EventHandler`s, then its sagas, as for any event. A
-translated event is **not** republished to `kraken.events`; a service that wants to share it publishes its own Snodra event
+translated event is **not** republished to `snodra.events`; a service that wants to share it publishes its own Snodra event
 from a handler. The dedupe id is `<name>:<partition>:<offset>`, or `<name>:<dedupeKey>` when the translator gives a
 `dedupeKey` (the partner's own id: two records with it are applied once). **Without a `dedupeKey` the id is only as good as the
 topic**: if the partner deletes and recreates the topic, the new records start again at offset 0 and carry ids that the
@@ -1018,7 +1018,7 @@ example.
 ### What is not supported
 
 - **Replay of past events into a new saga type.** A saga type reacts only to events consumed after it is deployed. A later
-  replay would read back through the 30-day retention of `kraken.events`; nothing here rules it out.
+  replay would read back through the 30-day retention of `snodra.events`; nothing here rules it out.
 - **Sagas across services.** A saga belongs to one service and its database; it talks to others through commands and events.
 - **Deadlines outside sagas** (aggregate- or bean-scoped).
 - **Service identity for saga commands:** a command to a handler with `@RequiresAuthentication` fails with `DENIED`.
@@ -1214,7 +1214,7 @@ and mirrored as serde structs.
 
 | Record part | Content |
 |---|---|
-| topic | `kraken.events` |
+| topic | `snodra.events` |
 | key | aggregate id (string) chosen by the publisher; guarantees ordering per aggregate |
 | value | JSON payload |
 | header `type` | wire type name, for example `billing.WorkoutLogged` |
@@ -1246,7 +1246,7 @@ JWKS, expiry, required realm role). See 06-security.md.
 
 | Setting | Value |
 |---|---|
-| Topic | `kraken.events` |
+| Topic | `snodra.events` |
 | Partitions | 6 |
 | Retention | 30 days (`retention.ms=2592000000`) |
 | Cleanup policy | `delete` |

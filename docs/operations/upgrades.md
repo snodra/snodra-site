@@ -23,26 +23,24 @@ there.
 
 ## Across a protocol change
 
-A release that changes the gRPC package (as `kraken.hub.v1` → `snodra.hub.v1` did) is a coordinated
-window: the server and every client must move together. There is no mixed-version mode and no
-negotiation. Upgrade the server and all services in the same window, then confirm registration.
+A release that changes the gRPC package is a coordinated window: the server and every client must
+move together. There is no mixed-version mode and no negotiation. Upgrade the server and all services
+in the same window, then confirm registration.
 
 ## Stores and schema
 
 - **MongoDB**: the library writes explicit documents and creates TTL indexes at startup. No migration
   is needed between the Kotlin and Rust libraries.
 - **SQL**: the schema is versioned and applied at startup when `init-schema` is true; a service that
-  runs its own migration sets it to `false` and the startup checks the version. A table rename (the
-  `kraken_*` → `snodra_*` move) is a data migration, not an automatic one.
-- **Event stores**: events and their record layout are unchanged by a rename. Check the broker's
+  runs its own migration sets it to `false` and the startup checks the version. A schema change is a
+  data migration, not an automatic one.
+- **Event stores**: events and their record layout are stable across releases. Check the broker's
   retention before a long maintenance window.
 
 ## Before you start
 
 - Read the release notes and the [compatibility page](../migration/compatibility.md).
 - Pin image tags and artifact versions; do not deploy `latest` by accident.
-- Export the current dashboards and record the metric names: a rename breaks queries silently.
+- Export the current dashboards and record the metric names, so a changed instrument is easy to spot
+  after the upgrade.
 - Keep the previous image and the previous client artifact available for rollback.
-
-If you are upgrading from a pre-rename release, follow [From kraken](../migration/from-kraken.md); it lists the
-names, coordinates and settings that change and the data that does not.

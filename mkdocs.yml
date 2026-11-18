@@ -112,7 +112,6 @@ nav:
       - Conformance runner: tools/conformance-runner.md
   - Migration:
       - migration/index.md
-      - From kraken: migration/from-kraken.md
       - Compatibility: migration/compatibility.md
   - Examples: examples/index.md
   - Editions: editions.md
