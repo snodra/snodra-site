@@ -66,14 +66,12 @@ with `HubClient::new(channel)`.
 
 ### Flow control
 
-Decision record: ADR 0014, hub flow control and priority.
-
 - Every session is **flow-controlled** with the `Register.initial_permits` it sent (at least 1):
   the hub forwards it a request only while it has a permit (one per
   forward) and adds permits on every `Permits{count}` it sends, never beyond its cap. The cap
   starts at `initial_permits`; a `Permits.grant > 0` from the session first raises it to
   `max(cap, grant)` (a grant never lowers it), which is how a multi-hub client moves a departed
-  hub's share to the surviving hubs (ADR 0016). A stream opens its flow state before its
+  hub's share to the surviving hubs. A stream opens its flow state before its
   session becomes current, so a
   request for the session always finds it; a request for a session whose flow is gone fails with
   `HANDLER_DISCONNECTED` instead of going out unmetered. Of two concurrent handshakes of one
@@ -114,8 +112,8 @@ Decision record: ADR 0014, hub flow control and priority.
 
 ### Query modes
 
-Decision record: ADR 0017, query modes and shared query types; details in
-[Query modes](https://snodra.damoreira.com/server/) on this site.
+Every rule from the client's side is in
+[The hub protocol, Query modes](../library-authors/protocol.md#query-modes).
 
 - **Shared query types.** `Register.shared_query_types` lists query types many services may own
   (exclusive `query_types` keep the one-owner rule). A point query on a shared type goes to one
@@ -267,3 +265,7 @@ With `override` the `SNODRA_SERVER_TIMEOUT_OVERRIDES` entry for the request's ty
 An override thus also moves the clamp for its type, up (long-running commands) or down. Clients
 send `timeout_ms = 0` unless their caller chose a timeout, so an override applies to them without
 any client change.
+
+## Read next
+
+- The client's side of the stream, message by message, for anyone writing a library: [The hub protocol](../library-authors/protocol.md).
