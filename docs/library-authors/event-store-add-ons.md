@@ -118,14 +118,14 @@ by default (mode `collection`), so they work on every event store. An add-on may
 
 A **segment** is a unit of the event store's order per key (a Kafka partition, a RabbitMQ partition stream, a segment
 of the in-memory log); a **position** is a record's place in its segment. Both are opaque strings that only the add-on
-reads (a decimal number on every first-wave store).
+reads (a decimal number on every store today: Kafka, RabbitMQ Streams, in-memory).
 
 - At most 128 bytes each: the hub drops a segment named in more than 128 bytes and reads a longer position as
   unknown. An empty position means unknown or none.
 - Segments are listed in the hub's order: names of ASCII digits only by their value, before every other name, which go
   by their bytes.
 - Dead-letter ids and processed-event markers embed them: a letter is `<processor>:<source>:<segment>:<position>`, a
-  stage-1 marker records the processor, source, segment and position so a reset deletes exactly the markers of its
+  [stage-1 marker](message-store-add-ons.md#stage-1-marker) records the processor, source, segment and position so a reset deletes exactly the markers of its
   replay range.
 
 The protocol fields an add-on's values end up in, through the library's status and control: `ProcessorStatus.subscription`,

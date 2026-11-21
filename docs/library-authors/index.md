@@ -65,16 +65,19 @@ A library is listed here when it has:
   naming the runner's version. For levels 2 to 4, which the runner does not check yet, list the
   [feature-level checks](feature-levels.md) your library's own tests cover, and the add-on kits it passes.
 
+To ask for the listing, open a pull request to [snodra-site](https://github.com/snodra/snodra-site) that adds a row
+for your library to the [Community libraries](#community-libraries) table, with the runner's text report attached.
+
 The suggested name is `snodra-messaging-<language>` (`snodra-messaging-go`, `snodra-messaging-python`, ...).
 
 ## The pages of this section
 
 | Page | For |
 |---|---|
+| [writing-a-library.md](writing-a-library.md) | the build order, the state machines, the pitfalls the official libraries met, what levels 2 to 4 add (the saga dispatch, retries and failure notice) |
 | [protocol.md](protocol.md) | the `Hub.Connect` stream: registering, heartbeats, reconnects, credentials, requests and errors, timeouts, flow control, the query modes, several hubs, status and processor control |
 | [messages.md](messages.md) | type names, JSON payloads, the event headers, correlation id, trace context, forwarded identity, handler errors |
 | [feature-levels.md](feature-levels.md) | the four levels and the check ids that prove each |
-| [writing-a-library.md](writing-a-library.md) | the build order, the state machines, the pitfalls the official libraries met |
 | [event-store-add-ons.md](event-store-add-ons.md) | writing an event-store add-on, its conformance kit, the RabbitMQ Streams wire rules, the event browser's queries |
 | [message-store-add-ons.md](message-store-add-ons.md) | writing a message-store add-on, its conformance kit, the SQL layout |
 | [conformance.md](conformance.md) | what proves each level, the conformance runner (level 1) and its report |

@@ -766,7 +766,7 @@ in [Server settings](../server/configuration/server.md)):
 | Client handshake timeout | 10 s without a `RegisterAck`: close and reconnect |
 | Client gives up a silent hub | no echo for 3 heartbeat intervals (9 s) |
 | HTTP/2 keepalive, client side | ping every 10 s, timeout 5 s, also while idle |
-| Client-side request guard | the hub's bound for the type (override or maximum) + 1 s |
+| Client-side request guard | the hub's bound for the request ([Timeouts](#timeouts): the caller's timeout, the type's override or the maximum) + 1 s |
 | Client reconnect backoff | 500 ms doubling to 5 s, ±20 % jitter (never above the maximum), back to 500 ms once an attempt reached the handshake; a refusal waits 80 to 100 % of the maximum |
 | Client permit grants | one per completed handler; sent at once while the hub holds `min(16, initial_permits / 2)` or fewer of the instance's permits, else batched at 16 or after 50 ms |
 | Instance status | every 5 s on every stream |

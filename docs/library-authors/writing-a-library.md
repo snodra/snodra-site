@@ -12,8 +12,8 @@ implementations ([Kotlin](../messaging/kotlin/index.md), [Rust](../messaging/rus
 - **Bindings.** Generate the gRPC types and the `Hub.Connect` client from
   [`proto/hub.proto`](https://github.com/snodra/snodra-server/blob/main/proto/hub.proto) with your language's protobuf and gRPC tooling. You need
   bidirectional streaming and HTTP/2 keepalive pings.
-- **A hub to try against.** The `snodra-server` image runs with its defaults (plain text, access control off, gRPC on
-  port 7000, dashboard on 7001); its dashboard shows your instance, its types, permits and status as the hub sees them.
+- **A hub to try against.** The `snodra-server` image ([Hub quick start](../server/quickstart.md)) runs with its
+  defaults (plain text, access control off, gRPC on port 7000, dashboard on 7001); its dashboard shows your instance, its types, permits and status as the hub sees them.
 - **A name.** `snodra-messaging-<language>` is the suggested name for a community library
   ([index.md, Add your library](index.md#add-your-library)).
 
@@ -303,12 +303,110 @@ What a library adds for processors:
 ## Level 4: Sagas
 
 Sagas live in the library, inside the service that owns them, so the hub only ever sees the commands a saga sends,
-never the saga itself (the programming model is in
-[Sagas and deadlines](../messaging/index.md#sagas-and-deadlines)). What the rest of Snodra sees of them:
+never the saga itself. The programming model (how a service declares a saga, its handlers, associations and
+deadlines) is the official libraries' own and is described in
+[Sagas and deadlines](../messaging/index.md#sagas-and-deadlines); a library in another language may give it any shape.
+What follows is the part two libraries must agree on, because their sagas send commands to each other's handlers and,
+with one message store, share the same records. The records themselves are the message store's saga ports
+([message-store-add-ons.md](message-store-add-ons.md#the-stores)).
 
-- A saga's commands and events are recorded in its transaction and relayed after the commit, in order per saga, at
-  least once; each command carries `idempotency-key` and `saga-id`, and no caller token (`L4-SAGA-DISPATCH`).
-- A redelivered event is applied once per saga type (`L4-SAGA-ONCE`); a command that fails for good comes back as a
-  local event (`L4-COMMAND-FAILED`); deadlines fire once over every instance (`L4-DEADLINES`).
-- The adapters' failure markers in `Error.details` travel across the hub (`L4-ADAPTER-MARKERS`,
-  [messages.md, Handler errors](messages.md#handler-errors)).
+### Applying an event
+
+- A delivered event first runs the processor's event handlers (stage 1, with the `processor:<name>:<eventId>` marker:
+  [message-store-add-ons.md, stage-1 marker](message-store-add-ons.md#stage-1-marker)), then, in the `default`
+  processor, the saga stage (stage 2).
+  The saga stage runs after stage 1 committed, and also when stage 1 failed (the failure is reported afterwards, so the
+  consumer retries or skips the record by its own rules); the record is acknowledged only after both.
+- Per (event, saga type), one transaction records the marker `saga:<sagaType>:<eventId>`, runs the handlers of every
+  saga instance the event reaches, and writes each instance's state, its dispatch entries and its deadline changes. A
+  redelivered event finds the marker and is skipped (`L4-SAGA-ONCE`).
+- An instance's state is written with an optimistic version (0 when created, plus 1 per write): a conflicting write
+  aborts the transaction and the event is tried again, so one instance never applies two events at once. An event that
+  fails all its attempts is parked as a saga failure together with its marker, so the consumer moves on.
+
+### Dispatching what a saga sends
+
+- A saga never sends during its handling: it records each command and event as a **dispatch entry** in its
+  transaction. An entry's `seq` is `version * 1000 + index` (the saga's version after the write, and the message's
+  0-based place in that handling, always below 1000), and its id is `<sagaId>:<seq>`.
+- A relay in every instance sends the committed entries, one saga's entries in `seq` order under a lease on that saga
+  (so two instances never send one saga's entries at once), different sagas in parallel (`L4-SAGA-DISPATCH`).
+- An **event** entry is appended to the outbox and marked sent in one transaction, then follows the ordinary outbox
+  ([Level 2](#level-2-events)), with the entry's key and the correlation id below.
+- A **command** entry is sent by its wire type name with its stored JSON payload and its routing key, and with:
+    - the headers `idempotency-key` = the entry's id `<sagaId>:<seq>` and `saga-id` = the saga's id;
+    - as correlation id, the correlation id of the message whose handling recorded the entry (for a deadline's
+      handling, that of the message that scheduled the deadline), and the trace context of that message;
+    - no `authorization` header and no caller identity: a saga's triggering event is not a caller, so a handler that
+      requires an authenticated caller refuses the command;
+    - no retry of the sender's own: the relay owns the retries below, and a sender's retry would multiply them.
+- A command type the service handles itself goes to its own handler without the hub; every other type goes through
+  the hub. A service without a hub knows only its own handlers.
+- A command is marked sent only after its reply, so a crash in between sends it again with the same
+  `idempotency-key`: every handler of a saga command must be idempotent by that header.
+
+### Retries and failures
+
+Each attempt's outcome is classified the same way in both official libraries, whether the command went through the
+hub or to the service's own handler:
+
+| The attempt ended with | Kind | `reason` once given up |
+|---|---|---|
+| a reply | sent | - |
+| never sent (no live hub stream), or the stream broke after the write (outcome unknown) | transient | `EXHAUSTED` |
+| `ErrorCode.TIMEOUT` (also the sender's local guard), `ErrorCode.HANDLER_DISCONNECTED`, `ErrorCode.RESOURCE_EXHAUSTED` | transient | `EXHAUSTED` |
+| `ErrorCode.NO_HANDLER` from the hub (a redeploy of the target service looks the same) | transient | `EXHAUSTED` |
+| `ErrorCode.HANDLER_ERROR` whose `Error.details` is `{"snodra":"retryable"}` | transient | `EXHAUSTED` |
+| a failure of the sender that is not a messaging error (its own storage or transport) | transient | `EXHAUSTED` |
+| no handler for the type in a service without a hub | permanent | `NO_HANDLER` |
+| `ErrorCode.UNAUTHENTICATED` or `ErrorCode.PERMISSION_DENIED` | permanent | `DENIED` |
+| `ErrorCode.INVALID_REQUEST` | permanent | `INVALID` |
+| `ErrorCode.HANDLER_ERROR` whose `Error.details` is `{"snodra":"unknown-outcome"}` | permanent | `UNKNOWN_OUTCOME` |
+| any other `ErrorCode.HANDLER_ERROR`, or any other code (`ErrorCode.CANCELLED` included) | permanent | `FAILED` |
+
+- **The markers** (`L4-ADAPTER-MARKERS`). An adapter whose external call may succeed later answers
+  `ErrorCode.HANDLER_ERROR` with `Error.details` exactly `{"snodra":"retryable"}`; one that cannot tell whether the
+  external call happened answers `{"snodra":"unknown-outcome"}` (UTF-8, no spaces, lower-case `snodra`). The relay
+  compares `Error.details`, with surrounding whitespace trimmed, to these bytes; anything else is an ordinary handler
+  failure. The markers are the same whether the adapter runs in the saga's service or behind the hub
+  ([messages.md, Handler errors](messages.md#handler-errors)).
+- **A transient failure** counts an attempt and delays the entry, holding back that saga's later entries and no
+  other saga's. The wait before attempt n+1 starts at 1 s and doubles up to 5 min, jittered by ±20 % and never above
+  the maximum; after 10 attempts in all (the first included) the command is given up as `EXHAUSTED`. These are the
+  official libraries' defaults; the attempts and the backoff are configurable.
+- **A permanent failure** is a known outcome: the entry records that it failed, the reason, the message and a
+  pending notice, in one write, before anything else, so the command is never sent again. The saga's later entries
+  are then sent: the saga decides what the failure means.
+
+### The failure notice
+
+A command given up comes back to its saga as a **local** event, never published to the event store
+(`L4-COMMAND-FAILED`):
+
+- Type name `snodra.SagaCommandFailed`, a JSON object with the fields `sagaId` (the saga that sent the command),
+  `commandType` (the command's wire type name), `idempotencyKey` (its `<sagaId>:<seq>`), `reason` (one of the values
+  below, as a string) and `message` (why, for people).
+- Its message id, from which its processed-event markers are built, is `failed:<sagaId>:<seq>`; its correlation id is
+  the command's.
+- It is dispatched inside the service like any event: to the service's ordinary event handlers of that type, and to
+  the saga that sent the command, found by `sagaId` (no association needed) while it is live and its type handles the
+  notice. Nobody taking it is logged at error and counted, never an error of the relay.
+- A notice that cannot be delivered (a handler fails, the store is down) is retried with the same backoff and the same
+  number of attempts as a command, then given up (logged at error and counted); its id makes every repeat harmless.
+
+| `reason` | When |
+|---|---|
+| `NO_HANDLER` | nobody handles the command type, in a service without a hub |
+| `DENIED` | the handler requires an authenticated caller, or refuses it: a saga command has none |
+| `INVALID` | the handler could not read the payload |
+| `FAILED` | the handler failed (any other error) |
+| `UNKNOWN_OUTCOME` | an idempotent adapter cannot tell whether its external call happened |
+| `EXHAUSTED` | a transient failure lasted through all the attempts |
+
+### Deadlines
+
+A deadline is recorded, and cancelled, in the saga's transaction. A scheduler in every instance claims each due
+deadline with a lease, so it fires on one instance and not on each (`L4-DEADLINES`): it loads the saga, runs the
+deadline's handler, writes the state and marks the deadline fired, in one transaction. A firing that fails, or whose
+instance dies, leaves the claim to expire and fires again after the lease, so a deadline fires at least once, never
+before it is due, and never once cancelled or for an ended saga.
