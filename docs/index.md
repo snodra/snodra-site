@@ -82,6 +82,7 @@ handling and a control plane of your own.
 | new to CQRS and event-driven services | [CQRS](concepts/cqrs.md) | [Commands](concepts/commands.md), [Queries](concepts/queries.md) and [Events](concepts/events.md) |
 | adopting Snodra in an existing system | [Installation](getting-started/installation.md) | [Your first service](getting-started/first-service.md) and [Spring Boot](integrations/spring-boot.md) |
 | operating Snodra | [Operations](operations/index.md) | [Monitoring](operations/monitoring.md), [Tuning](operations/tuning.md) and [Upgrades](operations/upgrades.md) |
+| writing a Snodra client library for another language | [Writing a library](library-authors/index.md) | [The hub protocol](library-authors/protocol.md), [Feature levels](library-authors/feature-levels.md) and [Conformance](library-authors/conformance.md) |
 
 ## Try the server
 
