@@ -52,3 +52,8 @@ message store keeps the outbox and markers, not your domain state.
 
 The guarantees that span both stores are in [Consistency](../concepts/consistency.md). The wiring
 and exact layout are in [the messaging model](../messaging/index.md).
+
+If you write an add-on of your own, for an official library or a new one, follow the contracts in
+[Event-store add-ons](../library-authors/event-store-add-ons.md) and
+[Message-store add-ons](../library-authors/message-store-add-ons.md): the operations, the wire rules and the
+conformance kit every add-on passes.
