@@ -31,7 +31,7 @@ Every message has a type name, the one thing the hub routes on and an event cons
   instance (`ALREADY_EXISTS`); a streaming or subscription query is a query type to the hub (the mode is the
   sender's choice).
 - **Reserved namespace.** `snodra.events.*` belongs to the event browser
-  ([event-store-add-ons.md](event-store-add-ons.md)): with the
+  ([event-store-add-ons.md, The event browser's queries](event-store-add-ons.md#the-event-browsers-queries)): with the
   hub's access control on, only a credential with the `event-browser` right may register those types.
 
 ## Payloads
@@ -50,7 +50,7 @@ record value. The hub never reads them. For every library to read every other's:
 refuses anything else (not JSON, an array, a bare value, a larger integer), and also a depth over 100 (counted as
 MySQL's `JSON_DEPTH`: `{"a":1}` is 2), a number no double holds, a lone surrogate escape, a leading byte order mark and
 bytes that are not UTF-8; so does every store add-on
-([message-store-add-ons.md](message-store-add-ons.md)). Payloads cross the libraries' store and event-store
+([message-store-add-ons.md](message-store-add-ons.md#the-rule)). Payloads cross the libraries' store and event-store
 interfaces as JSON bytes, never as a database's own document format.
 
 The owning service publishes the shape of each type: the `*-api` module of a Kotlin service, the documented contract
@@ -94,7 +94,7 @@ event it publishes (`L2-HEADERS`):
 - The event key (the order key) is not a header: it is the event store's key, typically the aggregate id. Events with
   the same key reach a processor in the order the event store received them; that is the publish order of one
   instance while one relay sends its outbox
-  ([message-store-add-ons.md](message-store-add-ons.md)).
+  ([message-store-add-ons.md](message-store-add-ons.md#the-rule)).
 - A header is UTF-8 text with one value per name. A record that carries anything else (a library never publishes one)
   is not preserved byte for byte.
 - An event parked in the event store's dead-letter destination (dead-letter mode `event-store`) keeps its key, payload

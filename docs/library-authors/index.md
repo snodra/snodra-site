@@ -45,7 +45,7 @@ schema and relayed, marked, claimed and read the other's outbox entries, markers
 processor control; on MongoDB the same, after the fixes for optional fields; and a chain of commands and events
 through one hub crossed the languages eight times with the same `traceparent` and correlation id. Not run: saga
 runtimes continuing a saga started in the other language, two languages as instances of one service through their
-real cores, and the Kotlin RabbitMQ Streams add-on on a cluster ([event-store-add-ons.md](event-store-add-ons.md)
+real cores, and the Kotlin RabbitMQ Streams add-on on a cluster ([event-store-add-ons.md](event-store-add-ons.md#rabbitmq-streams-wire-rules)
 has the cluster run of the Rust add-on).
 
 ## Community libraries

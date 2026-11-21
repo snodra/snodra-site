@@ -11,8 +11,8 @@ use it to get your library listed.
   [feature-levels.md](feature-levels.md#level-1-core).
 - **Levels 2 to 4** are proved by the event-store and message-store conformance kits that ship with both official
   libraries: every add-on runs them in its own tests
-  ([event-store-add-ons.md](event-store-add-ons.md),
-  [message-store-add-ons.md](message-store-add-ons.md)). A library in another language ports them.
+  ([event-store-add-ons.md](event-store-add-ons.md#the-conformance-kit),
+  [message-store-add-ons.md](message-store-add-ons.md#the-conformance-kit)). A library in another language ports them.
   The checks of levels 2 to 4 marked "runner, not checked yet" in [feature-levels.md](feature-levels.md) are proved by
   the library's own tests until a later runner version checks them.
 

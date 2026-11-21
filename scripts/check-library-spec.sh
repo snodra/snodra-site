@@ -3,8 +3,8 @@
 #
 # Fails when a page names a protocol message, field, enum value or rpc that hub.proto does not have, when the check
 # would pass vacuously (hub.proto yields no names, or the pages name none), and when a frozen SQL schema file of
-# docs/library-authors/sql/v1 does not have its pinned SHA-256 (skipped, with a notice, while that directory does not
-# exist). Links are checked by `mkdocs build --strict`, not here. The marking convention:
+# docs/library-authors/sql/v1 is missing or does not have its pinned SHA-256. Links are checked by
+# `mkdocs build --strict`, not here. The marking convention:
 #
 #   - `Message.field`, `Message.field.field` (followed through the field's message type), `Enum.VALUE` and `Hub.Rpc`
 #     in an inline code span name the protocol, on every page. A oneof's name counts as a field of its message.
@@ -41,35 +41,31 @@ if [ ! -f "$proto" ]; then
 fi
 
 # The frozen V1 SQL schema files (docs/library-authors/sql/v1): their SHA-256 is the one
-# docs/library-authors/message-store-add-ons.md states and both libraries pin. Skipped while the directory is absent.
-if [ -d "$dir/sql/v1" ]; then
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256() { sha256sum "$1" | awk '{ print $1 }'; }
-  elif command -v shasum >/dev/null 2>&1; then
-    sha256() { shasum -a 256 "$1" | awk '{ print $1 }'; }
-  else
-    echo "library spec: neither sha256sum nor shasum found" >&2
+# docs/library-authors/message-store-add-ons.md states and both libraries pin. A missing file is a failure.
+if command -v sha256sum >/dev/null 2>&1; then
+  sha256() { sha256sum "$1" | awk '{ print $1 }'; }
+elif command -v shasum >/dev/null 2>&1; then
+  sha256() { shasum -a 256 "$1" | awk '{ print $1 }'; }
+else
+  echo "library spec: neither sha256sum nor shasum found" >&2
+  exit 1
+fi
+for pinned in \
+  "postgresql 0b2d179a18580092cd7622d11e46451a08b64fad7d6d585450a0919f9148ca6a" \
+  "mysql f6e28f7c12c0e7db148b534c6ac9d04e5a375bd3b873d63a1c8080707af0cf31"; do
+  dialect="${pinned%% *}"
+  want="${pinned#* }"
+  schema="$dir/sql/v1/$dialect/V1__snodra.sql"
+  if [ ! -f "$schema" ]; then
+    echo "library spec: frozen schema not found at $schema" >&2
     exit 1
   fi
-  for pinned in \
-    "postgresql 0b2d179a18580092cd7622d11e46451a08b64fad7d6d585450a0919f9148ca6a" \
-    "mysql f6e28f7c12c0e7db148b534c6ac9d04e5a375bd3b873d63a1c8080707af0cf31"; do
-    dialect="${pinned%% *}"
-    want="${pinned#* }"
-    schema="$dir/sql/v1/$dialect/V1__snodra.sql"
-    if [ ! -f "$schema" ]; then
-      echo "library spec: frozen schema not found at $schema" >&2
-      exit 1
-    fi
-    got="$(sha256 "$schema")"
-    if [ "$got" != "$want" ]; then
-      echo "library spec: $schema has SHA-256 $got, frozen V1 is $want" >&2
-      exit 1
-    fi
-  done
-else
-  echo "library spec: docs/library-authors/sql/v1 not present yet, schema checksums skipped" >&2
-fi
+  got="$(sha256 "$schema")"
+  if [ "$got" != "$want" ]; then
+    echo "library spec: $schema has SHA-256 $got, frozen V1 is $want" >&2
+    exit 1
+  fi
+done
 pages=()
 for page in "$dir"/*.md; do
   [ -f "$page" ] && pages+=("$page")

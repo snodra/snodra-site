@@ -675,7 +675,7 @@ Only a library that runs event processors (level 3,
 | `ProcessorStatus.replaying`, `ProcessorStatus.operation_id`, `SegmentStatus.replay_until` | an open replay range, and the reset operation holding the processor's lock |
 
 A segment name longer than 128 bytes is dropped by the hub and a longer position reads as unknown, so an event-store
-add-on keeps both within 128 bytes ([event-store-add-ons.md](event-store-add-ons.md)).
+add-on keeps both within 128 bytes ([event-store-add-ons.md](event-store-add-ons.md#segments-and-positions)).
 
 ## Processor control
 
