@@ -363,7 +363,7 @@ hub or to the service's own handler:
 | `ErrorCode.UNAUTHENTICATED` or `ErrorCode.PERMISSION_DENIED` | permanent | `DENIED` |
 | `ErrorCode.INVALID_REQUEST` | permanent | `INVALID` |
 | `ErrorCode.HANDLER_ERROR` whose `Error.details` is `{"snodra":"unknown-outcome"}` | permanent | `UNKNOWN_OUTCOME` |
-| any other `ErrorCode.HANDLER_ERROR` (an unknown code or `ErrorCode.UNSPECIFIED` reads as one), or `ErrorCode.CANCELLED` | permanent | `FAILED` |
+| any other `ErrorCode.HANDLER_ERROR` (an unknown code or `ErrorCode.ERROR_CODE_UNSPECIFIED` reads as one), or `ErrorCode.CANCELLED` | permanent | `FAILED` |
 
 - **The markers** (`L4-ADAPTER-MARKERS`). An adapter whose external call may succeed later answers
   `ErrorCode.HANDLER_ERROR` with `Error.details` exactly `{"snodra":"retryable"}`; one that cannot tell whether the
