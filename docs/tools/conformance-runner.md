@@ -32,8 +32,8 @@ snodra-conformance run \
 ```
 
 `snodra-conformance list` prints the checks and what each needs. The runner, its reference service
-and a deliberately broken service live in `snodra-conformance`; the image is published with every
-release.
+and a deliberately broken service live in `snodra-conformance`; the runner is built from source, and its
+release workflow builds a container image.
 
 ## Options
 
