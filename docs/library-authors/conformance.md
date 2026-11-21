@@ -34,10 +34,10 @@ SIGTERM within 5 s.
 
 ## Running the runner
 
-The runner is built from source in the [snodra-conformance](https://github.com/snodra/snodra-conformance) repository
-(`cargo build --release -p snodra-conformance`, the binary is `target/release/snodra-conformance`); the
-[releases](https://github.com/snodra/snodra-conformance/releases) name the current version. Its release workflow
-builds a container image of the runner; none is published today. Start one or two hubs from the hub's image
+The runner lives in the [snodra-conformance](https://github.com/snodra/snodra-conformance) repository. Each release
+publishes binaries for Linux and macOS on its [releases page](https://github.com/snodra/snodra-conformance/releases)
+and the container image `snodra/snodra-conformance`; you can also build it from source
+(`cargo build --release -p snodra-conformance`, the binary is `target/release/snodra-conformance`). Start one or two hubs from the hub's image
 ([Hub quick start](../server/quickstart.md); plain text, access control off), then:
 
 ```sh
@@ -63,8 +63,8 @@ snodra-conformance run \
 Before any check, a pre-flight start must register on a fake hub and stop on SIGTERM within 5 s; otherwise the run
 ends with exit code 2 and the instance's log. Each instance runs in a process group of its own, stopped with SIGTERM
 (a kill 5 s later) when its check ends. The fake hubs and the runner's token issuer listen on `127.0.0.1`, so the
-service runs on the runner's machine or in its container. No runner image is published today; if you build one from the
-repository's Dockerfile and run the runner from it, know that the image is distroless and has no shell: run it with a `--service-cmd` that names a program inside it (mount your
+service runs on the runner's machine or in its container. If you run the runner from its container image, know that
+the image is distroless and has no shell: run it with a `--service-cmd` that names a program inside it (mount your
 service, or build an image `FROM` it), or copy `/app/snodra-conformance` into an image that can run your service.
 `snodra-conformance list` prints the checks and what each needs.
 

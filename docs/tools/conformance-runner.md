@@ -35,8 +35,10 @@ snodra-conformance run \
 ```
 
 `snodra-conformance list` prints the checks and what each needs. The runner, its reference service
-and a deliberately broken service live in `snodra-conformance`; the runner is built from source. Its
-release workflow builds a container image of the runner; none is published today.
+and a deliberately broken service live in `snodra-conformance`; each release publishes
+binaries for Linux and macOS on its
+[releases page](https://github.com/snodra/snodra-conformance/releases) and the container image
+`snodra/snodra-conformance`.
 
 ## Options
 
