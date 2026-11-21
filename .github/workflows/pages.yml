@@ -26,6 +26,12 @@ jobs:
           cache: pip
           cache-dependency-path: docs/requirements.lock
       - run: pip install -r docs/requirements.lock
+      - uses: actions/checkout@v4
+        with:
+          repository: snodra/snodra-server
+          path: server
+      - name: library spec check
+        run: SNODRA_PROTO_SOURCE=server/proto/hub.proto bash scripts/check-library-spec.sh
       - name: strict build
         run: mkdocs build --strict
       - uses: actions/configure-pages@v5
