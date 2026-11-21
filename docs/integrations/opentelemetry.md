@@ -48,7 +48,7 @@ Both libraries export the same instrument names, so one dashboard works for eith
 
 | Prefix | Owner |
 |---|---|
-| `snodra_hub_*` | the server |
+| `snodra_server_*` | the server |
 | `snodra_*` | the client library: outbox, processors, sagas, hub client |
 | `snodra_event_browser_*` | the event browser service |
 

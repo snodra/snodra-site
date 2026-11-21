@@ -15,7 +15,7 @@ Registration, heartbeats, reconnection and the failure modes a client must handl
   request arrived on), requests it sent are dropped; the new session's requests are untouched.
 - when a sender's buffer is full, a terminal `Reply` or `Error` is retried in
   the background for up to 5 s before it is dropped (logged at `warn`, counted in
-  `snodra_hub_session_buffer_full_total{service}`).
+  `snodra_server_session_buffer_full_total{service}`).
 - Graceful shutdown on SIGTERM or Ctrl-C: health turns `NOT_SERVING`, every stream is closed with
   `UNAVAILABLE` `hub shutting down` (in-flight requests fail as on a disconnect), connections get
   at most 5 s to drain, then telemetry is flushed and the process exits.
@@ -112,7 +112,7 @@ without client configuration.
 | Handler reconnects (new stream, same instance id) with requests queued | the new session takes over the queue | forwarded: `Error{HANDLER_DISCONNECTED}`; queued: served by the new stream |
 | Handler re-registers without types (graceful stop) | no longer a routing target; its queue is routed to the other instances | what it was forwarded it still answers |
 | All queues of the hub hold `SNODRA_SERVER_QUEUE_BYTES_TOTAL` | reply immediately | `Error{RESOURCE_EXHAUSTED}` |
-| Two services register the same type | second `Register` rejected, stream closed with `ALREADY_EXISTS` | the second service does not fail startup: it keeps reconnecting (at the backoff cap) and none of its handlers is reachable through that hub. Kotlin surfaces the rejection as `HubRegistrationRejectedException` from `awaitRegistered` (`lastRejection` on the connection); Rust keeps retrying with the reason in `last_rejection` ([02-messaging.md](https://snodra.damoreira.com/messaging/)) |
+| Two services register the same type | second `Register` rejected, stream closed with `ALREADY_EXISTS` | the second service does not fail startup: it keeps reconnecting (at the backoff cap) and none of its handlers is reachable through that hub. Kotlin surfaces the rejection as `HubRegistrationRejectedException` from `awaitRegistered` (`lastRejection` on the connection); Rust keeps retrying with the reason in `last_rejection` ([The messaging model](../messaging/index.md)) |
 | A type registered exclusive by one registrant and shared by another | the later `Register` rejected, stream closed with `ALREADY_EXISTS` | as above: the later registrant keeps reconnecting and exposes the rejection; it does not fail startup |
 | `Register` without credentials, or with an unknown token (`enforce`) | stream closed with `UNAUTHENTICATED`; nothing is registered | the service's connection fails and retries at the backoff cap: a registration rejection (`lastRejection`, `HubRegistrationRejectedException` from `awaitRegistered`, `await_hub` false in Rust, one `ERROR` line; [Client configuration](https://snodra.damoreira.com/server/configuration/mtls/)). `jwt` credentials on a hub with no `SNODRA_SERVER_JWT_ISSUER`: `UNAUTHENTICATED` "jwt credentials are not configured on this hub" |
 | `Register` with an invalid JWT (`enforce`): expired, wrong issuer or audience, bad signature, `none`/`HS*`, an ID or refresh token | stream closed with `UNAUTHENTICATED` and a short reason ("token expired", "wrong token issuer", ...), never the token | as above (a registration rejection) |
@@ -122,16 +122,16 @@ without client configuration.
 | A JWT session reaches `exp` + `SNODRA_SERVER_JWT_EXPIRY_GRACE` with no successful refresh (`enforce`) | stream closed with `UNAUTHENTICATED` "credentials expired"; pending requests end as on any disconnect. `permissive`: counted (`expired`) and logged once, the session stays. Requests between `exp` and the deadline are still allowed | the service: a registration rejection and a reconnect with a fresh token |
 | `Register` over a client certificate that names no service (no `snodra://service/<name>` URI SAN), or several (`enforce`) | stream closed with `PERMISSION_DENIED` "certificate names no service" / "certificate names more than one service" | as above (a registration rejection) |
 | `Register` with `credentials` that resolve to another service than the client certificate (`enforce`) | stream closed with `PERMISSION_DENIED` "credentials and certificate name different services"; `permissive` counts it and the certificate wins | as above |
-| A client without a valid certificate on a `required` listener, or with an invalid one on an `optional` one | TLS handshake fails (counted `snodra_hub_tls_handshake_failures_total{reason="client_cert_missing"\|"client_cert_invalid"}`); no stream exists | a transport failure: the connection is retried at the normal backoff (TLS 1.3: the client sees it when the stream opens) |
+| A client without a valid certificate on a `required` listener, or with an invalid one on an `optional` one | TLS handshake fails (counted `snodra_server_tls_handshake_failures_total{reason="client_cert_missing"\|"client_cert_invalid"}`); no stream exists | a transport failure: the connection is retried at the normal backoff (TLS 1.3: the client sees it when the stream opens) |
 | A certificate session reaches `notAfter` (`enforce`) | stream closed with `UNAUTHENTICATED` "certificate expired", no grace; pending requests end as on any disconnect. `permissive`: counted (`expired`) and logged once, the session stays | the service: an ordinary stream closure, not a registration rejection: it reconnects at the normal backoff (`INFO`, no `lastRejection`) with its renewed certificate; it should reload the files and reconnect before `notAfter` |
 | `ClientMessage.credentials` that is invalid, or for another service (`enforce`) | stream closed with `UNAUTHENTICATED` / `PERMISSION_DENIED`; `permissive` counts it and keeps the old credential | as above |
 | `Register` as a service the token does not grant, or for a type outside its `handle` (`enforce`) | stream closed with `PERMISSION_DENIED`, naming the type | as above (a registration rejection); a later `Register` on a live stream that adds such a type closes that stream |
 | `Register` under an instance id held by a live session of another service (`enforce` and `permissive`) | stream closed with `PERMISSION_DENIED` "instance id `<8 chars>` belongs to another service"; the holder is untouched | as above (a registration rejection) |
 | A request for a type outside the token's `send` (`enforce`) | answered before anything is routed, in every request mode | `Error{PERMISSION_DENIED}` naming the type (`UNAUTHENTICATED` when the token left the ACL) |
 | The ACL file changes so a live session is no longer allowed (`enforce`) | session closed with the matching status; its pending requests end as on any disconnect | the service: `UNAUTHENTICATED` (token removed) or `PERMISSION_DENIED` (service changed, `handle` narrowed); its senders: `Error{HANDLER_DISCONNECTED}` |
-| The ACL file or the TLS pair cannot be read or parsed on reload | previous ACL / certificate kept; logged at `error`, `snodra_hub_acl_reload_errors_total` for the ACL | nothing |
+| The ACL file or the TLS pair cannot be read or parsed on reload | previous ACL / certificate kept; logged at `error`, `snodra_server_acl_reload_errors_total` for the ACL | nothing |
 | The ACL file or the TLS pair is bad at startup | the hub refuses to start | no hub |
-| `permissive` mode, any of the above | logged (`warn`) and counted in `snodra_hub_auth_violations_total`; allowed | nothing |
+| `permissive` mode, any of the above | logged (`warn`) and counted in `snodra_server_auth_violations_total`; allowed | nothing |
 | Scatter-gather failures | see [Query modes](protocol.md#query-modes) | `ReplyPart` with an error, `ReplyEnd{timed_out}`, or an `Error` before any target |
 | Streaming query failures | see [Query modes](protocol.md#query-modes) | `ReplyEnd{error}` (`TIMEOUT`, `CANCELLED`, `HANDLER_DISCONNECTED`, `INVALID_REQUEST`, capacity, or the handler's own), or an `Error` before the target |
 | Subscription failures | see [Query modes](protocol.md#query-modes) | `ReplyEnd{error}` (the initial request's `TIMEOUT`, `HANDLER_DISCONNECTED` or capacity error, a target's own, `RESOURCE_EXHAUSTED` for a full subscriber buffer, `HANDLER_DISCONNECTED` when the last target left, `CANCELLED` for the max duration), or an `Error` before any target (`RESOURCE_EXHAUSTED` for the per-instance limit) |
@@ -143,4 +143,4 @@ sender of a stream or subscription that outlived its maximum duration; with acce
 `UNAUTHENTICATED` and `PERMISSION_DENIED` for a request it refuses.
 
 Nothing is retried by the hub. Retry policy belongs to the sender and is described in
-[02-messaging.md](https://snodra.damoreira.com/messaging/).
+[The messaging model](../messaging/index.md).

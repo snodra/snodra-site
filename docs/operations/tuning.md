@@ -17,8 +17,8 @@ average latency alone.
 
 A full queue answers `RESOURCE_EXHAUSTED` immediately; it does not wait. That is deliberate: a
 caller can retry a request that never ran, while a request parked in an unbounded queue would just
-age out at its deadline. Watch `snodra_hub_rejected_total{reason}` and
-`snodra_hub_queue_wait_seconds` before raising the limits — a bigger queue moves the failure from
+age out at its deadline. Watch `snodra_server_rejected_total{reason}` and
+`snodra_server_queue_wait_seconds` before raising the limits — a bigger queue moves the failure from
 rejection to latency.
 
 ## Permits and handler concurrency

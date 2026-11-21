@@ -1102,7 +1102,7 @@ Adding a handler after startup (for example in tests) re-sends `Register`.
 ## Several hubs
 
 With more than one hub
-([hub.md](../../server/index.md)) both libraries open one stream per hub with the
+([Snodra Server](../../server/index.md)) both libraries open one stream per hub with the
 identical `Register` (two targets answering the same `hub_id` are one hub). A request without a
 routing key goes round-robin over the live hubs; a keyed one goes to the live hub with the highest
 rendezvous score `fmix64(fnv1a64(utf8(hub_id) ++ 0x00 ++ utf8(key)))`, compared unsigned (64-bit

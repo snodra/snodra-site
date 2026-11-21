@@ -25,7 +25,7 @@ route any request while at least one is up.
   disagreement. The traffic graph and the Types page stay per hub.
 - The sandbox runs two hubs: `hub` (gRPC `localhost:7002`, dashboard `http://localhost:7001/`) and
   `hub-2` (gRPC `localhost:7012`, dashboard `http://localhost:7011/`), each listing both
-  dashboards as peers ([07-local-development.md](quickstart.md)).
+  dashboards as peers ([Hub quick start](quickstart.md)).
 
 **Client side** (both libraries): one connection per hub (deduplicated by
 `hub_id`), identical registration on each, unkeyed requests round-robin over acknowledged hubs,
@@ -74,7 +74,7 @@ subscriptions are bound to one hub. Rules shared by both libraries:
 | Default | `static://snodra-server:7000` (one hub) | `static://snodra-server:7000` (one hub) |
 
 One target is the single-hub setup. The keyed-request hash, the permit split and top-up, and the
-address-family rule are identical in both libraries ([02-messaging.md](https://snodra.damoreira.com/messaging/)). In the sandbox
+address-family rule are identical in both libraries ([The messaging model](../messaging/index.md)). In the sandbox
 every service uses `static://hub:7000,hub-2:7000`.
 
 ## Graceful shutdown

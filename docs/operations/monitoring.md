@@ -8,7 +8,7 @@ the short operator's map; the exhaustive metric tables are in
 
 | Source | Prefix | What it tells you |
 |---|---|---|
-| Server | `snodra_hub_*` | Requests, latency, queues, permits, sessions, processor status, auth failures, event browser |
+| Server | `snodra_server_*` | Requests, latency, queues, permits, connected instances, processor status, auth failures, events API calls |
 | Client libraries | `snodra_*` | Outbox, consumed events, processor lag and state, dead letters, sagas, hub-client latency |
 | Event browser | `snodra_event_browser_*` | Subscription lag and refresh outcomes (when it runs as its own service) |
 
@@ -32,12 +32,12 @@ to change the 60-second default.
 
 | Signal | Metric | Why |
 |---|---|---|
-| Capacity | `snodra_hub_rejected_total{reason}` | Requests are being refused because a queue or buffer is full |
-| Latency | `snodra_hub_queue_wait_seconds` | Time spent waiting for a permit, before the handler even starts |
+| Capacity | `snodra_server_rejected_total{reason}` | Requests are being refused because a queue or buffer is full |
+| Latency | `snodra_server_queue_wait_seconds` | Time spent waiting for a permit, before the handler even starts |
 | Backlog | `snodra_outbox_pending`, `snodra_outbox_oldest_age_seconds` | Events are committed but not reaching the event store |
 | Consumption | `snodra_processor_lag`, `snodra_dead_letters` | A processor is falling behind or parking records |
 
-Two more are worth a page: `snodra_hub_auth_violations_total` during an access-control rollout, and
+Two more are worth a page: `snodra_server_auth_violations_total` during an access-control rollout, and
 `snodra_processor_state` for a processor stuck in `FAILING` or `PAUSED`.
 
 ## Gauges need staleness handling

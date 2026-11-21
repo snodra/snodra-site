@@ -40,7 +40,7 @@ refused in every mode, before routing.
 ## Roll out without an outage
 
 1. **Observe.** Run with `SNODRA_SERVER_AUTH_MODE=permissive` and the ACL loaded. Every violation is
-   logged and counted in `snodra_hub_auth_violations_total`; nothing is refused.
+   logged and counted in `snodra_server_auth_violations_total`; nothing is refused.
 2. **Credential the services.** Give each one its token, JWT client or certificate, one at a time.
    Watch the violation count fall to zero.
 3. **Enforce.** Set `SNODRA_SERVER_AUTH_MODE=enforce`. A service that is missing a credential now

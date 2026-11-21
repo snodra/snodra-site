@@ -229,7 +229,7 @@ necessarily the very first attempt: a hub that was still starting is a plain ref
 [its own section](#authenticating-with-a-client-certificate-mtls); `DefaultHubChannelFactory.customizeTls` stays a hook for a subclass.
 
 **Turning it on.** `enforce` last: (1) run the hub with `SNODRA_SERVER_AUTH_MODE=permissive` and an ACL file; (2) give every service its
-token (and the CA, if the hub serves TLS); (3) watch `snodra_hub_auth_violations_total{reason,service}` and the dashboard until
+token (and the CA, if the hub serves TLS); (3) watch `snodra_server_auth_violations_total{reason,service}` and the dashboard until
 it stays flat; (4) switch the hub to `enforce`; (5) turn on TLS before tokens cross an untrusted network. A service
 whose token is missing or wrong in `enforce` fails visibly (`HubRegistrationRejectedException`, an `ERROR` line) instead of
 reconnecting in a tight loop.

@@ -33,7 +33,7 @@ key `snodra.messaging.type-prefix` plus the simple class name.
 ## Scatter-gather and shared query types
 
 Hub side and protocol:
-[hub.md, Query modes](../server/protocol.md#query-modes). A query type is **exclusive** (one owning
+[Protocol, Query modes](../server/protocol.md#query-modes). A query type is **exclusive** (one owning
 service, the default) or **shared** (any number of services may own it). A point query on a shared
 type goes to one live instance of any owner (one round-robin pool over all owners at the hub); a
 **scatter-gather** asks every live instance of every owner (on an exclusive type: every instance of
@@ -135,7 +135,7 @@ examples smoke checks both (see `snodra-messaging/examples/README.md`).
 ## Streaming queries
 
 Hub side and protocol:
-[hub.md, Streaming](../server/protocol.md#query-modes). A **streaming query** is answered by one
+[Protocol, Query modes](../server/protocol.md#query-modes). A **streaming query** is answered by one
 instance of one owner as a stream of parts under the collector's back-pressure: an export, a long
 listing, a search that trickles. Its type is exclusive or shared like any query type (a shared one
 goes to one instance of any owner: one pool over all owners at the hub); the hub picks the instance
@@ -335,7 +335,7 @@ nothing in flight on either hub, and a handler failure mapped to 502 (see
 ## Subscription queries
 
 Hub side and protocol:
-[hub.md, Subscription](../server/protocol.md#query-modes). A **subscription query** is an initial
+[Protocol, Query modes](../server/protocol.md#query-modes). A **subscription query** is an initial
 result followed by the updates every handler instance pushes, until the subscriber cancels or the
 handlers complete: a screen that shows an account and refreshes when it changes, a status page. Its
 type is exclusive or shared like any query type; unlike a stream, the hub asks **every** live
@@ -1025,7 +1025,7 @@ example.
 ## Event processors and dead letters
 
 Built in both libraries and on the hub; the hub side:
-[hub.md, Event processors](../server/event-processors.md).
+[Event processors](../server/event-processors.md).
 
 - **Named processors.** `@ProcessingGroup("orders")` on a handler class (Kotlin) or
   `builder.event_in::<E, _, _>("orders", handler)` (Rust) runs those handlers in their own Kafka consumer, group
@@ -1063,7 +1063,7 @@ Built in both libraries and on the hub; the hub side:
 ## Processor control
 
 Built in both libraries and on the hub; the hub side, its routes, credentials and curl examples:
-[hub.md, Processor control](../server/processor-control.md).
+[Processor control](../server/processor-control.md).
 
 - **The hub asks, the service keeps the state.** The hub's dashboard and HTTP API (`/api/v1/services/{service}/processors/
   {processor}/...`, with the write token `SNODRA_SERVER_DASHBOARD_WRITE_TOKEN` or an ACL credential with `control = true`;
@@ -1200,7 +1200,7 @@ both sides agree:
 - never rename or remove a field without introducing a new message type.
 
 The `*-api` module of the owning service is the authoritative schema for JVM consumers. For the Rust
-service the shapes are documented in [05-services/the service.md)
+service the shapes are documented with the service
 and mirrored as serde structs.
 
 ### Events on Kafka
@@ -1323,7 +1323,7 @@ before the offset is committed; see [Delivery and consistency](#delivery-and-con
 ## Hub protocol walkthrough
 
 Reference: ``protocol/hub.proto``, hub internals in
-[05-services/hub.md](../server/index.md).
+[Snodra Server](../server/index.md).
 
 1. **Connect.** At startup each instance opens `Hub.Connect` (HTTP/2 keepalive 10 s / 5 s, also
    while idle) and sends `Register{service_name, instance_id, command_types, query_types,
@@ -1376,7 +1376,7 @@ Reference: ``protocol/hub.proto``, hub internals in
 
 How fast each of these surfaces when the owning service is stopped, killed or partitioned, and
 the planned improvements, are documented in
-[05-services/hub.md](../server/limitations.md).
+[Limitations and future work](../server/limitations.md).
 
 Commands are not durable anywhere. A `TIMEOUT` does not tell the sender whether the handler ran.
 Command handlers should therefore be idempotent on their aggregate id, and senders should reuse the
@@ -1413,4 +1413,4 @@ Its methods are synchronous and **panic** on a failed step or expectation (namin
 > `SNODRA_SERVER_IMAGE`), not the registry name. The end-to-end test is skipped when the image is
 > absent (`hubImageAvailable()`).
 
-See [09-observability-and-testing.md](../server/observability.md).
+See [Observability](../server/observability.md).

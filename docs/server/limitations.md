@@ -56,7 +56,7 @@ What the hub deliberately does not do, and what is planned next.
 ### Resilience
 
 Measured on 2026-10-30 with the examples sandbox (`snodra-messaging/examples`, see
-[07-local-development.md](quickstart.md)): service A calling
+[Hub quick start](quickstart.md)): service A calling
 service B through the hub while B was stopped, killed mid-request, and cut off the network. The
 table shows how the hub and libraries behave now.
 

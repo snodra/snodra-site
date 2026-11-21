@@ -148,5 +148,5 @@ signs the page out. With peers, a control goes to the hub that served the page: 
 ### Audit and metrics
 
 One `info` line per call that passed the credential check (`control`, see [Observability](observability.md)), and
-`snodra_hub_control_total{action,outcome}` for every call, refused credentials included (those are counted, not
-logged). `snodra_hub_control_unknown_replies_total` counts replies nobody waited for.
+`snodra_server_control_total{action,outcome}` for every call, refused credentials included (those are counted, not
+logged). `snodra_server_control_unknown_replies_total` counts replies nobody waited for.

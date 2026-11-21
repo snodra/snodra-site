@@ -45,7 +45,7 @@ send   = ["orders.*"]
 ```
 
 Start in `permissive` mode: every violation is logged and counted in
-`snodra_hub_auth_violations_total`, but nothing is refused. Move to `enforce` once the count reaches
+`snodra_server_auth_violations_total`, but nothing is refused. Move to `enforce` once the count reaches
 zero. The server refreshes the signing keys every `SNODRA_SERVER_JWKS_REFRESH` (5 minutes) and on an
 unknown `kid`.
 

@@ -192,7 +192,7 @@ the service name (`SNODRA_SERVICE_NAME`; 1 to 128 characters of `[A-Za-z0-9._-]`
 extended key usage at all, `clientAuth`. DNS names and other URIs on it are ignored; none, or two
 service names (even equal ones), is `PERMISSION_DENIED` at the hub. The hub's `[[service]]` table of
 that name gives the rights, as for a JWT. How to issue one (`openssl`, cert-manager) is in
-[06-security.md](../../server/configuration/mtls.md).
+[mTLS (client certificates)](../../server/configuration/mtls.md).
 
 **What is checked, and when.** At startup (`Config::validate`, so also `SnodraMessaging::builder`): both
 files, no static token and no OAuth2 next to it, both files readable and holding a certificate and a
@@ -278,7 +278,7 @@ is run by the `HubPool` (a `HubConnection` used on its own re-reads the files on
 rotation count is in `CertificateStatus` and there is no metrics registry.
 
 **Turning it on: permissive first.** (1) Run the hub with `SNODRA_SERVER_AUTH_MODE=permissive` and the
-ACL; it logs and counts every violation (`snodra_hub_auth_violations_total`) and refuses nothing;
+ACL; it logs and counts every violation (`snodra_server_auth_violations_total`) and refuses nothing;
 (2) give the services their token (and TLS, once the hub has a certificate); (3) when the hub's log
 and metric show no violation, switch it to `enforce`. A service without a token against an `enforce` hub is refused
 and shows up as the `UNAUTHENTICATED` rejection above.

@@ -15,8 +15,8 @@ When the protocol package is unchanged, a rolling restart works:
    server, retry on the other one where the policy allows it, and reconnect.
 3. Upgrade services in any order. Each new instance registers with the same types; a re-register with
    the same instance id replaces the old session.
-4. Watch `snodra_hub_connected_instances`, `snodra_hub_registered_types` and the clients'
-   `snodra_hub_client_connected_hubs` until every instance is back on every server.
+4. Watch `snodra_server_connected_instances`, `snodra_server_registered_types` and the clients'
+   `snodra.hub.client.connected.hubs` until every instance is back on every server.
 
 Roll back by running the previous tag. The server stores nothing, so there is no schema to reverse
 there.
