@@ -336,7 +336,8 @@ with one message store, share the same records. The records themselves are the m
 - A **command** entry is sent by its wire type name with its stored JSON payload and its routing key, and with:
     - the headers `idempotency-key` = the entry's id `<sagaId>:<seq>` and `saga-id` = the saga's id;
     - as correlation id, the correlation id of the message whose handling recorded the entry (for a deadline's
-      handling, that of the message that scheduled the deadline), and the trace context of that message;
+      handling, that of the message that scheduled the deadline), and the trace context of the handled event (none
+      for a deadline's handling);
     - no `authorization` header and no caller identity: a saga's triggering event is not a caller, so a handler that
       requires an authenticated caller refuses the command;
     - no retry of the sender's own: the relay owns the retries below, and a sender's retry would multiply them.
@@ -362,7 +363,7 @@ hub or to the service's own handler:
 | `ErrorCode.UNAUTHENTICATED` or `ErrorCode.PERMISSION_DENIED` | permanent | `DENIED` |
 | `ErrorCode.INVALID_REQUEST` | permanent | `INVALID` |
 | `ErrorCode.HANDLER_ERROR` whose `Error.details` is `{"snodra":"unknown-outcome"}` | permanent | `UNKNOWN_OUTCOME` |
-| any other `ErrorCode.HANDLER_ERROR`, or any other code (`ErrorCode.CANCELLED` included) | permanent | `FAILED` |
+| any other `ErrorCode.HANDLER_ERROR` (an unknown code or `ErrorCode.UNSPECIFIED` reads as one), or `ErrorCode.CANCELLED` | permanent | `FAILED` |
 
 - **The markers** (`L4-ADAPTER-MARKERS`). An adapter whose external call may succeed later answers
   `ErrorCode.HANDLER_ERROR` with `Error.details` exactly `{"snodra":"retryable"}`; one that cannot tell whether the
