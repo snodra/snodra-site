@@ -30,8 +30,8 @@ Error codes:
 
 Metrics outcome labels are `ok`, `no_handler`, `timeout`, `handler_disconnected`, `handler_error`,
 `invalid_request`, `resource_exhausted`, `denied` and `cancelled` (a stream or subscription
-the sender cancelled, or one that outlived its max duration); `snodra_hub_requests_total` and
-`snodra_hub_request_duration_seconds` also have a `mode` label (`unary`, `scatter_gather`,
+the sender cancelled, or one that outlived its max duration); `snodra_server_requests_total` and
+`snodra_server_request_duration_seconds` also have a `mode` label (`unary`, `scatter_gather`,
 `streaming`, `subscription`), so a gather's or stream's latency (to its `ReplyEnd`) and a
 subscription's (to its initial part) stay apart from the unary latency of the same type.
 any handler `Reply{error}` counts as
@@ -134,8 +134,8 @@ Every rule from the client's side is in
   target that leaves, also while its request is still queued, is a failed part
   (`HANDLER_DISCONNECTED`).
 - **Accounting:** a scatter-gather is one request in flight, on its edge (latency to the
-  `ReplyEnd`, an error when no part succeeded) and in `snodra_hub_requests_total{mode="scatter_gather"}`;
-  `snodra_hub_scatter_targets{type}` records its targets.
+  `ReplyEnd`, an error when no part succeeded) and in `snodra_server_requests_total{mode="scatter_gather"}`;
+  `snodra_server_scatter_targets{type}` records its targets.
 - `tests/scatter_gather.rs` drives it over gRPC with raw clients.
 - **Streaming.** A sender sends a query with
   `Request.mode = STREAMING` (and `initial_credit`, `max_results`, `timeout_ms`). The hub picks
@@ -175,9 +175,9 @@ Every rule from the client's side is in
 - **Streaming accounting:** one request in flight (the sender's `inFlightAsSender`, the
   handler's `inFlightAsHandler`, one handler permit from the forward to the end, released on
   every ending path); one count on its edge with the latency to the end (an error when the end
-  carries one); `snodra_hub_requests_total{mode="streaming"}` and the duration histogram;
-  `snodra_hub_streams_open{service,instance}` (the handler's) and
-  `snodra_hub_stream_parts_total{service,type}`.
+  carries one); `snodra_server_requests_total{mode="streaming"}` and the duration histogram;
+  `snodra_server_streams_open{service,instance_id}` (the handler's) and
+  `snodra_server_stream_parts_total{service,type}`.
 - `tests/streaming.rs` drives it over gRPC with raw clients. The client APIs are in the
   libraries' READMEs: [snodra-messaging, Streaming queries](https://snodra.damoreira.com/messaging/kotlin/api/#streaming-queries)
   (Kotlin) and [snodra-messaging-rs, Streaming queries](https://snodra.damoreira.com/messaging/rust/api/#streaming-queries)
@@ -241,11 +241,11 @@ Every rule from the client's side is in
 - **Subscription accounting:** one request in flight (`inFlight`, the sender's
   `inFlightAsSender`; the initial request in its handler's `inFlightAsHandler`) until the initial
   part is delivered, then the subscription counts nowhere but in
-  `snodra_hub_subscriptions_open{service,instance}` (targets per handler instance); one count on
+  `snodra_server_subscriptions_open{service,instance_id}` (targets per handler instance); one count on
   its edge at the initial reply (an error when the initial failed, or when the subscription ended
-  before it other than by the sender's cancel), `snodra_hub_requests_total{mode="subscription"}`
+  before it other than by the sender's cancel), `snodra_server_requests_total{mode="subscription"}`
   and the duration histogram (the time to the initial part), outcome `cancelled` for a cancel or
-  the max duration before the initial part; `snodra_hub_subscription_updates_total{service,type}`
+  the max duration before the initial part; `snodra_server_subscription_updates_total{service,type}`
   per update relayed. A subscription that ends after its initial part counts nothing more.
 - `tests/subscription.rs` drives it over gRPC with raw clients. The client libraries implement
   the sender and handler sides; their READMEs:

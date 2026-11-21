@@ -55,7 +55,7 @@ answers with an HTTP/2 frame error is talking to it — pass `--listen` or `--ad
 | `SNODRA_SERVER_LISTEN` | `0.0.0.0:7000` | gRPC bind address |
 | `SNODRA_SERVER_HTTP_LISTEN` | `0.0.0.0:7001` | HTTP bind address for the dashboard and its API; empty disables the HTTP listener |
 | `SNODRA_SERVER_OTLP_ENDPOINT` | none | OTLP gRPC endpoint for traces and metrics; unset exports nothing |
-| `SNODRA_SERVER_LOG` | `info` | `tracing` filter, for example `snodra_hub=debug,info` |
+| `SNODRA_SERVER_LOG` | `info` | `tracing` filter, for example `snodra_server=debug,info` |
 | `SNODRA_SERVER_JWKS_REFRESH` | `5m` | how often the signing keys are fetched again (an unknown `kid` fetches at most once per 30 s on top); positive |
 
 ## Timeouts

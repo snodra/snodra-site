@@ -95,7 +95,7 @@ part succeeded. The owner side of the graph is the merge of a type's edges.
 | Cap | `SNODRA_SERVER_EDGE_STATS_MAX_EDGES` (10 000); a new edge at the cap drops the least recently used edges, 1 % of the cap at a time (at least one), counted in `evictedEdges` and shown on the overview |
 | Names | sender and type names longer than 200 bytes are cut (ending in `…`) |
 | Not routed | `NO_HANDLER`, `INVALID_REQUEST` and duplicate ids count as errors without a latency |
-| Sender gone | not counted, as in `snodra_hub_requests_total` |
+| Sender gone | not counted, as in `snodra_server_requests_total` |
 | Disabled | `SNODRA_SERVER_DASHBOARD_ENABLED=false` collects nothing |
 
 - **Builder call:** a type's owner edge includes the `NO_HANDLER` answers it got while its owner
@@ -166,7 +166,7 @@ in the hub.
 - requests the hub answers without routing them (`NO_HANDLER`,
   `INVALID_REQUEST`, a duplicate id) count as errors but have no latency, so they do not drag
   the percentiles to zero. Requests whose sender disconnected are not counted (as in
-  `snodra_hub_requests_total`). The `handle` edge of a type merges all its requests, including
+  `snodra_server_requests_total`). The `handle` edge of a type merges all its requests, including
   `NO_HANDLER` answers while the owner had no instance.
 - cap `SNODRA_SERVER_EDGE_STATS_MAX_EDGES` (10 000). At the cap a new edge drops
   the least recently used edges, 1 % of the cap at a time (at least one), counted in
