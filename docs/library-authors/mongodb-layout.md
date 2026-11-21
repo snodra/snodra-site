@@ -27,8 +27,8 @@ The page states what the two official add-ons both do: the Kotlin module `snodra
   must not be the first write of a collection. Neither add-on changes an index that exists, and MongoDB refuses an
   index under an existing name with other options: give every instance sharing a database the same retentions
   ([Retentions](#retentions)).
-- **Index keys are ascending** (`1`, an int) everywhere, and every index has the name given in its table. MongoDB
-  refuses an index on the same keys under another name, so a writer creates them under these names.
+- **Index keys are ascending** (`1`, an int) everywhere, and every index has the name given in its table. Create
+  them under these names: MongoDB refuses a second index with the same keys and the same options under another name.
 
 ### Types and values
 
@@ -106,8 +106,10 @@ One document per event appended to the outbox, relayed to the event store afterw
 **The payload.** The JSON object of the event becomes a BSON document field for field, in the order written: an object
 becomes an `object`, an array an `array`, a string a `string`, `true` and `false` a `bool`, `null` a `null`, a number
 with a fraction or an exponent a `double`, an integer an `int` or a `long` (which one differs: see the differences).
-A payload that is not a JSON object, or holds an integer outside the signed 64-bit range, is refused before
-anything is written ([the payload contract](message-store-add-ons.md#the-rule)). Both add-ons interpret MongoDB
+A payload the shared payload contract refuses is refused before anything is written: anything but a JSON object, an
+integer outside the signed 64-bit range, a depth over 100, a number no double holds, a lone surrogate escape, a leading
+byte order mark, bytes that are not UTF-8 ([the payload contract](message-store-add-ons.md#the-rule) has the exact
+rules). Both add-ons interpret MongoDB
 Extended JSON keywords in the payload (an object such as `{"$numberLong": "5"}` becomes that BSON value), so an event
 must not use them as field names. To relay an entry, the document is turned back into compact relaxed Extended JSON:
 the value is the same, the text need not be (`12.30` comes back as `12.3`).
@@ -323,7 +325,7 @@ One document per saga instance.
 | `type` | `string` | always | The saga's type name. |
 | `state` | `string` | always | The saga object as JSON text. |
 | `associations` | `array` | always | `{k: string, v: string}` pairs that route events to the instance; may be empty. |
-| `startKey` | `string` | optional | `<type>|<key>=<value>`: unique among live instances. Absent for an instance started with `forceNew`. |
+| `startKey` | `string` | optional | `<type>|<key>=<value>`, with `%`, `|` and `=` percent-escaped in each part as `%25`, `%7C` and `%3D`, in that order: unique among live instances. Absent for an instance started with `forceNew`. |
 | `ended` | `bool` | always | `false` while the instance is live. |
 | `endedAt` | `date` | optional | When it ended; absent while live. |
 | `version` | `long` | always | The optimistic version: `0` when created, one more per write. |
@@ -350,8 +352,11 @@ Every operation runs in the saga's transaction:
 - **Count the live instances per type**: `[{$match: {ended: false}}, {$group: {_id: "$type", n: {$sum: 1}}}]`, outside
   any transaction.
 
-Both add-ons report a write conflict (code 112) and any error carrying MongoDB's TransientTransactionError label, at a write or at
-commit, as the store's retryable conflict: the runtime retries the whole attempt.
+A write conflict (code 112) or any error carrying MongoDB's TransientTransactionError label is the store's retryable
+conflict, and the runtime retries the whole attempt. Rust maps it so on every write and at commit. Kotlin maps it on
+the writes of the saga stores and at commit, but not on an outbox append or a marker write, which raise the driver's
+exception as it is, and not at commit when the application declares a transaction manager of its own instead of the
+add-on's.
 
 ## saga_dispatch
 
@@ -507,10 +512,11 @@ transaction), a processed-event marker, a dead letter's delete by a retry, and t
 `saga_dispatch` (record, mark dispatched), `deadlines` (insert, find, cancel, mark fired), `saga_failures` and its
 markers in `processed_events`. Everything else (relay claims and marks, parking, processor control, external calls,
 the deadline and notice claims, the saga dispatch leases, purges) is a single-document or single-statement write that
-commits on its own.
+commits on its own; the Kotlin add-on lets more of these join a transaction that happens to be active
+([the differences](#where-the-two-add-ons-differ-today)).
 
 Inside a transaction, a write that conflicts with another transaction fails at once with a write conflict instead of
-waiting: both add-ons report it as the retryable conflict ([sagas](#sagas)).
+waiting: the store reports it as the retryable conflict, with the Kotlin exceptions given under [sagas](#sagas).
 
 ## Retentions
 
@@ -559,15 +565,24 @@ each other's documents today; each is a choice to settle before a third add-on c
   field; the values of one language mean nothing to the other.
 - **What a reader requires.** Rust fails on a document missing a field it requires where Kotlin falls back to a
   default: the outbox `headers` (Kotlin: empty), a dead letter's `attempts` (Kotlin: `0`), `error` (Kotlin: empty type
-  and message) and `lastAttemptAt` (Kotlin: `parkedAt`), a saga failure's `attempts` (Kotlin: `0`). Rust also refuses a
-  `double` where it expects an integer, which Kotlin reads as any number. Writers that follow the tables above never
-  meet either case.
+  and message), `lastAttemptAt` (Kotlin: `parkedAt`) and `offset` (Kotlin: an empty position, in a letter and in a
+  summary), a saga failure's `attempts` (Kotlin: `0`), a `processor_control` `operation` missing `id`, `kind`,
+  `leaseUntil` or `preparedAt` (Kotlin: an empty id, `reset`, the epoch) and a replay range missing one of its four
+  fields (Kotlin skips that range). Rust also refuses a `double` where it expects an integer, which Kotlin reads as any
+  number, and a `headers` value that is not a `string`, which Kotlin turns into its text. Writers that follow the
+  tables above never meet these cases.
 - **A duplicate key at a write.** Rust reports a duplicate key error (code 11000) of any write it does not expect
   one from (a saga insert on `startKey_live_unique`, a dispatch entry, a marker) as its retryable conflict, like a
   write conflict; Kotlin reports it as Spring's duplicate-key exception, and its core decides what follows.
 - **The order of header fields.** Rust writes a dead letter's `headers` sorted by name and the other header maps in no
   fixed order; Kotlin keeps the order it received them in. Nothing reads the order.
-- **Sessions for single-document writes.** Kotlin writes `external_calls` and `saga_dispatch_leases` through the
-  session-aware database, so they join a transaction when one is active (its core runs each external-call write in a
-  short transaction of its own); Rust writes both outside any session. Each is a single-document write, so the stored
-  result is the same.
+- **Which operations can join a transaction.** Rust uses a session only for the writes listed under
+  [Transactions](#transactions) and runs everything else outside any session. Kotlin sends far more through the
+  session-aware database, so it joins a transaction when one is active on the calling thread: every outbox operation
+  (append, claim, mark sent, mark failed, counts, purge), every `processed_events` operation but the deletion of
+  replay ranges (record, exists, purge), every `external_calls` operation (its core runs each in a short transaction
+  of its own), and every operation on `sagas`, `saga_dispatch` (the relay's writes and the notice claims included),
+  `saga_dispatch_leases`, `deadlines` (the claim and the count included) and `saga_failures`. Only `dead_letters`
+  (but a retry's delete), `processor_control` and the deletion of markers in replay ranges always commit on their own
+  in Kotlin. When nothing is active, the two do the same; each of these is a single-document or single-statement
+  write either way.

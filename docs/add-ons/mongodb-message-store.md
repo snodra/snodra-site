@@ -41,8 +41,9 @@ pool are yours; pass the store to `.store(...)`.
 - **The outbox is atomic with your state.** A rollback leaves no event and no marker.
 - **Shared data layout.** The collections and document fields are the ones the Kotlin library has
   always written — `outbox`, `processed_events`, `dead_letters`, `processor_control`,
-  `external_calls`, `sagas`, `saga_dispatch`, `deadlines`, `saga_failures`. A Kotlin and a Rust
-  instance can share one database, and existing data needs no migration.
+  `external_calls`, `sagas`, `saga_dispatch`, `saga_dispatch_leases`, `deadlines`, `saga_failures`.
+  A Kotlin and a Rust instance can share one database, and existing data needs no migration. Every
+  field and index: [MongoDB layout](../library-authors/mongodb-layout.md).
 - **No `_class` fields.** Documents are explicit, so a schema change in one library does not break
   the other.
 - **One database per logical service.** Instances share it; two different services keep separate

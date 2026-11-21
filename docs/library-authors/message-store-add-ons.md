@@ -173,9 +173,10 @@ database add-ons and passes the kit: read it first.
 
 The MongoDB add-on (both libraries) keeps the libraries' collections (`outbox`, `processed_events`, `dead_letters`,
 `processor_control`, `external_calls`, the saga collections) and needs a replica set for its transactions. **A reader
-must accept the absence of every optional field**: the Rust store leaves out a field it has no value for, where the
-Kotlin store may write it, so a third-party store sharing the collections reads a missing optional field as none. The
-fields the Rust store omits: `sagas` `startKey`, `endedAt`; `saga_dispatch` `routingKey`, `dispatchedAt`,
+must accept the absence of every optional field**: the Rust store leaves out a field it has no value for, except an
+outbox entry's `key`, `sentAt` and `failedAt`, which it writes as `null` where the Kotlin store leaves them out
+([the differences](mongodb-layout.md#where-the-two-add-ons-differ-today)), so a third-party store sharing the
+collections reads a missing or `null` optional field as none. The fields the Rust store omits: `sagas` `startKey`, `endedAt`; `saga_dispatch` `routingKey`, `dispatchedAt`,
 `nextAttemptAt`, `failedAt`, `failureReason`, `failureMessage`, `noticePending`, `noticeAttempts`, `noticeNextAt`;
 `deadlines` `payload`, `payloadType`, `claimedBy`, `claimedUntil`, `finishedAt`, `correlationId`; `outbox` `owner`,
 `leaseUntil`; `dead_letters` `key`, `eventId`, `eventType`, `payload`, `payloadBinary`, `blockedBy`, `replay` (absent is
