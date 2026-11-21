@@ -184,12 +184,10 @@ false); `external_calls` `reply`, `error`, `leaseUntil`, `owner`. A deadline's e
 add-on (Kotlin `snodra-messaging-jdbc`, Rust `snodra-messaging-sqlx`) keeps them in tables whose layout both libraries
 share, below.
 
-The SQL layout is specified on this page; the MongoDB collections and their document shapes are not, yet. Today they
-are defined only by the official MongoDB add-ons, which a store sharing the collections reads as its reference: the
-Kotlin module
+The SQL layout is specified on this page; the MongoDB collections, their document fields, indexes and atomic
+operations on [mongodb-layout.md](mongodb-layout.md), from the official MongoDB add-ons: the Kotlin module
 [`snodra-messaging-mongo`](https://github.com/snodra/snodra-messaging/tree/main/snodra-messaging-mongo) and the Rust
 crate [`crates/snodra-messaging-mongo`](https://github.com/snodra/snodra-messaging-rs/tree/main/crates/snodra-messaging-mongo).
-A page specifying them is planned.
 
 ## The SQL layout
 

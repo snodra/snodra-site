@@ -101,6 +101,7 @@ nav:
       - Feature levels: library-authors/feature-levels.md
       - Event-store add-ons: library-authors/event-store-add-ons.md
       - Message-store add-ons: library-authors/message-store-add-ons.md
+      - MongoDB layout: library-authors/mongodb-layout.md
       - Conformance: library-authors/conformance.md
   - Operations:
       - operations/index.md

@@ -80,5 +80,6 @@ The suggested name is `snodra-messaging-<language>` (`snodra-messaging-go`, `sno
 | [feature-levels.md](feature-levels.md) | the four levels and the check ids that prove each |
 | [event-store-add-ons.md](event-store-add-ons.md) | writing an event-store add-on, its conformance kit, the RabbitMQ Streams wire rules, the event browser's queries |
 | [message-store-add-ons.md](message-store-add-ons.md) | writing a message-store add-on, its conformance kit, the SQL layout |
+| [mongodb-layout.md](mongodb-layout.md) | the MongoDB layout of a message store: collections, document fields and BSON types, indexes, the atomic operations, and where the two official add-ons differ |
 | [conformance.md](conformance.md) | what proves each level, the conformance runner (level 1) and its report |
 | [Kotlin](../messaging/kotlin/index.md), [Rust](../messaging/rust/index.md) | the official libraries: install, configure, modules (in the reference section of this site) |
