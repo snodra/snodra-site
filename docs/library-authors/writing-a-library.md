@@ -333,6 +333,11 @@ with one message store, share the same records. The records themselves are the m
   (so two instances never send one saga's entries at once), different sagas in parallel (`L4-SAGA-DISPATCH`).
 - An **event** entry is appended to the outbox and marked sent in one transaction, then follows the ordinary outbox
   ([Level 2](#level-2-events)), with the entry's key and the correlation id below.
+- An **event** entry the outbox refuses (its payload can never become an outbox entry: not a JSON object, or one the
+  store cannot hold) is given up at once, never retried: the entry records that it failed, the reason `INVALID` and
+  the message, and the relay logs it at error level. No failure notice follows (the notice is about commands), and the
+  saga's later entries are sent as after a failed command. Both official libraries already refuse such an entry when
+  the saga records it; this rule is the backstop for one recorded anyway.
 - A **command** entry is sent by its wire type name with its stored JSON payload and its routing key, and with:
     - the headers `idempotency-key` = the entry's id `<sagaId>:<seq>` and `saga-id` = the saga's id;
     - as correlation id, the correlation id of the message whose handling recorded the entry (for a deadline's
@@ -375,6 +380,13 @@ hub or to the service's own handler:
   other saga's. The wait before attempt n+1 starts at 1 s and doubles up to 5 min, jittered by ±20 % and never above
   the maximum; after 10 attempts in all (the first included) the command is given up as `EXHAUSTED`. These are the
   official libraries' defaults; the attempts and the backoff are configurable.
+- **A bound on the wait** (optional). A library may bound how long its relay waits for a command's answer, so that a
+  call that never returns (a local adapter has no timeout of its own) cannot hold its saga forever. A send abandoned
+  at that bound must count as a transient failure, retried later with the same `idempotency-key`, never as a
+  permanent one. Through the hub the bound must not be shorter than the hub's deadline for the call plus a margin, so
+  the relay never sends a command again while the hub may still be running the first. The Kotlin library bounds the
+  wait (`snodra.messaging.sagas.relay.send-timeout`, 1 min by default; through the hub at least the hub's deadline
+  plus 10 s); the Rust crate's relay has no such bound.
 - **A permanent failure** is a known outcome: the entry records that it failed, the reason, the message and a
   pending notice, in one write, before anything else, so the command is never sent again. The saga's later entries
   are then sent: the saga decides what the failure means.

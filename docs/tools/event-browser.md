@@ -1,21 +1,18 @@
 # Event browser
 
-The event browser searches events, shows one record, tails new ones and lists consumer-group lag
+The event browser searches events, shows one record, tails new ones and lists subscription lag
 without a Kafka client. It is what the dashboard's **Events** page and the `/api/v1/events*` routes
 answer.
 
-## Ways to run it
+## Running it
 
-**In the server.** Set `SNODRA_SERVER_KAFKA_BOOTSTRAP` and the server reads the topics in
-`SNODRA_SERVER_EVENT_TOPICS` itself. The routes, their bounds and the payload rules are in
-[the server's event browser page](../server/event-browser.md). This is the quickest setup: one
-process, one port, the dashboard already there.
-
-**As its own service.** The `snodra-event-browser` image connects to the server like any service and
-registers the reserved `snodra.events.*` query types. Use it when the browser should be separate from
-the server — for example, when the server should not hold broker credentials, or when several
-servers share one browser. In that deployment, without a connected browser the server's events
-routes answer 404 `event browser not installed`.
+The server reads no event store. The event browser is a service of its own, `snodra-event-browser`:
+it connects to the server like any service, registers the reserved `snodra.events.*` query types and
+answers them from the event store it reads. The server's routes, the payload rules and what the server
+does with each answer are on [the server's event browser page](../server/event-browser.md). Without a
+connected browser the server's events routes answer 404 `event browser not installed` and the
+dashboard hides the Events page. With several servers, the browser connects to each one like any
+service (`SNODRA_SERVER_ADDRESS` takes a list).
 
 ```yaml
 services:
@@ -37,19 +34,20 @@ services:
 | View | Question |
 |---|---|
 | Search | Which events match a type, key, source, time range, correlation id or payload text? |
-| Record | What exactly does this topic/partition/offset contain, headers and payload? |
+| Record | What exactly does this source/segment/position (topic/partition/offset) contain, headers and payload? |
 | Tail | What is arriving now? |
-| Consumer groups | How far behind is each group on this topic? |
+| Lag | How far behind is each subscription (on Kafka, each consumer group) on this source? |
 | Lag metric | `snodra_event_browser_subscription_lag{subscription, source}` |
 
-Search reads partitions backwards within a scan budget and a time budget; a page carries a cursor,
+Search reads every segment backwards within a scan budget and a time budget; a page carries a cursor,
 so no record is skipped or repeated between pages. Records written after the first page do not appear
 in later pages.
 
 ## Settings
 
-The server-side settings are `SNODRA_SERVER_EVENT_*` and `SNODRA_SERVER_KAFKA_BOOTSTRAP`; see
-[Server settings](../server/configuration/server.md). The standalone service uses its own names:
+The browser's own settings; the server's side of the event browser is two settings,
+`SNODRA_SERVER_EVENT_BROWSER_PAYLOADS` and `SNODRA_SERVER_EVENT_MAX_TAILS` (see
+[the server's event browser page](../server/event-browser.md)):
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -70,9 +68,10 @@ the `snodra.events.*` types.
 
 ## Security
 
-Payloads follow the server's payload rules: a record detail serves a payload only to a request that
-presents the dashboard or write token, and every payload view writes an audit line. Payload search
-(`q`) is refused otherwise. Treat the tokens as read access to your event data.
+The server decides who sees payloads, not the browser: a record detail serves a payload only when
+`SNODRA_SERVER_EVENT_BROWSER_PAYLOADS=true` and the request presents the dashboard or write token, and
+every payload view writes an audit line. Payload search (`q`) is refused otherwise
+([Payloads](../server/event-browser.md#payloads)). Treat the tokens as read access to your event data.
 
 ## Read next
 

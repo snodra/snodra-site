@@ -4,7 +4,7 @@ Pause, resume, reset and replay processors, and work their dead letters, from th
 
 ## Processor control
 
-Decision record: ADR 0023. The hub is a stateless
+The hub is a stateless
 control plane: it asks the instances that run a processor to act and turns their answers into one HTTP answer. The
 state lives in each service's MongoDB (`processor_control`, one document per processor), which every instance reads at
 start and every 5 s: a pause outlives every hub and reaches instances that start later. For control the hub reads no

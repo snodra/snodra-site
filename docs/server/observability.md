@@ -42,7 +42,7 @@ forwarded `Request` keeps the original `traceparent` so the handler's span is a 
 not of the hub's.
 
 Metrics: OTLP to `SNODRA_SERVER_OTLP_ENDPOINT` (every 60 s, the SDK's default; `OTEL_METRIC_EXPORT_INTERVAL` in ms
-changes it), named below as Prometheus stores them (ADR 0026). The resource
+changes it), named below as Prometheus stores them. The resource
 is `service.name=snodra-server` and `service.instance.id=<SNODRA_SERVER_ID>`, so every series carries `job="snodra-server"` and
 `instance="<hub id>"` (otel-lgtm also adds `service_name` and `service_instance_id` with the same values); no data
 point carries a hub id. Labels below are the data-point labels only. `service` is always the handling side (the

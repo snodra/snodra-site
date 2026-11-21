@@ -43,7 +43,7 @@ All keys (`snodra.messaging.*`; durations accept `200ms`, `5s`, `7d`; relaxed bi
 | `hub.tls.enabled` | `false` | Talk TLS to the hub, for every `hub.address` form (a list of targets and `dns:///`). Off: plain text. The hub must serve TLS on that port (`SNODRA_SERVER_TLS_CERT` / `SNODRA_SERVER_TLS_KEY`). |
 | `hub.tls.ca-file` | JVM system roots | PEM file with the CA certificate(s) that signed the hub's certificate (a self-signed hub certificate is its own CA). Read on every connection attempt; a file that cannot be used fails the startup. Set without `hub.tls.enabled` it is ignored with a warning. |
 | `hub.tls.server-name` | the address's host | Name to verify the hub's certificate against, for when the address is an IP or an alias the certificate does not list. |
-| `hub.oauth2.token-uri` | none | Setting it turns OAuth2 client-credentials authentication on (P5b, [JWT](#authenticating-with-a-jwt-oauth2-client-credentials)): the token endpoint, for example `https://auth.example/realms/snodra/protocol/openid-connect/token`. `http` is allowed and warns once unless the host is loopback or a single-label name. Cannot be combined with `hub.token` or `hub.token-file` (the startup fails naming both). Environment: `SNODRA_MESSAGING_HUB_OAUTH2_TOKEN_URI`, or `SNODRA_SERVER_OAUTH2_TOKEN_URI` when this key is unset. |
+| `hub.oauth2.token-uri` | none | Setting it turns OAuth2 client-credentials authentication on (see [JWT](#authenticating-with-a-jwt-oauth2-client-credentials)): the token endpoint, for example `https://auth.example/realms/snodra/protocol/openid-connect/token`. `http` is allowed and warns once unless the host is loopback or a single-label name. Cannot be combined with `hub.token` or `hub.token-file` (the startup fails naming both). Environment: `SNODRA_MESSAGING_HUB_OAUTH2_TOKEN_URI`, or `SNODRA_SERVER_OAUTH2_TOKEN_URI` when this key is unset. |
 | `hub.oauth2.client-id` | `snodra.messaging.service-name` | The confidential client's id; it is the token's `azp`, which the hub requires to equal the service name. Environment: `SNODRA_SERVER_OAUTH2_CLIENT_ID`. |
 | `hub.oauth2.client-secret` | none | The client secret (sent as HTTP Basic, `client_secret_basic`). Never logged, redacted in `toString` and in the actuator's `configprops` and `env`. Prefer the file. Environment: `SNODRA_MESSAGING_HUB_OAUTH2_CLIENT_SECRET`, or `SNODRA_SERVER_OAUTH2_CLIENT_SECRET`. |
 | `hub.oauth2.client-secret-file` | none | File holding the client secret: read at startup (an unreadable or empty file fails it, naming the file) and **again on every token fetch**, so a rotated secret applies without a restart. Wins over `client-secret`. Environment: `SNODRA_MESSAGING_HUB_OAUTH2_CLIENT_SECRET_FILE`, or `SNODRA_SERVER_OAUTH2_CLIENT_SECRET_FILE`. A token URI with neither secret fails the startup. |
@@ -166,8 +166,8 @@ fails startup with a hint.
 
 ## Hub security: token, ACL and TLS
 
-Since P5a the hub can authenticate services and restrict what they register and send, and serve its gRPC port over TLS
-(decision record: ADR 0018, hub access control; operator how-to: `https://snodra.damoreira.com/concepts/security/`). All of it is opt-in
+The hub can authenticate services and restrict what they register and send, and serve its gRPC port over TLS
+(operator how-to: `https://snodra.damoreira.com/concepts/security/`). All of it is opt-in
 on the hub (`SNODRA_SERVER_AUTH_MODE=off|permissive|enforce`, default `off`); this section is the client's side. It is
 unrelated to [Security](#security) above, which is about the **user's** forwarded JWT.
 
@@ -225,7 +225,7 @@ absent) and, if the address is not a name on the certificate, `hub.tls.server-na
 Plain text against a TLS hub (or TLS against a plain-text one) never hangs: the stream fails at once as
 `UNAVAILABLE (io exception)` or `INTERNAL (http2 exception)` and the first `WARN` line that applies (not
 necessarily the very first attempt: a hub that was still starting is a plain refusal, which carries no hint) says to check
-`snodra.messaging.hub.tls.enabled` and `tls.ca-file`; later attempts log it at `DEBUG`. A client certificate (mTLS, P5c) is
+`snodra.messaging.hub.tls.enabled` and `tls.ca-file`; later attempts log it at `DEBUG`. A client certificate (mTLS) is
 [its own section](#authenticating-with-a-client-certificate-mtls); `DefaultHubChannelFactory.customizeTls` stays a hook for a subclass.
 
 **Turning it on.** `enforce` last: (1) run the hub with `SNODRA_SERVER_AUTH_MODE=permissive` and an ACL file; (2) give every service its
@@ -236,8 +236,8 @@ reconnecting in a tight loop.
 
 ## Authenticating with a JWT (OAuth2 client credentials)
 
-Since P5b a service can present a short-lived OAuth2 access token instead of a static token (decision record: ADR 0019,
-hub JWT authentication). The hub validates it against the realm's keys (`SNODRA_SERVER_JWT_ISSUER`, ...), requires
+A service can present a short-lived OAuth2 access token instead of a static token. The hub validates it against the
+realm's keys (`SNODRA_SERVER_JWT_ISSUER`, ...), requires
 its `azp` to equal the service name and takes the rights from the `[[service]]` table of that name in its ACL file.
 
 **The provider, in two lines.** One confidential client per service with *service accounts enabled and nothing else* (no standard
@@ -298,8 +298,7 @@ its name is refused by the JDK's URI parser (the host would be null), so it fail
 
 ## Authenticating with a client certificate (mTLS)
 
-Since P5c the hub can take a **client certificate** as the service's credential (decision record: ADR 0020,
-hub mutual TLS; issuing certificates and the hub's settings: `https://snodra.damoreira.com/concepts/security/`, "mTLS mode"). The TLS handshake
+The hub can take a **client certificate** as the service's credential (issuing certificates and the hub's settings: `https://snodra.damoreira.com/concepts/security/`, "mTLS mode"). The TLS handshake
 proves the service holds the key, the certificate names the service, and the rights are the hub's `[[service]]` table of that name, the
 same table a JWT uses. No secret crosses the wire and no identity provider is involved.
 

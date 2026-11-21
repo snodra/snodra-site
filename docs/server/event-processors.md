@@ -4,7 +4,7 @@ How the hub presents the processor status every service instance reports.
 
 ## Event processors
 
-Decision record: ADR 0022. A service's Kafka
+A service's Kafka
 event handlers run in **event processors**: `default` for the handlers without a processing group, and one per named
 processing group (`@ProcessingGroup("orders")` in Kotlin, `builder.event_in("orders", …)` in Rust); each has its own
 consumer group, `<service group>.<name>` (`<service group>.default` for `default`). Each instance reports its
@@ -37,7 +37,7 @@ group, live members or not, as Kafka reports it: [Event browser](event-browser.m
 | `instances[]` | each instance's report as kept (the topology fields above) with `instanceId` and `statusAgeMs` |
 
 `services[].deadLetters` sums its processors'. Services that report no processor are not listed. The dashboard
-re-aggregates in the browser from `instances[]`, also over every reachable peer (ADR 0022 ruling 10); a peer that
+re-aggregates in the browser from `instances[]`, also over every reachable peer; a peer that
 does not answer is shown unreachable.
 
 Dead letters themselves (the `dead_letters` collection, the `topic` and `log` modes, the local `DeadLetters` admin API

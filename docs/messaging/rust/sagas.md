@@ -2,13 +2,12 @@
 
 ## Sagas
 
-Sagas, deadlines and the integration toolkit of ADR 0021 (S2): the model of the Kotlin starter (S1), on the same MongoDB
+Sagas, deadlines and the integration toolkit: the model of the Kotlin starter, on the same MongoDB
 collections and document shapes (`sagas`, `saga_dispatch`, `saga_dispatch_leases`, `deadlines`, `saga_failures`,
 `external_calls`, markers in `processed_events`), so a Kotlin and a Rust instance read each other's documents. The
 programming model, the delivery guarantees and the command-failure taxonomy are in
 [Sagas and deadlines](../index.md#sagas-and-deadlines) (its "Rust"
-subsection maps every Kotlin element to this crate); the decisions in
-ADR 0021, S2 rulings 47 to 67. The sandbox's banner saga
+subsection maps every Kotlin element to this crate). The sandbox's banner saga
 (`examples/service-c/src/banner.rs`) is a complete example.
 
 A saga is a state type and a definition closure. Handlers are **synchronous** closures that change the state and record
@@ -177,7 +176,7 @@ holding the fixture across an `.await`).
 
 ### Differences from Kotlin
 
-The behaviour is ADR 0021's rulings 1 to 46; where Rust differs, the S2 ruling says why (rulings 47 to 67):
+The behaviour is the Kotlin starter's; where Rust differs:
 
 - Sagas are closures registered on the builder (`builder.saga(name, define)`), not scanned `@Saga` classes; the name is
   required.

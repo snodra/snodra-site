@@ -40,7 +40,7 @@
 
 ## Security
 
-Access control and TLS for the hub connection (roadmap P5a, hub ADR 0018). Everything here is opt-in
+Access control and TLS for the hub connection. Everything here is opt-in
 and the hub decides: against a hub in `SNODRA_SERVER_AUTH_MODE=off` (the default) the token is ignored
 and nothing changes.
 
@@ -108,8 +108,8 @@ SNODRA_SERVER_TLS=true SNODRA_SERVER_TLS_CA=/etc/snodra/ca.pem SNODRA_SERVER_TLS
 
 ### Authenticating with a JWT (OAuth2 client credentials)
 
-Instead of a static token a service can register with a short-lived OAuth2 access token (roadmap
-P5b, hub ADR 0019). On the provider side, make the
+Instead of a static token a service can register with a short-lived OAuth2 access token.
+On the provider side, make the
 service a **confidential client with service accounts only** (no standard flow, no direct access
 grants) whose **client id is the service name**: the hub checks the token's `azp` against
 `Register.service_name` and takes the rights from its `[[service]]` ACL table of that name. Then set
@@ -169,8 +169,8 @@ binding (only `SNODRA_SERVER_OAUTH2_*`), no `/env` redaction layer to extend (`S
 
 ### Authenticating with a client certificate (mTLS)
 
-A third credential (roadmap P5c, hub ADR 0020, "mTLS
-mode" in [06-security.md](../../server/configuration/mtls.md)): the service presents a
+A third credential (see
+[mTLS mode](../../server/configuration/mtls.md)): the service presents a
 certificate in the TLS handshake of the hub connection, and the hub reads the service's identity from
 it. No secret crosses the wire and no identity provider is in the path. Set
 

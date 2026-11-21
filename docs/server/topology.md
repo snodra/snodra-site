@@ -33,8 +33,13 @@ docker exec snodra-server /app/snodra-server --topology --json
   unreachable or timeout), 2 usage error (unknown or conflicting flags; usage goes to stderr).
   With nothing connected it prints `no services connected` and a totals line.
 - Without `SNODRA_SERVER_DASHBOARD_TOKEN` the topology has no authentication, like the rest of the
-  port-7000 surface, except that with `SNODRA_SERVER_AUTH_MODE=enforce` the gRPC call needs an ACL token;
-  with the token, the gRPC call and `GET /api/v1/topology` need it (see [Security](configuration/index.md)).
+  port-7000 surface, except that with `SNODRA_SERVER_AUTH_MODE=enforce` the gRPC call needs a service
+  credential: an ACL token, a JWT of a service with a `[[service]]` table, or a client certificate of
+  one (`permissive` lets a call without one through, counted as `topology_unauthenticated`).
+- With `SNODRA_SERVER_DASHBOARD_TOKEN` set, the gRPC call needs a credential in every mode, `permissive`
+  included: the dashboard token, or, in `permissive` and `enforce`, one of those service credentials
+  (`off` reads no ACL, so there only the dashboard token passes); anything else is `UNAUTHENTICATED`.
+  `GET /api/v1/topology` needs the dashboard token or the write token (see [Security](configuration/index.md)).
 - The hub has no gRPC server reflection, hence the `-proto` flags. grpcurl's proto-JSON prints
   int64 as strings and omits default values, so its output differs textually from
   `curl :7001/api/v1/topology`.
@@ -121,7 +126,7 @@ two additions to the registry rules.
   type that the owner holds as a command) is rejected with `ALREADY_EXISTS`. A type's kind cannot
   change while it is owned; change it only after every instance of the owner has left and the
   owner grace sweep has removed the type.
-- Shared query types (`Register.shared_query_types`, ADR 0017): a type registered
+- Shared query types (`Register.shared_query_types`): a type registered
   exclusive by one registrant and shared by another (even of the same service) fails the later
   `Register` with `ALREADY_EXISTS`; a type listed as shared and as a command or exclusive query in
   one `Register` is `INVALID_ARGUMENT`. Like a kind, the flag changes only once the type is gone.
