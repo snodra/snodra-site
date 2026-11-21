@@ -302,9 +302,9 @@ What a library adds for processors:
 
 ## Level 4: Sagas
 
-Sagas live in the library, inside the service that owns them, so the hub only ever sees the commands a saga sends, never the saga itself (the
-programming model is in [Sagas and deadlines](../messaging/index.md#sagas-and-deadlines)). What the rest
-of Snodra sees of them:
+Sagas live in the library, inside the service that owns them, so the hub only ever sees the commands a saga sends,
+never the saga itself (the programming model is in
+[Sagas and deadlines](../messaging/index.md#sagas-and-deadlines)). What the rest of Snodra sees of them:
 
 - A saga's commands and events are recorded in its transaction and relayed after the commit, in order per saga, at
   least once; each command carries `idempotency-key` and `saga-id`, and no caller token (`L4-SAGA-DISPATCH`).
