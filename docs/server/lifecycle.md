@@ -22,9 +22,6 @@ Registration, heartbeats, reconnection and the failure modes a client must handl
 
 ## Handshake
 
-Decision records: ADR 0013 (the ack),
-ADR 0024 (one version of everything: no negotiation).
-
 ```text
 client                                   hub
   Register{..., client_version,      -->   registers the instance
@@ -44,7 +41,7 @@ client                                   hub
 - A `Register` the hub refuses closes the stream with a status instead (`INVALID_ARGUMENT`,
   `ALREADY_EXISTS`, `UNAUTHENTICATED`, `PERMISSION_DENIED`); a stream without a `Register` within
   `SNODRA_SERVER_HANDSHAKE_TIMEOUT` is closed with `DEADLINE_EXCEEDED`.
-- Every session has every feature: flow control (ADR 0014),
+- Every session has every feature: flow control,
   `InstanceStatus` reports ([High availability](operations.md#high-availability)), the query modes
   ([Query modes](protocol.md#query-modes)), credential refresh (`ClientMessage.credentials`;
   [JWT credentials](https://snodra.damoreira.com/server/configuration/jwt-oauth2/)), event processor status (`InstanceStatus.processors`;
@@ -126,7 +123,7 @@ without client configuration.
 | `Register` over a client certificate that names no service (no `snodra://service/<name>` URI SAN), or several (`enforce`) | stream closed with `PERMISSION_DENIED` "certificate names no service" / "certificate names more than one service" | as above (a registration rejection) |
 | `Register` with `credentials` that resolve to another service than the client certificate (`enforce`) | stream closed with `PERMISSION_DENIED` "credentials and certificate name different services"; `permissive` counts it and the certificate wins | as above |
 | A client without a valid certificate on a `required` listener, or with an invalid one on an `optional` one | TLS handshake fails (counted `snodra_hub_tls_handshake_failures_total{reason="client_cert_missing"\|"client_cert_invalid"}`); no stream exists | a transport failure: the connection is retried at the normal backoff (TLS 1.3: the client sees it when the stream opens) |
-| A certificate session reaches `notAfter` (`enforce`) | stream closed with `UNAUTHENTICATED` "certificate expired", no grace; pending requests end as on any disconnect. `permissive`: counted (`expired`) and logged once, the session stays | the service: an ordinary stream closure, not a registration rejection: it reconnects at the normal backoff (`INFO`, no `lastRejection`) with its renewed certificate; it should reload the files and reconnect before `notAfter` (ADR 0020, review ruling 20) |
+| A certificate session reaches `notAfter` (`enforce`) | stream closed with `UNAUTHENTICATED` "certificate expired", no grace; pending requests end as on any disconnect. `permissive`: counted (`expired`) and logged once, the session stays | the service: an ordinary stream closure, not a registration rejection: it reconnects at the normal backoff (`INFO`, no `lastRejection`) with its renewed certificate; it should reload the files and reconnect before `notAfter` |
 | `ClientMessage.credentials` that is invalid, or for another service (`enforce`) | stream closed with `UNAUTHENTICATED` / `PERMISSION_DENIED`; `permissive` counts it and keeps the old credential | as above |
 | `Register` as a service the token does not grant, or for a type outside its `handle` (`enforce`) | stream closed with `PERMISSION_DENIED`, naming the type | as above (a registration rejection); a later `Register` on a live stream that adds such a type closes that stream |
 | `Register` under an instance id held by a live session of another service (`enforce` and `permissive`) | stream closed with `PERMISSION_DENIED` "instance id `<8 chars>` belongs to another service"; the holder is untouched | as above (a registration rejection) |

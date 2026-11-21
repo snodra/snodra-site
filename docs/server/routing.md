@@ -40,8 +40,8 @@ Rules enforced on `Register`:
 - A type in `command_types` or `query_types` may be owned by one service only. If a second service
   registers a type another service already owns, the hub rejects the `Register` with
   `ALREADY_EXISTS` and closes the stream; this is a deployment error and must be loud.
-- A type in `shared_query_types` may be owned by many services ([Query modes](protocol.md#query-modes),
-  ADR 0017). Registrants must agree: a type
+- A type in `shared_query_types` may be owned by many services ([Query modes](protocol.md#query-modes)).
+  Registrants must agree: a type
   registered exclusive by one registrant and shared by another (even of the same service) fails
   the later `Register` with `ALREADY_EXISTS`; a type listed as shared and as a command or
   exclusive query in one `Register` is `INVALID_ARGUMENT`. Commands are never shared.
@@ -79,7 +79,7 @@ Rules enforced on `Register`:
 | QUERY, mode `SCATTER_GATHER` | any | every live instance of every owner that lists the type ([Query modes](protocol.md#query-modes)) |
 | QUERY, mode `STREAMING` | any | one instance, chosen as an unkeyed request among the live instances of the owner(s) that list the type ([Query modes](protocol.md#query-modes)) |
 
-Choosing among the owning service's instances for unkeyed requests (ADR 0014):
+Choosing among the owning service's instances for unkeyed requests:
 
 1. the best tag-match score: the number of the sender's `Register.tags` pairs the instance has
    with the same value;

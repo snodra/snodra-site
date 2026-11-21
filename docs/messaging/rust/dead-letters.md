@@ -1,6 +1,6 @@
 # Dead letters
 
-A record a processor cannot handle is kept, not lost (ADR 0022). `SNODRA_KAFKA_DEAD_LETTER_MODE`
+A record a processor cannot handle is kept, not lost. `SNODRA_KAFKA_DEAD_LETTER_MODE`
 chooses where it goes:
 
 | Mode | What happens | Sequenced per key | Admin API |

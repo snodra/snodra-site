@@ -11,7 +11,7 @@
   ones): no credits, and an emit is delivered at once, not after the commit of a surrounding transaction. `maxResults`,
   `cancel()` and `take(n)` end it as against a hub.
 - `SnodraContainers.hubMtls(directory, services, serverCertificate, serverKey, clientCa, clientAuth = "required")`: the hub image
-  (`SNODRA_SERVER_IMAGE`, default `snodra-server:dev`) in mode `enforce` with `[[service]]` tables and a client CA (P5c). Issue the hub's own
+  (`SNODRA_SERVER_IMAGE`, default `snodra-server:dev`) in mode `enforce` with `[[service]]` tables and a client CA. Issue the hub's own
   pair from the client CA with both usages, so the image's health check (which presents it under `required`) passes. Generate the CA
   and the certificates at test time; the starter's own tests use BouncyCastle in test scope for that (the JDK's `keytool` cannot give a
   URI SAN and a seconds-long validity at once).
@@ -26,24 +26,24 @@
   `requestsFrom(...)`, `sessionsOf(...)`,
   and `pauseReading = true` stops reading every stream. Like the real hub it keeps one session per instance id: a new
   stream registering an id replaces the older one (`sessionsReplacedOf(...)`, `streamsOpenedBy(...)`;
-  `replaceSessions = false` keeps both), and `ackDelay` delays each `RegisterAck` as network latency would. Query modes
-  (P4a): shared query types, scatter-gather with parts, end, `max_results`, the deadline and a `Cancel` to every forwarded
+  `replaceSessions = false` keeps both), and `ackDelay` delays each `RegisterAck` as network latency would. Query modes:
+  shared query types, scatter-gather with parts, end, `max_results`, the deadline and a `Cancel` to every forwarded
   target of a gather that ends early, as the real hub; an unknown request mode is `INVALID_REQUEST`, and `inject(instanceId,
-  message)` writes any server message to an instance's stream. Streaming queries (P4b): one target, credits
+  message)` writes any server message to an instance's stream. Streaming queries: one target, credits
   (`uint32`) and `Flow`, parts and ends relayed, `max_results`, the idle timeout (paused while the credit is 0),
   `maxStreamDuration`, cancels both ways and the gates as the real hub (a unary `Reply` to the target is ignored),
   `dropParts` drops relayed parts by `seq` (the real hub's full-buffer drop), and `openStreams()`,
-  `creditOf(requestId)`, `flowsFrom(instanceId)` and `cancelsFrom(instanceId)` observe it. Subscription queries (P4c):
+  `creditOf(requestId)`, `flowsFrom(instanceId)` and `cancelsFrom(instanceId)` observe it. Subscription queries:
   every live instance of the type is a target as they are at the open, the initial request goes out as `<id>#0` through a
   permit and the queue, updates are renumbered behind the initial part under the sender's credit and the buffer
   (`subscriptionBuffer`, 256: one more ends it), `max_results` counts updates, cancels fan out both ways, a target leaving is
   silent unless it was the last (`HANDLER_DISCONNECTED`), `maxSubscriptionsPerInstance` (1024) refuses with
   `RESOURCE_EXHAUSTED`, `maxSubscriptionDuration` (off) ends with `CANCELLED`, and the gates are the real hub's;
   `openSubscriptions()`, `subscriptionTargetsOf(instanceId)`,
-  `subscriptionCreditOf(requestId)` and `bufferedUpdatesOf(requestId)` observe it. Processor control (P6b):
+  `subscriptionCreditOf(requestId)` and `bufferedUpdatesOf(requestId)` observe it. Processor control:
   `control(instanceId, request)` sends a `ControlRequest` to the instance's session and awaits its `ControlReply` from that
   session, `controlRepliesFrom(instanceId)` lists every reply.
-- `InProcessHub.auth` (P5a): `HubAuth.enforce(tokens)`, `HubAuth.permissive(tokens)` or `HubAuth.OFF` (default), with `tokens` a
+- `InProcessHub.auth`: `HubAuth.enforce(tokens)`, `HubAuth.permissive(tokens)` or `HubAuth.OFF` (default), with `tokens` a
   map from the plain test token to `AclEntry(service, handle, send)` (patterns: exact, `prefix.*`, `*`), answers like the real
   hub: in `enforce` the first `Register` is closed with `UNAUTHENTICATED` (no credentials, an empty token, a `jwt` on a hub
   without `services`, an unknown token) or `PERMISSION_DENIED` (another service name, a command, query or shared query outside `handle`), a later `Register`
@@ -54,7 +54,7 @@
   service name or handled type it no longer grants; their in-flight requests fail as on any disconnect); set
   `closeSessionsOnAuthChange = false` to keep them and test the per-request refusal instead. Like the real hub (unless `auth` is `OFF`), a `Register` naming the instance id of a live session of another service is closed with `PERMISSION_DENIED` (`instance id … belongs to another service`) and the owner is left alone. `permissive` allows and records. `authViolations()` lists every violation (code, message, enforced, a monotonic timestamp, so tests can assert
   the spacing of reconnects) and `tokensSeenFrom(instanceId)` the token of every `Register` received, refused ones included.
-- `InProcessHub` and JWT credentials (P5b): `HubAuth.enforce(tokens, services)` / `permissive(tokens, services)` take the `[[service]]`
+- `InProcessHub` and JWT credentials: `HubAuth.enforce(tokens, services)` / `permissive(tokens, services)` take the `[[service]]`
   tables as `AclEntry(service, handle, send)`. A `jwt` credential whose `azp` is the registering service and that has such an
   entry is accepted with its rights; another `azp` or a service without an entry is `PERMISSION_DENIED`, a token that is not three
   segments with an `azp` is `UNAUTHENTICATED`, and without `services` the hub answers "jwt credentials are not configured". The

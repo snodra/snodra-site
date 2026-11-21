@@ -125,18 +125,18 @@ answers with an HTTP/2 frame error is talking to it — pass `--listen` or `--ad
 
 ## Event browser
 
+The server reads no event store: the [event browser](../event-browser.md) is the `snodra-event-browser`
+add-on, with [its own settings](../../tools/event-browser.md#settings). The server's side:
+
 | Variable | Default | Meaning |
 |---|---|---|
-| `SNODRA_SERVER_KAFKA_BOOTSTRAP` | none | Kafka bootstrap servers the event browser reads (plaintext); unset: the event browser and the consumer groups are off (404) and their pages hidden |
-| `SNODRA_SERVER_EVENT_TOPICS` | `snodra.events` | the only topics the event browser and its tail read, comma-separated, the first the default; a `<topic>.dlt` is browsable when listed |
 | `SNODRA_SERVER_EVENT_BROWSER_PAYLOADS` | `false` | serve event payloads (record detail, `q`) to a request that presents the dashboard or write token (a token must be configured too) |
-| `SNODRA_SERVER_EVENT_SEARCH_MAX_SCANNED` | `50000` | records one search reads from Kafka at most |
-| `SNODRA_SERVER_EVENT_SEARCH_MAX_RESULTS` | `100` | results one search page returns at most (1 to 1000) |
-| `SNODRA_SERVER_EVENT_SEARCH_TIMEOUT` | `10s` | time budget of one search, record read or consumer-group listing, Kafka calls included |
-| `SNODRA_SERVER_EVENT_MAX_SEARCHES` | `4` | searches, record reads and group listings at once; one more is 429 |
-| `SNODRA_SERVER_EVENT_MAX_TAILS` | `4` | event tails at once; one more is 429 |
-| `SNODRA_SERVER_EVENT_TAIL_DURATION` | `15m` | a tail ends (`maxDuration`) after this long; at least `1s` |
-| `SNODRA_SERVER_GROUP_LAG_INTERVAL` | `60s` | How often the consumer-group lag task reads every group on the event topics; `0` turns it off |
+| `SNODRA_SERVER_EVENT_MAX_TAILS` | `4` | event tails open at once on this hub, 1 to 1024; one more is 429 |
+
+`SNODRA_SERVER_KAFKA_BOOTSTRAP`, `SNODRA_SERVER_EVENT_TOPICS`, `SNODRA_SERVER_EVENT_SEARCH_MAX_SCANNED`,
+`SNODRA_SERVER_EVENT_SEARCH_MAX_RESULTS`, `SNODRA_SERVER_EVENT_SEARCH_TIMEOUT`, `SNODRA_SERVER_EVENT_MAX_SEARCHES`,
+`SNODRA_SERVER_EVENT_TAIL_DURATION` and `SNODRA_SERVER_GROUP_LAG_INTERVAL` are no longer read; each one still set is
+a startup warning.
 
 ## Startup checks
 

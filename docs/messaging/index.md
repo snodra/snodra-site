@@ -32,7 +32,7 @@ key `snodra.messaging.type-prefix` plus the simple class name.
 
 ## Scatter-gather and shared query types
 
-Hub side and protocol: ADR 0017,
+Hub side and protocol:
 [hub.md, Query modes](../server/protocol.md#query-modes). A query type is **exclusive** (one owning
 service, the default) or **shared** (any number of services may own it). A point query on a shared
 type goes to one live instance of any owner (one round-robin pool over all owners at the hub); a
@@ -134,7 +134,7 @@ examples smoke checks both (see `snodra-messaging/examples/README.md`).
 
 ## Streaming queries
 
-Hub side and protocol: ADR 0017 (P4b),
+Hub side and protocol:
 [hub.md, Streaming](../server/protocol.md#query-modes). A **streaming query** is answered by one
 instance of one owner as a stream of parts under the collector's back-pressure: an export, a long
 listing, a search that trickles. Its type is exclusive or shared like any query type (a shared one
@@ -250,7 +250,7 @@ error of the same hub code**; the parts emitted before it stay emitted.
 | A gap in `seq`, or `ReplyEnd.parts` above the parts received (checked locally, "stream lost N parts") | `InvalidMessageException` | `InvalidMessage` |
 | The handler's instance left mid-stream, also while the target was still queued (`HANDLER_DISCONNECTED`; a stream never moves to another instance) | `HandlerDisconnectedException` | `HandlerDisconnected` |
 | The target's hub queue or session buffer was full (`RESOURCE_EXHAUSTED`) | `HandlerBusyException` | `HandlerBusy` |
-| The stream outlived `SNODRA_SERVER_MAX_STREAM_DURATION` (`CANCELLED`) | `StreamCancelledException` (new in P4b) | `MessagingError::Cancelled` (new in P4b) |
+| The stream outlived `SNODRA_SERVER_MAX_STREAM_DURATION` (`CANCELLED`) | `StreamCancelledException` | `MessagingError::Cancelled` |
 | The stream to the hub breaks before the end | `HubConnectionLostException` | `HubConnectionLost` (a loss while the request still sat in the outbound buffer moves it to the next live hub with the same id, as a unary request) |
 | No part or end within the local guard (a hub that never answers) | `MessageTimeoutException` (a `Cancel` is written) | `Timeout` (the stream is cancelled, best effort) |
 
@@ -334,7 +334,7 @@ nothing in flight on either hub, and a handler failure mapped to 502 (see
 
 ## Subscription queries
 
-Hub side and protocol: ADR 0017 (P4c),
+Hub side and protocol:
 [hub.md, Subscription](../server/protocol.md#query-modes). A **subscription query** is an initial
 result followed by the updates every handler instance pushes, until the subscriber cancels or the
 handlers complete: a screen that shows an account and refreshes when it changes, a status page. Its
@@ -550,8 +550,7 @@ hub ends the whole subscription with it (the subscriber's call fails or `updates
 apply to it (only the initial request takes one, for its duration). The hub's own buffer, per-instance
 limit and maximum duration are its settings.
 
-**Shared rulings (both libraries)**, continuing the numbering of the stream rulings
-(ADR 0017, P4c client slices):
+**Shared rulings (both libraries)**, continuing the numbering of the stream rulings:
 
 28. **The initial request is recognised by its `#0` id**; a subscription handler answers it, and a
     unary request for the type (any other id) is `INVALID_REQUEST`.
@@ -605,12 +604,11 @@ A **saga** is a long-running process that reacts to events, keeps its own state,
 ends. It is the saga model: `@Saga`, `@StartSaga`, `@SagaEventHandler`, `@EndSaga`, deadlines, built for what Snodra
 needs it for: driving **integrations with external systems**, that is asking an outside system to do something, waiting
 for its answer and handling the answer that never comes. Sagas live in the Kotlin library, inside each service, against
-that service's MongoDB and Kafka consumer; the hub only carries the commands a saga sends to another service. Decision and
-rulings: ADR 0021. Service authors start with the "Sagas" section of the
+that service's MongoDB and Kafka consumer; the hub only carries the commands a saga sends to another service. Service
+authors start with the "Sagas" section of the
 `snodra-messaging` README and the sandbox's postcard saga (`snodra-messaging/examples/README.md`).
 
-Kotlin (S1) and Rust (S2) both have it, on the same collections
-(ADR 0021). The sections below describe the model with the
+Kotlin and Rust both have it, on the same collections. The sections below describe the model with the
 Kotlin API; Rust gives the crate's API next to it and what differs.
 
 ### Programming model
@@ -784,7 +782,7 @@ it is logged at error and counted in `snodra.saga.command.failures`, and the sag
 entries are sent after a permanently failed one: the saga decides what the failure means (end, compensate, ask a person).
 
 How a failure kind reaches the relay: it travels as `HANDLER_ERROR` with a small JSON marker in `details`
-(`{"Snodra":"retryable"}`, `{"Snodra":"unknown-outcome"}`), so it is the same whether the adapter runs in the saga's service or in
+(`{"snodra":"retryable"}`, `{"snodra":"unknown-outcome"}`), so it is the same whether the adapter runs in the saga's service or in
 another one.
 
 `SendOptions.headers` carries the relay's `idempotency-key` and `saga-id` to the handler's `MessageContext.headers` (hub or
@@ -1026,8 +1024,7 @@ example.
 
 ## Event processors and dead letters
 
-**P6a, built** in both libraries and on the hub. Decision record and the binding contract:
-ADR 0022; the hub side:
+Built in both libraries and on the hub; the hub side:
 [hub.md, Event processors](../server/event-processors.md).
 
 - **Named processors.** `@ProcessingGroup("orders")` on a handler class (Kotlin) or
@@ -1043,7 +1040,7 @@ ADR 0022; the hub side:
   processor, or commit the new group's offsets at the end before the deploy
   (`kafka-consumer-groups --group <service group>.<name> --topic <events topic> --reset-offsets --to-latest --execute`,
   with no running member; records produced between the reset and the old instances' stop are handled by both). There is
-  no start position per processor: P6b's reset ([Processor control](#processor-control)) moves the group of a processor
+  no start position per processor: the reset of [Processor control](#processor-control) moves the group of a processor
   that already runs.
 - **Dead letters.** `snodra.messaging.kafka.dead-letter.mode` (Rust `SNODRA_KAFKA_DEAD_LETTER_MODE`): `collection`
   (default; the `dead_letters` collection, retention `dead-letter.retention`, 30 d), `topic` (`<topic>.dlt`) or `log`
@@ -1056,20 +1053,16 @@ ADR 0022; the hub side:
 - **Status.** Every 5 s each instance reports its processors to every live hub:
   state, partitions with position, committed offset, high watermark and lag, totals, dead letters and the last error.
   The hub dashboard's Processors page and `GET /api/v1/processors` show them; pausing, resuming and resetting a
-  processor and working its letters from the dashboard or the hub's HTTP API is P6b's
+  processor and working its letters from the dashboard or the hub's HTTP API is
   [Processor control](#processor-control).
 - **Sandbox.** service-b (Kotlin) and service-c (Rust) each run a named `audit` processor that can be made to fail on
   demand, with example admin endpoints over the dead letters (`/audit/...`); the examples smoke steps 26 to 26h park,
   sequence, retry and discard letters and read them on `GET /api/v1/processors`
   (`snodra-messaging/examples/README.md`).
 
-The library sections of ADR 0022 (Kotlin, Rust) record what each slice built and decided.
-
 ## Processor control
 
-**P6b, built** in both libraries and on the hub. Decision record and the binding contract:
-ADR 0023 (its Kotlin and Rust sections hold each library's
-rulings, "Differences between the libraries" what differs); the hub side, its routes, credentials and curl examples:
+Built in both libraries and on the hub; the hub side, its routes, credentials and curl examples:
 [hub.md, Processor control](../server/processor-control.md).
 
 - **The hub asks, the service keeps the state.** The hub's dashboard and HTTP API (`/api/v1/services/{service}/processors/
@@ -1101,7 +1094,7 @@ rulings, "Differences between the libraries" what differs); the hub side, its ro
   `partition` and `offset`, so a replay deletes exactly its range: `{processor, topic, partition, offset}` per range,
   nothing else.
 - **Dead letters from the hub.** List (summaries, never a payload), retry, retry all and discard, answered by one
-  instance through the P6a admin API (`Retried`, `Duplicate`, `Failed`, `Blocked`, `NotRetriable`, `NotFound`).
+  instance through the library's dead-letter admin API (`Retried`, `Duplicate`, `Failed`, `Blocked`, `NotRetriable`, `NotFound`).
 - **Sandbox.** The `audit` processors of service-b and service-c have a reset handler (`GET /audit/resets`) and a
   no-replay notifier (`GET /audit/notified`); the examples smoke steps 27 to 27e pause, resume and reset them to
   `earliest` and work their letters through the hub with the write token, in every sandbox mode
@@ -1252,14 +1245,13 @@ JWKS, expiry, required realm role). See 06-security.md.
 | Cleanup policy | `delete` |
 | Replication | 1 (single broker) |
 | Producer | `acks=all`, `enable.idempotence=true`, key = aggregate id |
-| Consumer group | `<service group>.<processor>` for every processor, `default` included, the service group being `snodra.messaging.kafka.group-id` or the service name (Rust: the service name) (P6a, [Event processors and dead letters](#event-processors-and-dead-letters)); all instances share them |
+| Consumer group | `<service group>.<processor>` for every processor, `default` included, the service group being `snodra.messaging.kafka.group-id` or the service name (Rust: the service name) ([Event processors and dead letters](#event-processors-and-dead-letters)); all instances share them |
 | Offset commit | after the handler's transaction commits (manual ack) |
 
 Why one topic: ordering per aggregate across event types, a single place to look, and a single
 subscription per service; consumers skip records whose `type` they do not handle. Trade-off: every
 service reads every event. At Snodra's scale this is
-negligible; if it ever matters, per-service topics are the escape hatch recorded in
-ADR 0003.
+negligible; if it ever matters, per-service topics are the escape hatch.
 
 Replay: reset the consumer group's offsets (`kafka-consumer-groups.sh --reset-offsets`) while the
 service is stopped. The `processed_events` collection must be cleared for the same service when a
@@ -1324,8 +1316,8 @@ In a service with sagas the same record then goes to its saga types, each in a t
 before the offset is committed; see [Delivery and consistency](#delivery-and-consistency).
 
 > **Builder call (first version):** no dead-letter topic; failed records are visible as metrics
-> and logs in Grafana. **Reversed by ADR 0022**
-> (P6a, built in both libraries): a record that exhausts its attempts is parked as a dead
+> and logs in Grafana. **Reversed since**
+> (both libraries): a record that exhausts its attempts is parked as a dead
 > letter by default, see [Event processors and dead letters](#event-processors-and-dead-letters).
 
 ## Hub protocol walkthrough
@@ -1340,7 +1332,7 @@ Reference: ``protocol/hub.proto``, hub internals in
    default_timeout_ms, max_timeout_ms, type_timeouts_ms, ...}` before the echo of that heartbeat. The ack is the
    confirmation that the `Register` was processed: a stream without one within 10 s fails with `DEADLINE_EXCEEDED`
    ("registration not confirmed in time") and the client reconnects. The hub and the libraries ship together, a hub
-   and a client of different builds are not supported (ADR 0024).
+   and a client of different builds are not supported.
 2. **Heartbeat.** The client heartbeats at the interval from the ack (3 s by default); the hub echoes it with
    `sent_at_ms` unchanged. Silence for the hub's heartbeat timeout (10 s) or a closed stream removes the instance and fails its in-flight requests with `HANDLER_DISCONNECTED`. A
    client that gets no echo for three intervals drops the stream and reconnects.

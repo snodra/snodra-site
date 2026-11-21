@@ -72,28 +72,26 @@ is a library; the example services are built from source by the sandbox compose.
 
 ## Known limitations
 
-- Hub authentication is a static token per service (P5a), a OAuth2 client-credentials JWT (P5b) or a client certificate (P5c, mTLS).
+- Hub authentication is a static token per service, a OAuth2 client-credentials JWT or a client certificate (mTLS).
   A static token is a long-lived secret: rotate it through `hub.token-file`. An access token that the provider revokes keeps working until
   it expires (minutes); a certificate until its `notAfter` or until the hub's `[[service]]` table is removed (no CRL, no OCSP: issue
   short-lived certificates). A client key must be unencrypted PKCS#8 PEM. With a single hub, a certificate rotation leaves the instance
   without a stream for a moment (see the rotation notes above).
-- Event processors (P6a) are observed, not controlled: no pause, resume, reset or replay, and retry or discard of dead letters only
-  through the service's own `DeadLetters` bean (the hub's control plane is P6b). Attempts and back-off are shared by all processors;
-  one consumer thread per processor and instance.
+- Event processors: attempts and back-off are shared by all processors; one consumer thread per processor and instance.
 - No leader election for the outbox publisher; with several instances delivery is at-least-once and ordering is per
   publishing instance.
 - A stream pins one handler instance for its whole life: a restart of that instance fails the stream
   (`HANDLER_DISCONNECTED`), and the library never resumes it. A subscription's update targets are fixed when it opens
   (at-most-once updates): an instance that starts later is never added and the library never resubscribes, so a
   subscriber that must hear every instance resubscribes itself (opt-in auto-resubscribe is future work).
-- Library metrics are limited to the credential counters of P5b and the saga toolkit's (see [Sagas](api.md#sagas)), both Micrometer and optional; there are no metrics for the buses, the outbox or the consumer yet. OpenTelemetry comes from the application.
+- Library metrics are limited to the JWT credential counters and the saga toolkit's (see [Sagas](api.md#sagas)), both Micrometer and optional; there are no metrics for the buses, the outbox or the consumer yet. OpenTelemetry comes from the application.
 - Configuration metadata is hand-maintained in `META-INF/spring-configuration-metadata.json`.
 - `TraceHeaders` is only active with Micrometer Tracing on the classpath.
 - Trace context is injected on outbound messages (hub requests, outbox events) but not yet extracted on inbound hub
   requests or Kafka records, so a handler's spans do not join the caller's trace.
 - No service-to-service identity yet: commands sent from event handlers, sagas or scheduled jobs carry no token, so they can
   only reach handlers without `@RequiresAuthentication` (a `snodra-system` client-credentials token is future work).
-- Sagas: Kotlin only (the Rust crate follows, S2); a new saga type does not see events from before its deployment (no replay);
+- Sagas: a new saga type does not see events from before its deployment (no replay);
   parked saga events are retried by a person through `SagaFailures`; a saga belongs to one service.
 - Sagas, reviewed and left as they are: `saga_dispatch` entries that failed for good and `saga_failures` documents have no TTL; a
   `startKey` is `"<type>|<key>=<value>"`, so an association key that contains `=` can make two pairs share one live instance

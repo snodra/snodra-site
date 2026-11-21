@@ -87,7 +87,7 @@
 
 ## Multiple hubs
 
-snodra-server reaches high availability through several independent hubs that never talk to each other (ADR 0016):
+snodra-server reaches high availability through several independent hubs that never talk to each other:
 every instance connects to every hub, and the client decides where each request goes.
 
 ```yaml
@@ -149,7 +149,7 @@ snodra.messaging.hub.address: static://hub-1:7000,static://hub-2:7000   # or: dn
 
 ## Scatter-gather
 
-A query type can be **shared** by several services (ADR 0017): any number of services may own it.
+A query type can be **shared** by several services: any number of services may own it.
 A point query (`queryBus.send`) on a shared type goes to one instance of any owner (the hub round-robins over all of
 them, also when the sender is itself an owner: a shared type is never short-circuited to the local handler); a
 **scatter-gather** asks every live instance of every owner and returns what they answered.
@@ -205,7 +205,7 @@ queryBus.scatterGatherFlow(SearchEverything("legs")).collect { part -> render(pa
 
 ## Streaming queries
 
-A **streaming query** (ADR 0017, P4b) is answered by one handler instance as a stream of parts under the collector's
+A **streaming query** is answered by one handler instance as a stream of parts under the collector's
 back-pressure: an export, a long listing, a search that trickles. The query implements `StreamingQuery<R>` (`R` is
 the element type), the handler returns `Flow<R>`, and the caller collects a `Flow<R>` from `queryBus.stream`.
 
@@ -288,7 +288,7 @@ queryBus.stream(ExportWorkouts(ownerId), StreamOptions(initialCredit = 32, timeo
 
 ## Subscription queries
 
-A **subscription query** (ADR 0017, P4c) is an initial result followed by the updates the handlers push, until the
+A **subscription query** is an initial result followed by the updates the handlers push, until the
 subscriber cancels or the handlers complete: a screen that shows an account and refreshes when it changes, a status page.
 The query implements `SubscriptionQuery<I, U>` (`I` the initial result, `U` an update), the handler returns the initial
 result `I`, every handler instance pushes updates through the `QueryUpdateEmitter`, and the caller gets a
@@ -403,8 +403,7 @@ MongoDB and its Kafka consumer; the hub is not involved except to carry the comm
 Everything starts and ends with Snodra messages. A saga never calls an external system itself: it sends a command, an
 **adapter** in the same service (an ordinary `@CommandHandler` made idempotent) makes the call, and the external system's answer
 comes back as an ordinary Snodra event through a partner topic, a webhook or polling. The full model, the delivery guarantees,
-the configuration and the metrics are in [Sagas and deadlines](../index.md#sagas-and-deadlines); the decision and every
-builder ruling are in ADR 0021 (sagas in the library); a working example with a fake partner is in
+the configuration and the metrics are in [Sagas and deadlines](../index.md#sagas-and-deadlines); a working example with a fake partner is in
 `snodra-messaging/examples/README.md` ("The postcard saga").
 
 ## A minimal saga
@@ -710,7 +709,7 @@ adapter against a fake of the partner, the controller with a mock request and a 
 
 ## Event processors
 
-Every `@EventHandler` belongs to an **event processor** (P6a, ADR 0022). A processor is its own Kafka
+Every `@EventHandler` belongs to an **event processor**. A processor is its own Kafka
 consumer, in its own consumer group, on the events topic: its own position, its own failure domain, its own idempotency markers
 and dead letters. A slow projection in one processor never holds a notifier in another.
 
@@ -771,8 +770,8 @@ dead-letter mode. The hub shows them in `GET /api/v1/topology`, `GET /api/v1/pro
 | `STARTING` | started, no assignment yet (an assignment of zero partitions counts: an idle group member is `RUNNING`), or between a revocation and the next assignment |
 | `RUNNING` | otherwise |
 | `FAILING` | for 60 s after a record exhausted its attempts, or a record could not be acknowledged (its letter could not be parked, the DLT could not be reached); wins over `STARTING` and `RUNNING` |
-| `PAUSED` | paused through processor control (P6b): still in its group, consuming nothing; wins over `FAILING`, `STARTING` and `RUNNING` |
-| `STOPPED` | the processor is stopping or stopped; also while a reset holds its lock (P6b), with `operation_id` set |
+| `PAUSED` | paused through processor control: still in its group, consuming nothing; wins over `FAILING`, `STARTING` and `RUNNING` |
+| `STOPPED` | the processor is stopping or stopped; also while a reset holds its lock, with `operation_id` set |
 
 A report also carries `operation_id` (the reset holding the processor's lock, empty when none), `replaying` (a replay
 range is open on this instance's partitions) and per partition `replay_until` (the end of its open replay range, 0 when none).
@@ -860,13 +859,13 @@ The document (the same from the Rust library; no `_class`, an absent field is ab
 | `blockedBy` | string | `SEQUENCED` only: the head letter when it was parked |
 | `attempts` | Int32 | handler attempts so far |
 | `parkedAt`, `lastAttemptAt`, `expireAt` | Date | `expireAt = parkedAt + retention` (TTL index) |
-| `replay` | bool | `true` when parked while its processor replayed the record (P6b): its retry is a replay too; absent otherwise |
+| `replay` | bool | `true` when parked while its processor replayed the record: its retry is a replay too; absent otherwise |
 
 Indexes: `dead_letters_processor_key_offset`, `dead_letters_processor_parked`, `dead_letters_expire` (TTL), created at startup.
 
 ## Processor control
 
-The hub (ADR 0023) pauses, resumes and resets a processor of a service **on every
+The hub pauses, resumes and resets a processor of a service **on every
 instance**, and lists, retries and discards its dead letters, from its dashboard or HTTP API (writes need the hub's write token
 or an ACL credential with `control = true`; see the hub's documentation). The hub keeps nothing: the state of each processor is a
 document in the service's own MongoDB, `processor_control`, which every instance reads at start (before its consumers poll) and
@@ -983,7 +982,7 @@ data class SendOptions(                      // every field null = the configure
 
 - **Priority** (`SendOptions.priority`, default per type from `snodra.messaging.hub.priorities.<type>`,
   else 0) only matters when the hub queues requests for a busy, flow-controlled handler: higher
-  first, equal priorities keep arrival order (ADR 0014).
+  first, equal priorities keep arrival order.
   Old hubs ignore it. Local handlers (same instance) ignore it.
 - **Retry** is opt-in (`snodra.messaging.hub.retry.enabled=false`; per call `SendOptions.retry`). One
   classification decides what may be retried, used by the buses
@@ -1032,7 +1031,7 @@ no hub round trip. Otherwise the message goes to the hub.
 ```kotlin
 @Target(AnnotationTarget.FUNCTION) annotation class EventHandler
 @Target(AnnotationTarget.FUNCTION) annotation class CommandHandler
-@Target(AnnotationTarget.FUNCTION) annotation class QueryHandler(val shared: Boolean = false) // shared: ADR 0017
+@Target(AnnotationTarget.FUNCTION) annotation class QueryHandler(val shared: Boolean = false)
 
 @Target(AnnotationTarget.CLASS) annotation class MessageType(val value: String)
 ```
@@ -1102,8 +1101,8 @@ Adding a handler after startup (for example in tests) re-sends `Register`.
 
 ## Several hubs
 
-With more than one hub (ADR 0016,
-[hub.md](../../server/index.md)) both libraries open one stream per hub with the
+With more than one hub
+([hub.md](../../server/index.md)) both libraries open one stream per hub with the
 identical `Register` (two targets answering the same `hub_id` are one hub). A request without a
 routing key goes round-robin over the live hubs; a keyed one goes to the live hub with the highest
 rendezvous score `fmix64(fnv1a64(utf8(hub_id) ++ 0x00 ++ utf8(key)))`, compared unsigned (64-bit

@@ -4,7 +4,7 @@ High availability, graceful shutdown and upgrades.
 
 ## High availability
 
-Decision record: ADR 0016. Run two or
+Run two or
 more hubs; they never talk to each other. Each hub is exactly the hub described above: its
 registry holds the instances with a stream to it, and it routes only to them. Availability comes
 from every service instance connecting to every hub with the same registration, so any hub can
@@ -27,7 +27,7 @@ route any request while at least one is up.
   `hub-2` (gRPC `localhost:7012`, dashboard `http://localhost:7011/`), each listing both
   dashboards as peers ([07-local-development.md](quickstart.md)).
 
-**Client side** (both libraries, per ADR 0016): one connection per hub (deduplicated by
+**Client side** (both libraries): one connection per hub (deduplicated by
 `hub_id`), identical registration on each, unkeyed requests round-robin over acknowledged hubs,
 keyed commands rendezvous-hashed over `(routing key, hub_id)` to one hub, replies on the arrival
 stream, permits split `ceil(max-concurrent-handlers / N)`, unsent requests retried on another hub,
@@ -56,9 +56,13 @@ subscriptions are bound to one hub. Rules shared by both libraries:
   is gone. Neither library dedupes before connecting, so two targets of one hub cost one eviction
   at startup, then settle. A DNS address that comes back while its connection is still draining revives that
   connection instead of opening a second stream.
-- **Writes still queued on the client** when a stream breaks: the Kotlin client never wrote them,
-  so it sends them to another hub; the Rust crate counts what sits in its 256-deep outbound buffer
-  as written and fails it with `HubConnectionLost`. The libraries may differ here; see each README.
+- **Writes still queued on the client** when a stream breaks were never written, so both
+  libraries send them to the next hub with the same request id: the Kotlin client's unwritten
+  requests, and what sits in the Rust crate's 256-deep outbound buffer, which the crate hands
+  back as never written when the stream is lost (a request moves at most 8 times; with no hub
+  left to take it, it fails with `HubUnavailable`). Only a request the transport already took
+  fails with `HubConnectionLost`: its outcome is unknown. This is the protocol's never-sent rule
+  (`L1-NEVER-SENT` in [Protocol](../library-authors/protocol.md)).
 
 **Client configuration.** The existing address setting takes the list; there is no separate key:
 

@@ -45,7 +45,7 @@
   ack within 10 s (`HubSettings.handshake_timeout`) is abandoned and opened again with the normal
   backoff; a heartbeat echo confirms nothing. `HubConnection::handshake()` returns the ack. The
   hub and this library ship together: a hub of another commit is not supported.
-- **Flow control** (ADR 0014): `Register` offers `max_concurrent_handlers` permits, `load_factor`
+- **Flow control**: `Register` offers `max_concurrent_handlers` permits, `load_factor`
   and `tags`. The hub forwards only while this instance has permits and queues the rest (by
   priority, then age; queued requests keep their own deadline). Every finished request gives its permit back on
   the stream it arrived on. The hub still holds `initial − received + returned` of this stream's
@@ -79,7 +79,7 @@
 
 ## Multiple hubs
 
-High availability without hub-to-hub traffic (ADR 0016):
+High availability without hub-to-hub traffic:
 every instance registers on every hub, and the client picks a hub per request.
 
 - **Targets.** `SNODRA_SERVER_ADDRESS=static://hub:7000,hub-2:7000` lists the hubs (blanks and
@@ -154,7 +154,7 @@ every instance registers on every hub, and the client picks a hub per request.
 
 ## Scatter-gather
 
-Shared query types and scatter-gather queries (ADR 0017),
+Shared query types and scatter-gather queries,
 the counterpart of snodra-messaging's `scatterGather` and `@QueryHandler(shared = true)`.
 
 ```rust
@@ -221,7 +221,7 @@ while let Some(part) = parts.next().await { let part = part?; /* ... */ }
 ## Streaming queries
 
 A query whose result is a flow of items from one instance of one owner, under the caller's
-back-pressure (ADR 0017),
+back-pressure,
 the counterpart of snodra-messaging's streaming query API.
 
 ```rust
@@ -335,7 +335,7 @@ tokio::spawn(async move { rows.try_for_each(|row| async { Ok(()) }).await });
 ## Subscription queries
 
 A query whose result is an initial value followed by the updates every owner instance pushes,
-until the subscriber cancels or the owners complete (ADR 0017),
+until the subscriber cancels or the owners complete,
 the counterpart of snodra-messaging's subscription query API.
 
 ```rust
@@ -481,7 +481,7 @@ while let Some(update) = updates.next().await { let tick = update?; /* in the hu
 ## Event processors
 
 Each **event processor** is its own Kafka consumer on the events topic, with its own consumer
-group, position, markers, dead letters and failure domain (ADR 0022; processing groups, the
+group, position, markers, dead letters and failure domain (processing groups, the
 Kotlin starter's `@ProcessingGroup`). A slow or failing handler in one processor never holds
 another.
 
@@ -550,7 +550,7 @@ Dead letters are covered in [Dead letters](dead-letters.md).
 
 ## Processor control
 
-The hub is the control plane of the event processors (ADR 0023, P6b): its HTTP API and its
+The hub is the control plane of the event processors: its HTTP API and its
 dashboard pause, resume and reset a processor on every instance at once and work its dead letters
 (see the hub's `hub.md`, "Processor control", for the routes and the write token). Each
 `ControlRequest` is handled off the hub stream's
