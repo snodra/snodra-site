@@ -753,7 +753,7 @@ unless its message says what did: a `reset_execute` refused after its reset hand
 (n), m markers deleted, positions not moved: retry the reset".
 
 What each action does inside the instance (the lease, the reset steps, replay ranges, dead-letter sequencing) is the
-library's contract, in [writing-a-library.md](writing-a-library.md).
+library's contract, in [writing-a-library.md, Level 3: Processors](writing-a-library.md#level-3-processors).
 
 ## Timing summary
 
