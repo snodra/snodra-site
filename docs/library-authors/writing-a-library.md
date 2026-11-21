@@ -302,7 +302,7 @@ What a library adds for processors:
 
 ## Level 4: Sagas
 
-Sagas live in the library, inside the service that owns them, so the hub and the stores never see a saga as such (the
+Sagas live in the library, inside the service that owns them, so the hub only ever sees the commands a saga sends, never the saga itself (the
 programming model is in [Sagas and deadlines](../messaging/index.md#sagas-and-deadlines)). What the rest
 of Snodra sees of them:
 

@@ -27,8 +27,8 @@ check that proves them. The **Proved by** column says what runs a check today:
 - **runner, not checked yet**: a later runner version will run it; until then nothing checks it but each library's own
   tests.
 - **kit**: the event-store and message-store conformance kits that ship with both official libraries.
-  Every add-on runs them today; a library in another language ports them. The kits' checks are listed by name, with what each asserts,
-  in [event-store-add-ons.md](event-store-add-ons.md#the-conformance-kit) and
+  Every add-on runs them today; a library in another language ports them. The kits' checks are listed by name, with
+  what each asserts, in [event-store-add-ons.md](event-store-add-ons.md#the-conformance-kit) and
   [message-store-add-ons.md](message-store-add-ons.md#the-conformance-kit). The names are the Rust kit's; the Kotlin
   kits hold the same checks in camelCase, and the message-store page lists the Kotlin names that differ
   ([Check names in both libraries](message-store-add-ons.md#check-names-in-both-libraries)).

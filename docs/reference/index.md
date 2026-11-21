@@ -33,3 +33,8 @@ configuration, the API, dead letters, sagas, testing and the modules and build.
 The event store and message store are add-ons with their own reference pages:
 [Add-ons](../add-ons/index.md). The installation coordinates for every artifact are in
 [Installation](../getting-started/installation.md).
+
+## For library authors
+
+[Writing a library](../library-authors/index.md) is the specification for a client library in another language: the hub
+protocol, the messages, the feature levels, the store add-ons and the conformance runner that proves a library.

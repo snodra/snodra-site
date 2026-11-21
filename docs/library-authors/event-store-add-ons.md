@@ -212,7 +212,7 @@ Their modules and settings: [Kafka event store](../add-ons/kafka-event-store.md)
 
 The Kotlin and the Rust Kafka add-ons read and write the same topics, so instances of one processor in either language
 share its consumer group. A third-party add-on that shares those topics must follow every rule below. The layout is
-the one the Kafka add-ons have always written, kept byte for byte: one topic carries the events of every service, the
+the one the Kafka add-ons write, byte for byte: one topic carries the events of every service, the
 record key keeps one key's events in order on one partition, and each processor reads the whole topic in a consumer
 group of its own. The library creates no topic: the infrastructure does (`snodra.events`, and `snodra.events.dlt` for
 the dead-letter mode `event-store`).
