@@ -62,8 +62,8 @@ A library is listed here when it has:
 - **a public repository**, with a README that says how to install and configure it;
 - **an OSI-approved licence**;
 - **a passing conformance report** for the feature level it claims, from the [conformance runner](conformance.md),
-  naming the runner's version. Until the runner is released, list the [feature-level checks](feature-levels.md) your
-  library's own tests cover, and the add-on kits it passes.
+  naming the runner's version. For levels 2 to 4, which the runner does not check yet, list the
+  [feature-level checks](feature-levels.md) your library's own tests cover, and the add-on kits it passes.
 
 The suggested name is `snodra-messaging-<language>` (`snodra-messaging-go`, `snodra-messaging-python`, ...).
 

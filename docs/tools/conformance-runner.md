@@ -59,6 +59,8 @@ listed.
 
 ## Read next
 
+- Writing a conformance service, what the runner does not observe and how its fake servers differ:
+  [Conformance](../library-authors/conformance.md).
 - The test kits you already have: [Testing](../operations/testing.md).
 - The wire contract the checks exercise: [Protocol](../server/protocol.md).
 - The Kotlin and Rust test pages: [Kotlin testing](../messaging/kotlin/testing.md) and
