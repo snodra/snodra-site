@@ -95,13 +95,13 @@ nav:
       - SQL message store: add-ons/sql-message-store.md
   - Writing a library:
       - library-authors/index.md
-      - Feature levels: library-authors/feature-levels.md
+      - Writing guide: library-authors/writing-a-library.md
       - Protocol: library-authors/protocol.md
       - Messages: library-authors/messages.md
-      - Writing a library: library-authors/writing-a-library.md
-      - Conformance: library-authors/conformance.md
+      - Feature levels: library-authors/feature-levels.md
       - Event-store add-ons: library-authors/event-store-add-ons.md
       - Message-store add-ons: library-authors/message-store-add-ons.md
+      - Conformance: library-authors/conformance.md
   - Operations:
       - operations/index.md
       - Monitoring: operations/monitoring.md
@@ -145,9 +145,6 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
-
-exclude_docs: |
-  adr/template.md
 
 validation:
   links:

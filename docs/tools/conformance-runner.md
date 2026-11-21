@@ -19,10 +19,13 @@ pre-flight check requires it to register on a fake server and stop within 5 seco
 
 ## Run it
 
+Two servers from the current release of the server image (see the [Hub quick start](../server/quickstart.md)),
+then the runner:
+
 ```sh
 # two servers, plain text, access control off
-docker run -d --rm -p 7000:7000 -e SNODRA_SERVER_OTLP_ENDPOINT= snodra/snodra-server:0.5.0
-docker run -d --rm -p 7100:7000 -e SNODRA_SERVER_OTLP_ENDPOINT= snodra/snodra-server:0.5.0
+docker run -d --rm -p 7000:7000 -e SNODRA_SERVER_OTLP_ENDPOINT= snodra/snodra-server:latest
+docker run -d --rm -p 7100:7000 -e SNODRA_SERVER_OTLP_ENDPOINT= snodra/snodra-server:latest
 
 snodra-conformance run \
   --service-cmd "/path/to/your-conformance-service" \
@@ -32,8 +35,8 @@ snodra-conformance run \
 ```
 
 `snodra-conformance list` prints the checks and what each needs. The runner, its reference service
-and a deliberately broken service live in `snodra-conformance`; the runner is built from source, and its
-release workflow builds a container image.
+and a deliberately broken service live in `snodra-conformance`; the runner is built from source. Its
+release workflow builds a container image of the runner; none is published today.
 
 ## Options
 
@@ -62,6 +65,6 @@ listed.
 - Writing a conformance service, what the runner does not observe and how its fake servers differ:
   [Conformance](../library-authors/conformance.md).
 - The test kits you already have: [Testing](../operations/testing.md).
-- The wire contract the checks exercise: [Protocol](../server/protocol.md).
+- The wire contract the checks exercise: [Protocol](../library-authors/protocol.md).
 - The Kotlin and Rust test pages: [Kotlin testing](../messaging/kotlin/testing.md) and
   [Rust testing](../messaging/rust/testing.md).

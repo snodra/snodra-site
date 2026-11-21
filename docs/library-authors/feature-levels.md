@@ -46,7 +46,7 @@ check that proves them. The **Proved by** column says what runs a check today:
 | `L1-RECONNECT` | After the stream drops, the library reconnects with a backoff whose cap is at most 5 s and the identical `Register`, never stalls, and is registered again within 12 s of a hub restart. | runner |
 | `L1-UNARY` | A command and a point query sent through the hub reach their handler, by routing key when one is given, and the reply comes back decoded; a command without a result answers `{}`. | runner |
 | `L1-REQUEST-ID` | Every send attempt carries a fresh `Request.id`; no id is reused while a request with it is pending. | runner |
-| `L1-TIMEOUT` | `Request.timeout_ms` is 0 unless the caller chose a timeout, and the library gives up locally only after the hub's bound for the type plus 1 s. | runner |
+| `L1-TIMEOUT` | `Request.timeout_ms` is 0 unless the caller chose a timeout, and the library gives up locally only after the hub's bound for the request plus 1 s. | runner |
 | `L1-ERRORS` | Each `ErrorCode` reaches the caller as its own error; `Error.message` is kept for the codes a handler produces (`ErrorCode.HANDLER_ERROR`, `ErrorCode.UNAUTHENTICATED`, `ErrorCode.PERMISSION_DENIED`, `ErrorCode.INVALID_REQUEST`) and `Error.details` for `ErrorCode.HANDLER_ERROR`; an unknown code reads as `ErrorCode.HANDLER_ERROR`. | runner |
 | `L1-NEVER-SENT` | A request never handed to a stream's transport is reported as never sent; one written to a stream that then breaks is reported as outcome unknown. | runner |
 | `L1-RETRY` | When the library retries, a command is retried only when its handler never ran, never after `ErrorCode.TIMEOUT`, `ErrorCode.HANDLER_DISCONNECTED` or an unknown outcome; every attempt has a fresh id and sends the remaining budget, never 0, as `Request.timeout_ms`. | runner |
@@ -108,6 +108,6 @@ check that proves them. The **Proved by** column says what runs a check today:
 | `L4-ADAPTER-MARKERS` | `Error.details` of `{"snodra":"retryable"}` and `{"snodra":"unknown-outcome"}` are written by an adapter's failure and read by the saga relay, also across the hub. | runner, not checked yet |
 
 The kits and the runner check behaviour a library can show from outside. The full contract of levels 3 and 4 (the
-reset steps, the dead-letter document, the saga storage) is written in [protocol.md](protocol.md),
-[messages.md](messages.md), [event-store-add-ons.md](event-store-add-ons.md) and
-[message-store-add-ons.md](message-store-add-ons.md).
+reset steps, the dead-letter document, the saga dispatch, retries and failure notice, the saga storage) is written in
+[protocol.md](protocol.md), [messages.md](messages.md), [writing-a-library.md](writing-a-library.md) (levels 3 and 4),
+[event-store-add-ons.md](event-store-add-ons.md) and [message-store-add-ons.md](message-store-add-ons.md).

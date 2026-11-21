@@ -68,9 +68,17 @@ The operations' guarantees, each proved by a kit check ([The conformance kit](#t
   per key holds within one relay (two relays' batches are not ordered against each other). A failed attempt counts and keeps the entry pending; an entry given up is never claimed again nor
   purged. A payload that is not a JSON object with integers that fit in a signed 64-bit integer is refused. A store may
   wake the relay on every committed append instead of letting it poll.
-- **Processed events.** A marker id records once. A stage-1 marker of a delivered event also records its processor,
-  source, segment and position, so a reset deletes exactly the markers of its replay range; markers without a position
-  are never deleted by a reset.
+- **Processed events.** A marker id records once. A library handles one delivered event in two stages: **stage 1**
+  runs the processor's event handlers, **stage 2** the sagas (in `default` only), with markers and transactions of
+  their own ([writing-a-library.md, Level 4](writing-a-library.md#applying-an-event)).
+  A **stage-1 marker**{#stage-1-marker} is the marker `processor:<name>:<eventId>` that stage 1 records in the same
+  transaction as the handlers' effects (`<name>` the processor, `<eventId>` the event's id, or its dedupe id for an event dispatched inside
+  the service), so a redelivery whose
+  stage 1 committed skips the handlers. A stage-1 marker of a delivered event (one the processor's subscription
+  delivered, or a dead letter's retry) also records its processor, source, segment and position, so a reset deletes
+  exactly the markers of its replay range; markers without a position (a stage-1 marker of an event dispatched inside
+  the service, such as a translated partner event, and every saga, ingress and failure-notice marker) are never deleted
+  by a reset.
 - **Dead letters.** A letter's id is `<processor>:<source>:<segment>:<position>`, so parking a redelivered record finds
   the first letter. The head of a key is the earliest position among its letters that are not `INVALID`. Every
   operation is a write of its own, but a retry deletes its letter in the record's transaction: the letter goes only
@@ -79,7 +87,7 @@ The operations' guarantees, each proved by a kit check ([The conformance kit](#t
   and an expiry clears it only past the lease. A pause does not touch the lock and the lock does not touch the pause.
 
 **Identifiers the stores hold**, the same in every add-on and both libraries: markers `processor:<name>:<eventId>`
-(stage 1 of a processor), `saga:<sagaType>:<eventId>`, `ingress:<source>:<key>`, `failed:<sagaId>:<seq>`; dead letters
+([stage 1](#stage-1-marker) of a processor), `saga:<sagaType>:<eventId>`, `ingress:<source>:<key>`, `failed:<sagaId>:<seq>`; dead letters
 as above; saga dispatch entries `<sagaId>:<seq>` (also the command's `idempotency-key`).
 
 ## The conformance kit
@@ -99,7 +107,7 @@ can be run by itself. What each asserts:
 | `rolled_back_transaction_leaves_no_outbox_entry` | an entry appended in a rolled-back transaction never reaches the relay; one in a committed transaction does |
 | `rolled_back_handler_leaves_no_processed_marker` | a handler's rolled-back transaction leaves neither its marker nor the events it published: a redelivery handles the event again |
 | `processed_marker_records_once` | a marker records once until a purge past its time removes it; a purge keeps the markers recorded after its bound |
-| `delete_markers_removes_only_the_range` | a reset deletes the stage-1 markers of its processor in its ranges and nothing else: no other position, segment, source or processor, no marker without a position |
+| `delete_markers_removes_only_the_range` | a reset deletes the [stage-1 markers](#stage-1-marker) of its processor in its ranges and nothing else: no other position, segment, source or processor, no marker without a position |
 | `concurrent_relays_publish_each_entry_once` | two relays claiming one outbox at once: every entry is claimed by exactly one of them, and each claims some while the other holds its first batch |
 | `expired_lease_is_reclaimed` | a claimer that crashes holds its entries until its lease runs out; then another relay claims them, in order, with the attempts counted |
 | `purge_removes_only_sent_before` | a purge removes the entries sent before its bound and nothing else; a failed entry is never claimed again |
@@ -175,6 +183,13 @@ false); `external_calls` `reply`, `error`, `leaseUntil`, `owner`. A deadline's e
 `correlationId` field by both libraries. The SQL
 add-on (Kotlin `snodra-messaging-jdbc`, Rust `snodra-messaging-sqlx`) keeps them in tables whose layout both libraries
 share, below.
+
+The SQL layout is specified on this page; the MongoDB collections and their document shapes are not, yet. Today they
+are defined only by the official MongoDB add-ons, which a store sharing the collections reads as its reference: the
+Kotlin module
+[`snodra-messaging-mongo`](https://github.com/snodra/snodra-messaging/tree/main/snodra-messaging-mongo) and the Rust
+crate [`crates/snodra-messaging-mongo`](https://github.com/snodra/snodra-messaging-rs/tree/main/crates/snodra-messaging-mongo).
+A page specifying them is planned.
 
 ## The SQL layout
 
