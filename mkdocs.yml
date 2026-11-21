@@ -28,8 +28,6 @@ theme:
 
 not_in_nav: |
   404.md
-  library-authors/protocol.md
-  library-authors/messages.md
   library-authors/writing-a-library.md
   library-authors/event-store-add-ons.md
   library-authors/message-store-add-ons.md
@@ -102,6 +100,8 @@ nav:
   - Writing a library:
       - library-authors/index.md
       - Feature levels: library-authors/feature-levels.md
+      - Protocol: library-authors/protocol.md
+      - Messages: library-authors/messages.md
   - Operations:
       - operations/index.md
       - Monitoring: operations/monitoring.md
