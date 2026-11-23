@@ -42,6 +42,6 @@ library.
 - [API](api.md): handlers, sending, the four query modes, errors, identity, lifecycle and telemetry.
 - [Testing](testing.md): testing handlers, and running the conformance runner against the library's own service.
 
-The library's source, its `SPEC-GAPS.md` (the places where the specification was silent: what the libraries do, and
-what is settled as the specification; the library follows the Kotlin library) and its releases are in the
+The library's source, its `SPEC-GAPS.md` (where each specification rule the library had to decide comes from; the
+library follows the Kotlin library) and its releases are in the
 [repository](https://github.com/snodra/snodra-messaging-go).

@@ -185,8 +185,8 @@ for u, err := range sub.Updates() {
 `Emit(match func(Q) bool, update U) int` reaches every open subscription whose match function accepts and returns how
 many it reached; `Complete` and `Fail` end them. The type is declared to the hubs as a subscription type
 (`Register.subscription_query_types`) on every registration, so a hub serves it with `Subscribe` only: a `Query`,
-`Stream` or `Gather` of it, and a `Subscribe` of a type nobody serves with `HandleSubscription`, fail with
-`INVALID_REQUEST`. A subscription takes no permit and no handler slot, and `MaxSubscriptions` bounds
+`Stream` or `Gather` of it, and a `Subscribe` of a query type that is not declared a subscription type, fail
+with `INVALID_REQUEST` (a type nobody registered is `NO_HANDLER`). A subscription takes no permit and no handler slot, and `MaxSubscriptions` bounds
 them. The caller's context bounds the whole subscription: when it ends, the subscription is cancelled at the hub.
 `Updates()` can be ranged over once.
 

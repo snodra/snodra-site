@@ -123,7 +123,7 @@ Every rule from the client's side is in
   serves with a subscription handler (each also in `query_types` or `shared_query_types`, else
   `INVALID_ARGUMENT`; registrants agree, else `ALREADY_EXISTS`). The hub serves such a type in mode
   `SUBSCRIPTION` only: a sender's `UNARY`, `STREAMING` or `SCATTER_GATHER` request for it, and a
-  `SUBSCRIPTION` request for any other type, get one `INVALID_REQUEST` before any instance gets
+  `SUBSCRIPTION` request for a query type that is not declared a subscription type, get one `INVALID_REQUEST` before any instance gets
   anything. The hub's own initial request `<id>#0` is not affected.
 - **Scatter-gather.** A sender sends a query with
   `Request.mode = SCATTER_GATHER`. Every live instance of every owner that lists the type (on an

@@ -27,8 +27,9 @@ Linux (static musl, and gnu), macOS and Windows, on amd64 and arm64:
 curl -fsSL -o snodra-server.tar.gz \
   https://github.com/snodra/snodra-server/releases/download/v0.6.0/snodra-server-v0.6.0-x86_64-unknown-linux-musl.tar.gz
 tar xzf snodra-server.tar.gz && ./snodra-server
-``` Replace `0.6.0` with another release when you
-upgrade; `latest` exists, but a fixed tag keeps a restart reproducible.
+```
+
+Replace `0.6.0` with another release when you upgrade; `latest` exists, but a fixed tag keeps a restart reproducible.
 
 Check it:
 
@@ -121,7 +122,7 @@ sagas yet. No version is released, so take the module without one. It needs Go 1
 
 ```sh
 go get github.com/snodra/snodra-messaging-go
-go get github.com/snodra/snodra-messaging-go/otel   # optional: OpenTelemetry metrics and traces
+go get github.com/snodra/snodra-messaging-go/observability   # optional: OpenTelemetry metrics and traces
 ```
 
 The package is named `snodra`; import it as `snodra "github.com/snodra/snodra-messaging-go"`. The core module depends

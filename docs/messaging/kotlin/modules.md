@@ -4,9 +4,9 @@
 
 | Module | Coordinates | Purpose |
 |---|---|---|
-| `snodra-messaging-api` | `com.damoreira.snodra:snodra-messaging-api:0.1.0-SNAPSHOT` | `@MessageType`, `Event`, `Command<R>`, `Query<R>`, `StreamingQuery<R>`. No Spring. Depended on by every `*-api` module. |
-| `snodra-messaging` | `com.damoreira.snodra:snodra-messaging:0.1.0-SNAPSHOT` | Spring Boot starter: buses, handler annotations, hub client, outbox, Kafka consumer, sagas, deadlines and the external-integration toolkit, auto-configuration. |
-| `snodra-messaging-test` | `com.damoreira.snodra:snodra-messaging-test:0.1.0-SNAPSHOT` | `InMemoryBuses`, `InProcessHub`, `SnodraContainers`, `SnodraTestKafka`, `SagaTestFixture`. |
+| `snodra-messaging-api` | `com.damoreira.snodra:snodra-messaging-api` | `@MessageType`, `Event`, `Command<R>`, `Query<R>`, `StreamingQuery<R>`. No Spring. Depended on by every `*-api` module. |
+| `snodra-messaging` | `com.damoreira.snodra:snodra-messaging` | Spring Boot starter: buses, handler annotations, hub client, outbox, Kafka consumer, sagas, deadlines and the external-integration toolkit, auto-configuration. |
+| `snodra-messaging-test` | `com.damoreira.snodra:snodra-messaging-test` | `InMemoryBuses`, `InProcessHub`, `SnodraContainers`, `SnodraTestKafka`, `SagaTestFixture`. |
 | `examples/examples-api`, `examples/service-a`, `examples/service-b` | not published | Two sample services talking through the hub; see [Examples](#examples). |
 
 ## Requirements
@@ -32,12 +32,14 @@ testcontainers.docker.socket.override=/var/run/docker.sock
 
 ```bash
 ./gradlew build                  # compile + all tests (needs Docker, see above)
-./gradlew publishToMavenLocal    # installs 0.1.0-SNAPSHOT into ~/.m2 for the service repos
+./gradlew publishToMavenLocal    # installs the modules into ~/.m2, to try a local change in a service
 ```
 
-Publishing to the GitLab Package Registry happens in CI on tags matching `api/vX.Y.Z`: the `publish-api` job sets
-`SNODRA_GITLAB_MAVEN_URL` and authenticates with `CI_JOB_TOKEN`, then publishes all three modules with the tag's version.
-Locally, set `SNODRA_GITLAB_MAVEN_URL` and `SNODRA_GITLAB_TOKEN` and run `./gradlew publish`.
+Releases are cut by CI, never by hand: on a push to `main`, the Conventional Commit subjects since the last `vX.Y.Z`
+tag decide the next version (`feat` a minor, `fix` or `perf` a patch, anything else no release). CI builds and checks
+the bundle with that version, tags the tested commit, and publishes every module to Maven Central (signed, with sources
+and javadoc) and its JARs to the GitHub release. The version comes from the tag (`-Pversion`); no file holds it, so a
+local build without `-Pversion` is not a release.
 
 The published POM and Gradle module metadata carry resolved versions for every dependency (Gradle `versionMapping`), and the
 POM also imports the Spring Boot BOM, so consumers do not need to manage them.

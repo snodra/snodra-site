@@ -49,8 +49,9 @@ Rules enforced on `Register`:
   `shared_query_types` of the same `Register`, otherwise `INVALID_ARGUMENT`. Registrants must agree on it too: a type
   declared a subscription type by one registrant and not by another fails the later `Register` with `ALREADY_EXISTS`,
   also when the type's only instance registers it again the other way, until the owner grace sweep has removed the
-  type. The hub serves a subscription type in mode `SUBSCRIPTION` only, and mode `SUBSCRIPTION` serves subscription
-  types only: anything else is `Error{INVALID_REQUEST}` before any instance gets anything
+  type. The hub serves a subscription type in mode `SUBSCRIPTION` only: a request for one in another mode, and a
+  subscription of a query type that is not declared a subscription type, is `Error{INVALID_REQUEST}` before any
+  instance gets anything (a type with no live owner is `NO_HANDLER` first)
   ([Library protocol, Subscription types](../library-authors/protocol.md#subscription-types)).
 - A `Register` with an empty `service_name` or `instance_id`, or with `initial_permits` 0, is
   rejected with `INVALID_ARGUMENT`.

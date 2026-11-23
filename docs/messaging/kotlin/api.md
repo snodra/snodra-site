@@ -345,7 +345,7 @@ result.updates.collect { change -> render(change) }   // completes when the hand
   library declares every such type (exclusive or shared) to the hub in `Register.subscription_query_types` on every
   registration; nothing is configured. So the hub serves the type in mode `SUBSCRIPTION` only: a point query, a
   stream or a gather of it (only a raw transport caller can send one: the typed API cannot), and a subscription of a
-  type nobody serves with a subscription handler, end with the hub's `INVALID_REQUEST` (`InvalidMessageException`,
+  query type that is not declared a subscription type, end with the hub's `INVALID_REQUEST` (`InvalidMessageException`,
   not retried). The handler side still answers a unary request for the type `INVALID_REQUEST` ("is a subscription
   query: send it with QueryBus.subscribe"), and a `SUBSCRIPTION` request for a type without a subscription handler
   ends with `INVALID_REQUEST`; and
@@ -1058,7 +1058,7 @@ optional second parameter of type `MessageContext` gives access to headers, the 
 correlation id. Command and query handlers return the response object (or `Unit`, serialised as
 `{}`). Handlers may be `suspend`.
 
-`@MessageType` is defined in the dependency-free artifact `com.damoreira.snodra:snodra-messaging-api`, which `*-api` modules depend on so they never pull in Spring, Kafka or gRPC (see 04-repositories.md).
+`@MessageType` is defined in the dependency-free artifact `com.damoreira.snodra:snodra-messaging-api`, which `*-api` modules depend on so they never pull in Spring, Kafka or gRPC ([Modules](modules.md)).
 
 ```kotlin
 @MessageType("billing.LogWorkout")
@@ -1151,8 +1151,6 @@ registration.
 connection attempt to each hub) instead of a `() -> ManagedChannel`, and the exposed bean is
 `HubConnections` (one `HubConnection` per hub; `awaitRegistered`, `connections()`) instead of
 `HubConnection`. Tests that read `HubConnection` from the context must switch to `HubConnections`.
-The version stays `0.1.0-SNAPSHOT` (nothing was published beyond local `mavenLocal()` installs);
-re-run `./gradlew publishToMavenLocal` in snodra-messaging before rebuilding a service.
 
 ## Error types
 

@@ -106,7 +106,7 @@ let mut parts = app.queries().scatter_gather_stream(&SearchEverything { text }, 
 | The stream to the gather's hub breaks before the end | `HubConnectionLostException` (parts received are dropped) | `HubConnectionLost` (parts received are dropped) |
 | No end within the local guard | `MessageTimeoutException` | `Timeout` |
 
-**Shared rulings (both libraries).**
+**Shared rules (Kotlin and Rust).**
 
 1. **An undecodable part is a failed part** (code `ERROR_CODE_UNSPECIFIED` / `UNSPECIFIED`, the
    decode error as message), never a failure of the whole call; `failed` counts it.
@@ -297,7 +297,7 @@ is retried: the flow throws, a broken hub stream as `HubConnectionLost`. Kotlin 
 policy or `StreamOptions.retry`; Rust takes `Config.hub_retry` (no per-call policy on
 `StreamOptions`).
 
-**Shared rulings (both libraries).**
+**Shared rules (Kotlin and Rust).**
 
 1. **A mode mismatch is `INVALID_REQUEST`**, answered by the handler's library (above).
 2. **Credits:** the handler sends parts only under credit (Rust holds at most one item ahead); the
@@ -382,7 +382,8 @@ initial request; Rust guards run before the handler. On the wire a subscription 
 like any query type (`Register.query_types`, or `shared_query_types` when shared) and is also declared
 in `Register.subscription_query_types`, which the library fills from its subscription handlers (nothing
 to configure). The hub then serves the type with a subscription only: a point query, a stream or a
-gather of it, and a subscription of a type nobody declared, fail with `INVALID_REQUEST`. The hub sends
+gather of it, and a subscription of a query type that is not declared a subscription type, fail with
+`INVALID_REQUEST`. The hub sends
 each live instance a `SUBSCRIPTION` request, on which the library only registers the
 subscription (the decoded query, its request id, the hub stream it arrived on): no handler runs,
 no permit is held. The initial result is a separate ordinary request (`<id>#0`, mode `UNARY`) that
@@ -487,7 +488,7 @@ goes through the hub, also from a service that owns the type.
   `Cancel` or a lost stream during admission removes the subscription). So an update emitted
   after the initial result was read on that instance is never lost; across instances the
   at-most-once gap above remains. A panicking or failing filter skips that subscription only, and
-  the initial part counts as consumed when `subscribe` returns (rulings 37-40 below).
+  the initial part counts as consumed when `subscribe` returns (rules 37-40 below).
 
 **Credits and the hub's buffer.** `initialCredit` / `initial_credit` is the window: the hub relays
 that many parts (the initial result included) before the consumer took any, and holds further
@@ -555,7 +556,7 @@ hub ends the whole subscription with it (the subscriber's call fails or `updates
 apply to it (only the initial request takes one, for its duration). The hub's own buffer, per-instance
 limit and maximum duration are its settings.
 
-**Shared rulings (both libraries)**, continuing the numbering of the stream rulings:
+**Shared rules (Kotlin and Rust)**, continuing the numbering of the stream rules:
 
 28. **The initial request is recognised by its `#0` id**; a subscription handler answers it, and a
     unary request for the type (any other id) is `INVALID_REQUEST`.
@@ -744,8 +745,8 @@ In plain words, for a service with a saga:
   and the relay waits for it as for any call through the hub. A service with `hub.enabled=false` sends to its own
   handlers only, whatever that option; a type it does not handle is `NO_HANDLER`.
 - **Identity.** A saga's command carries no user token and no caller identity (the triggering event's user is not a caller).
-  A handler with `@RequiresAuthentication` refuses it with `DENIED`, until the `snodra-system` service identity
-  (06-security.md, planned) is forwarded.
+  A handler with `@RequiresAuthentication` refuses it with `DENIED`, until a service identity for saga commands is
+  forwarded.
 - **Time** comes from an injectable `Clock` bean; the test fixture advances it.
 - **Leases need synchronised clocks.** The relay's saga lease, the deadline claim and the `external_calls` lease are
   timestamps written by one instance and compared with the clock of another. Keep the instances' clocks in step (NTP, or the
@@ -1240,7 +1241,7 @@ The gRPC `Request` message from ``protocol/hub.proto`` carries `type`,
 | `traceparent`, `tracestate` | W3C trace context |
 
 The handling service validates the JWT exactly as it validates a REST request (issuer, signature via
-JWKS, expiry, required realm role). See 06-security.md.
+JWKS, expiry, required realm role); see [Forwarded identity](../library-authors/messages.md#forwarded-identity).
 
 ## Kafka layout
 
