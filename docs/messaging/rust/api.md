@@ -12,7 +12,18 @@
   it like `Timeout`). An unknown code reads as `RemoteHandler`. A handler's
   `Err` becomes `HANDLER_ERROR` unless it is `Unauthenticated`/`AccessDenied`/`InvalidMessage`; a panic
   becomes `HANDLER_ERROR "handler panicked"`, never a dropped stream.
-- **Guards** run before the payload is decoded: anonymous → `UNAUTHENTICATED`, refused → `PERMISSION_DENIED`.
+- **Guards** run before the payload is decoded: anonymous → `UNAUTHENTICATED`, refused → `PERMISSION_DENIED`. A guard
+  needs a JWKS: `start()` fails, naming every guarded type, when a type has a guard (`requires`) and
+  `Config::jwks_url` is unset.
+- **Local dispatch.** A command, or a unary query of a type not registered as shared, that this instance handles
+  itself is answered in-process by its own handler once the app has started, without the hub: the routing key and
+  priority are ignored, no timeout or retry applies, no handler permit is taken and no request metric is recorded.
+  The handler sees the caller the hub path would carry (the token in `SendOptions.authorization`, or the current
+  handler's when `forward_jwt` is on, verified by the same resolver), the correlation id and the trace context; its
+  failure is mapped as through the hub. Scatter-gathers, streams, subscriptions and shared queries always go through
+  the hub. `SNODRA_SERVER_ALWAYS_ROUTE_THROUGH_HUB=true` (`Config::hub_always_route_through_hub`, or the builder's
+  `always_route_through_hub(true)`) sends every request through the hub, the saga relay's commands included, so a
+  routing key keeps its instance affinity; it has no effect while the hub is turned off.
 - **Unit replies** travel as `{}`; an `Option::None` reply stays `null`.
 - **Consumer** (one per [event processor](#event-processors)): one record at a time; marker
   inserted first (a duplicate id never reaches the handler), handlers run, commit, then the offset.
@@ -30,10 +41,16 @@
   `events.publish_in` must come from it (the driver rejects sessions of another client).
 - **Verified identity** checks signature, `exp`, `nbf` and `iss`; `aud` is not validated (some providers set it, Spring's
   decoder ignores it too). A JWKS outage is `UNAUTHENTICATED` for the caller, never an internal error with a URL.
-- **Shutdown** drains in-flight handlers (10 s bound), closes every hub stream, fails this instance's outgoing requests still in flight with `HubConnectionLost`, stops the publisher and the consumer.
+  Without a JWKS no token is an identity: the caller is anonymous and the token is only forwarded. A header that is
+  not `Bearer <token>` (the scheme in any letter case) or a token that is not a signed JWS (five segments, unreadable,
+  `alg: none`, an empty signature) is `UNAUTHENTICATED` with or without a JWKS, before the handler is looked up.
+- **Shutdown** registers no types with every hub (at most 1 s for the acks), ends the subscriptions served here at
+  once, stops the saga relay, the deadline scheduler and the sampler, drains in-flight handlers (5 s bound), closes
+  every hub stream (at most 2 s each for the hub to finish its side), fails this instance's outgoing requests still
+  in flight with `HubConnectionLost`, stops the publisher and the consumer.
 - **Start** does not wait for the hub. `await_hub(timeout)` tells you when the registration was
   confirmed by at least one hub (requests can then be sent; before that they fail with
-  `HubUnavailable`); `await_all_hubs(timeout)` waits until every hub confirmed it (with
+  `HubUnavailable`, except those answered in-process); `await_all_hubs(timeout)` waits until every hub confirmed it (with
   `dns:///`: every address of the latest resolution; a second target of a hub already reached does
   not count). `app.hub_ids()` lists the hubs registered on now. snodra-messaging (Kotlin) differs
   here: its `HubConnections.awaitRegistered` waits for every hub, like `await_all_hubs`.
@@ -70,8 +87,11 @@
   least `max(initial_backoff, 250 ms)` of the budget is left; otherwise the last error is returned
   at once, without waiting. Each attempt sends what is left of the budget as `timeout_ms`, never
   less than 1 ms (a remainder never turns into "unset", which would let the hub apply its default).
-- **Liveness**: a stream with no heartbeat echo for three intervals is dropped and reconnected; the
-  channel also sends HTTP/2 keepalive pings every 10 s (5 s to answer, also while idle).
+- **Liveness**: a stream is dropped and reconnected when its hub is silent: on a heartbeat tick, more than three
+  intervals since the last echo (the ack counts as the first) and the three heartbeats sent since then all
+  unanswered, so between three and four intervals after the last echo. Nothing is checked before the ack (the 10 s
+  handshake timeout covers that). The channel also sends HTTP/2 keepalive pings every 10 s (5 s to answer, also while
+  idle).
 - **Replies** go back on the stream the request arrived on; when that stream is gone the reply is
   dropped, never sent on a newer one. The hub has already failed the request with
   `HANDLER_DISCONNECTED`, including when this instance reconnected with the same instance id while
@@ -95,8 +115,10 @@ every instance registers on every hub, and the client picks a hub per request.
   port; its host may not contain `/`; `dns://server/...` is not supported. An address that names no hub fails `Config::validate`.
 - **Connections.** One stream per hub, each with its own handshake, heartbeat and reconnect
   backoff, all with the identical `Register`. Two targets whose acks carry the same
-  `hub_id` are one hub: the connection acknowledged first keeps it and the other is closed for
-  good (logged once). The hub replaces a session when the same instance registers again, so the
+  `hub_id` are one hub: the connection acknowledged first keeps it and the other is closed and
+  parked (logged once): no stream, out of the routing, the permit split and the status. The parked
+  target is connected again once its owner is gone: the owner's address is no longer resolved, or the
+  owner answers another hub id. The hub replaces a session when the same instance registers again, so the
   kept connection reconnects once, and the hub drops the instance until it is back (well under a
   second with the default backoff). A hub whose ack carries an empty `hub_id` (a real hub always
   names itself) is known by its target as `host:port`, the `static://` or `http(s)://` prefix stripped
@@ -123,9 +145,13 @@ every instance registers on every hub, and the client picks a hub per request.
   snodra-messaging). `HubUnavailable` means no hub took it. A request the transport had already
   taken fails with `HubConnectionLost` when its stream drops (outcome unknown: it may be on the
   wire); the retry policy then decides (queries are retried, commands are not). Replies go on the stream the request arrived on.
+  A moved request sends the caller's chosen timeout again as `timeout_ms`, never what is left of it; it
+  moves at most 8 times (the ninth loss is `HubUnavailable`
+  `'<type>' not written: 9 hub streams lost before it was`), and no move starts once the caller's timeout (5 s without one) has passed since the
+  call began. Scatter-gathers, streams and subscriptions move the same way until they are written.
 - **`NO_HANDLER` failover.** A unary send (a command or a point query; not a scatter-gather,
   stream or subscription) that a hub answers with `NO_HANDLER` was never delivered, so the other
-  live, acknowledged hubs get it in turn, each at most once and within the caller's remaining
+  live, acknowledged hubs get it in turn, each at most once and each with the caller's full
   timeout; if all decline, the last `NO_HANDLER` comes back at once, with no extra delay. A keyed
   command moves too (its preferred hub has no handler, so affinity cannot be kept anyway), in
   rendezvous order. This is what keeps a single owner instance reachable while it is deregistered on
@@ -133,8 +159,9 @@ every instance registers on every hub, and the client picks a hub per request.
   of the owner. It does not depend on the opt-in retry policy, which may still retry `NoHandler`
   afterwards by its own rules.
 - **Permits.** A stream offers `ceil(max_concurrent_handlers / N)` permits, N being the hubs live
-  when its `Register` is written, itself included (a hub still on its first connect attempt counts
-  as live, so hubs that start together split from the start). When N shrinks from N_old to N_new
+  when its `Register` is written, itself included, also when it reconnects for a client certificate
+  rollover (a hub still on its first connect attempt counts as live, so hubs that start together split
+  from the start). When N shrinks from N_old to N_new
   (a hub is lost, its first attempt fails, it is closed as a duplicate or leaves DNS), every live
   stream gets one `Permits` top-up so that it holds `ceil(max / N_new)` in all: with 8 permits and
   two hubs each offers 4, and when one stops the survivor gets `Permits{count: 4, grant: 8}`; the
@@ -145,8 +172,8 @@ every instance registers on every hub, and the client picks a hub per request.
   afresh. Permits are never revoked when N grows; the local concurrency limit stays
   `max_concurrent_handlers` over all hubs, so a hub may briefly hold more permits than this
   instance runs at once, and the extra requests wait locally (same rule as snodra-messaging).
-- **Status.** Every `SNODRA_SERVER_STATUS_INTERVAL_MS` the instance sends `InstanceStatus` to every
-  hub: `connected_hub_ids` (the acknowledged hubs), `handlers_in_flight` (handlers running over all
+- **Status.** Every `SNODRA_SERVER_STATUS_INTERVAL_MS`, and at once whenever the set of live hubs
+  changes, the instance sends `InstanceStatus` to every hub: `connected_hub_ids` (the acknowledged hubs), `handlers_in_flight` (handlers running over all
   hubs) and the [event processors](#event-processors)' status. Each hub shows the report in its topology
   (`connectedHubIds`, `statusAgeMs`) and its dashboard flags instances missing a hub.
 - **Logs** of each connection carry its `address` (and the `hub` id once acknowledged). The crate
@@ -382,7 +409,7 @@ while let Some(update) = updates.next().await { let tick = update?; /* in the hu
 |---|---|
 | Trait | `trait SubscriptionQuery: MessageType + Serialize + DeserializeOwned + Send + Sync + 'static { type Initial: Serialize + DeserializeOwned + Send + 'static; type Update: Serialize + DeserializeOwned + Send + 'static; }` |
 | Register a handler | `SnodraMessagingBuilder::subscription_query::<Q, F, Fut>(handler) -> Self` and `shared_subscription_query` (also on `HandlerRegistry`), with `F: Fn(Q, MessageContext) -> Fut`, `Fut: Future<Output = Result<Q::Initial, MessagingError>>`: the handler answers the initial result |
-| Registered types | `HandlerRegistry::subscription_query_types()` (exclusive and shared); `registered_types()` has `subscription_queries`, the exclusive ones, announced in `Register.query_types` with `queries`; a shared subscription type is in `shared_queries` like any shared query |
+| Registered types | `HandlerRegistry::subscription_query_types()` (exclusive and shared); `registered_types()` has `subscription_queries` (the exclusive ones, announced in `Register.query_types` with `queries`) and `shared_subscription_queries` (in `shared_queries` like any shared query); `RegisteredTypes::subscription_query_types()` lists both, and every `Register` declares them in `Register.subscription_query_types`. Nothing is configured: the handler registration is the declaration |
 | Emitter | `QueryUpdateEmitter` (`Clone`): `emit<Q: SubscriptionQuery>(&self, filter: impl Fn(&Q) -> bool, update: &Q::Update)`, `complete<Q>(&self, filter)`, `complete_exceptionally<Q>(&self, filter, error: &MessagingError)`. From `SnodraMessagingBuilder::emitter()` (to capture in handlers and in the code that changes the data) or `SnodraMessaging::emitter()`; also `open_subscriptions()` |
 | Subscribe | `Sender::subscribe<Q: SubscriptionQuery>(self: &Arc<Self>, &Q, SubscriptionOptions) -> Result<Subscription<Q>, MessagingError>` (`async`): owned, like `stream_owned` (`app.sender()` is the `Arc`); there is no borrowed variant |
 | Result | `Subscription<Q> { initial: Q::Initial, updates: BoxStream<'static, Result<Q::Update, MessagingError>> }` with `cancel(self)` |

@@ -48,7 +48,8 @@ class Orders(private val events: EventBus) {
 ```
 
 `@RequiresAuthentication` on a handler evaluates a Spring Security expression against the forwarded
-identity; realm roles become `ROLE_<role>`. That is the same identity a REST endpoint sees, which is
+identity, verified with the service's JWKS (a guarded handler without a `JwtDecoder` fails the startup);
+realm roles become `ROLE_<role>`. That is the same identity a REST endpoint sees, which is
 what makes a Boot service a natural edge.
 
 ## Actuator and observability

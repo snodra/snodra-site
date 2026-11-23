@@ -38,7 +38,9 @@
   permit and the queue, updates are renumbered behind the initial part under the sender's credit and the buffer
   (`subscriptionBuffer`, 256: one more ends it), `max_results` counts updates, cancels fan out both ways, a target leaving is
   silent unless it was the last (`HANDLER_DISCONNECTED`), `maxSubscriptionsPerInstance` (1024) refuses with
-  `RESOURCE_EXHAUSTED`, `maxSubscriptionDuration` (off) ends with `CANCELLED`, and the gates are the real hub's;
+  `RESOURCE_EXHAUSTED`, `maxSubscriptionDuration` (off) ends with `CANCELLED`, and the gates are the real hub's,
+  `Register.subscription_query_types` included (the subset check, registrants agreeing, and `INVALID_REQUEST` for a
+  point query, stream or gather of a subscription type and for a subscription of an undeclared type);
   `openSubscriptions()`, `subscriptionTargetsOf(instanceId)`,
   `subscriptionCreditOf(requestId)` and `bufferedUpdatesOf(requestId)` observe it. Processor control:
   `control(instanceId, request)` sends a `ControlRequest` to the instance's session and awaits its `ControlReply` from that

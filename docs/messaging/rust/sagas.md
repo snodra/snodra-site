@@ -120,7 +120,8 @@ Partner sources (`ExternalSource { topic, bootstrap_servers, group_id, propertie
 `builder.clock(Clock)` replaces the clock of the runtime, the relay, the scheduler, the adapters and the ingress
 (`ManualClock` in tests). The runtime, the relay, the scheduler and the gauge sampler run only with a registered saga, the
 `external_calls` indexes only with an idempotent handler, a partner consumer per source; `app.ingress()` always exists.
-Saga commands to a type the service handles itself go to its own handler without the hub. Shutdown stops the relay, the
+Saga commands to a type the service handles itself go to its own handler without the hub, unless
+`SNODRA_SERVER_ALWAYS_ROUTE_THROUGH_HUB` is on (then they go through the hub like any other command). Shutdown stops the relay, the
 scheduler and the sampler first (at most 20 s for the three together), then the rest.
 
 **Deploys and in-flight adapter calls.** At shutdown the relay abandons a send still running after 15 s; the saga's

@@ -21,8 +21,9 @@ spring:
           issuer-uri: https://auth.example/realms/snodra
 ```
 
-The `issuer-uri` is only needed when the service also serves HTTP or wants forwarded tokens verified (see
-[Security](#security)); Kafka-only tools and services behind the hub start without any security configuration.
+The `issuer-uri` is only needed when the service also serves HTTP, verifies forwarded tokens, or has a handler with
+`@RequiresAuthentication`, which cannot start without a `JwtDecoder` (see [Security](#security)); Kafka-only tools and
+services behind the hub without such a handler start without any security configuration.
 
 All keys (`snodra.messaging.*`; durations accept `200ms`, `5s`, `7d`; relaxed binding, e.g. `SNODRA_MESSAGING_HUB_ADDRESS`):
 
@@ -34,12 +35,13 @@ All keys (`snodra.messaging.*`; durations accept `200ms`, `5s`, `7d`; relaxed bi
 | `hub.address` | `static://snodra-server:7000` | The hub or hubs: one gRPC target (`host:port`, optional `static://` prefix), a comma-separated list of them (`hub-1:7000,hub-2:7000`, one connection per hub), or one `dns:///name:port` whose addresses are re-resolved every 30 s. See [Multiple hubs](api.md#multiple-hubs). A malformed value fails the startup. |
 | `hub.status-interval` | `5s` | Period of the `InstanceStatus` report (connected hub ids, handlers in flight) sent to every live hub; also sent whenever the set of live hubs changes. Must be positive. |
 | `hub.request-timeout` | unset | Per-request timeout sent as `timeout_ms`. Unset: the hub applies its default (5 s) or its per-type override (`SNODRA_SERVER_TIMEOUT_OVERRIDES`). Also bounds the wait for a hub stream (5 s when unset). `0s` counts as unset. |
+| `hub.always-route-through-hub` | `false` | Send every command and query through the hub, also one of a type this instance handles itself, and the saga relay's commands too, so a routing key keeps its instance affinity across the instances of the service and the request gets the hub's flow control, priorities, deadline and metrics. Off: a command, or a query of a type not declared `shared`, that this instance handles is answered in-process and its routing key is ignored (see [API](api.md#semantics-worth-knowing)). On: a request to an own type before the hub acknowledged the registration (during startup) gets `NoHandlerException`. No effect with `hub.enabled=false`. Environment: `SNODRA_MESSAGING_HUB_ALWAYSROUTETHROUGHHUB`. |
 | `hub.reconnect-backoff.min` | `500ms` | Initial reconnect delay when the stream drops; doubles per failed attempt. Must be positive and not above `max`, or the startup fails naming the property. |
 | `hub.reconnect-backoff.max` | `5s` | Maximum reconnect delay. Every wait is jittered by ±20 % and capped at this value (at the cap: 80-100 % of it); the delay resets to `min` once an attempt reached the hub's handshake. Must be positive (a zero would hot-loop handshakes against a refusing hub): checked at binding, a bad value fails the startup naming the property. |
 | `hub.max-subscriptions` | `1024` | Subscription queries this instance serves at once, over every hub (at least 1). The next one is refused with `RESOURCE_EXHAUSTED` ("subscription limit (N) reached"), which the subscriber sees as a `HandlerBusyException`. A subscription holds no handler permit, so `max-concurrent-handlers` does not bound it; the default equals the hub's own `SNODRA_SERVER_MAX_SUBSCRIPTIONS_PER_INSTANCE`. |
 | `hub.stream-credit-timeout` | `10m` | The longest a streaming handler of this instance waits for credit from the collector before it ends the stream with `TIMEOUT` ("no credit within ...") and frees its handler slot and hub permit (a hub that forgot the stream would otherwise leave them held forever). Must be positive; the default is the hub's default maximum stream duration (`SNODRA_SERVER_MAX_STREAM_DURATION`). |
 | `hub.token` | none | Static token sent in `Register.credentials.token` of **every** hub stream (hub access control, [Hub security](#hub-security-token-acl-and-tls)). Optional; an empty or blank value is the same as none. Never logged, redacted in `toString` and in the actuator's `configprops` and `env`. Environment: `SNODRA_MESSAGING_HUB_TOKEN`, or `SNODRA_SERVER_TOKEN` when this key is unset. |
-| `hub.token-file` | none | File holding the token (a container secret such as `/run/secrets/snodra-server-token`; surrounding whitespace ignored). Read at startup (an unreadable file fails it, naming the file) and **again on every reconnect**, so a rotated secret is picked up without a restart. After a first non-empty read, an unreadable or empty file (a non-atomic rotation caught half way) keeps the last token read and logs one `WARN`; at startup an empty file means no token. **Wins over `hub.token` when both are set.** Environment: `SNODRA_MESSAGING_HUB_TOKEN_FILE`, or `SNODRA_SERVER_TOKEN_FILE` when this key is unset. |
+| `hub.token-file` | none | File holding the token (a container secret such as `/run/secrets/snodra-server-token`; surrounding whitespace ignored). Read at startup (an unreadable file fails it, naming the file), **again on every reconnect**, and on every heartbeat of a registered stream, which sends a changed token to the hub as a credentials refresh, so a rotated secret is picked up without a restart or a reconnect. After a first non-empty read, an unreadable or empty file (a non-atomic rotation caught half way) keeps the last token read and logs one `WARN`; at startup an empty file means no token. **Wins over `hub.token` when both are set.** Environment: `SNODRA_MESSAGING_HUB_TOKEN_FILE`, or `SNODRA_SERVER_TOKEN_FILE` when this key is unset. |
 | `hub.tls.enabled` | `false` | Talk TLS to the hub, for every `hub.address` form (a list of targets and `dns:///`). Off: plain text. The hub must serve TLS on that port (`SNODRA_SERVER_TLS_CERT` / `SNODRA_SERVER_TLS_KEY`). |
 | `hub.tls.ca-file` | JVM system roots | PEM file with the CA certificate(s) that signed the hub's certificate (a self-signed hub certificate is its own CA). Read on every connection attempt; a file that cannot be used fails the startup. Set without `hub.tls.enabled` it is ignored with a warning. |
 | `hub.tls.server-name` | the address's host | Name to verify the hub's certificate against, for when the address is an IP or an alias the certificate does not list. |
@@ -115,10 +117,16 @@ fun handle(cmd: RecomputeStats) { ... }   // no annotation: any caller, includin
 
 The expression is Spring Security SpEL evaluated by the **receiving** library before the handler runs:
 `isAuthenticated()`, `hasRole('x')`, `hasAnyRole(...)`, `hasAuthority('ROLE_x')`, `principal` (a `MessagePrincipal`
-with `userId`, `roles`, `verified`), plus `#message` (the decoded command or query) and `#ctx` (the `MessageContext`),
+with `userId`, `roles`, and `verified`, which is always true), plus `#message` (the decoded command or query) and `#ctx` (the `MessageContext`),
 e.g. `"hasRole('snodra-user') and #message.ownerId == #ctx.userId"`. Realm roles from the token's `realm_access.roles`
 become `ROLE_<role>` authorities. A syntax error fails startup naming the handler; `@RequiresAuthentication` is not
 allowed on `@EventHandler` (events carry no identity). Annotated handlers are listed at startup at `INFO`.
+
+**A guarded handler needs a JWKS.** A `@RequiresAuthentication` handler in a service without a `JwtDecoder` bean
+fails the startup, naming every such handler: set `spring.security.oauth2.resourceserver.jwt.jwk-set-uri` (or
+`issuer-uri`) so Spring Boot creates one, or declare a `JwtDecoder` bean. This holds whether or not the hub is enabled,
+so a service that guards only in-process calls needs one too, and also for a bean whose handlers are registered after
+startup (its creation fails and none of its handlers is registered).
 
 Outcomes, on the hub path and the local short-circuit alike:
 
@@ -135,21 +143,19 @@ How the receiver resolves the forwarded identity (`ForwardedIdentityResolver`):
 
 | Forwarded `authorization` header | `JwtDecoder` bean | Result |
 |---|---|---|
-| absent | any | anonymous; `MessageContext.userId = null`, request proceeds |
-| `Bearer <jwt>`, valid | present | identity `{sub, realm roles}`, `verified = true` |
+| absent or blank | any | anonymous; `MessageContext.userId = null`, request proceeds |
+| `Bearer <jwt>`, valid | present | identity `{sub, realm roles}` |
 | `Bearer <jwt>`, invalid or expired | present | `UNAUTHENTICATED` (a forged or stale token is a bug or an attack) |
-| `Bearer <jwt>`, signed | absent | claims read **without verification**, `verified = false`; warned once per process |
-| `Bearer <jwt>`, unsigned (`alg: none`) or encrypted | absent | `UNAUTHENTICATED` (only signed tokens are read unverified) |
-| malformed | any | `UNAUTHENTICATED` |
+| `Bearer <jwt>`, a signed JWS | absent | anonymous: the token is never read into an identity, only forwarded by the handler's nested sends; logged once at `INFO` |
+| `Bearer <token>` that is not a signed JWS: encrypted (five segments), unreadable, `alg: none` or an empty signature | absent | `UNAUTHENTICATED` ("unsupported token", "unreadable token", "unsigned token") |
+| not `Bearer <token>` (the scheme in any letter case) | any | `UNAUTHENTICATED` ("malformed authorization header") |
 
-an unverified identity counts as authenticated. The peer that forwarded it validated it at its own
-ingress and is trusted by the network model; verification is for catching forged or expired tokens where the
-service can, not for distrusting the peer. Without a `JwtDecoder` the checks are therefore advisory: any client on
-the private network can mint a signed token with any claims. Use `principal.verified` in an expression when a
-handler must insist on a verified identity (`"isAuthenticated() and principal.verified"`). On the local
-short-circuit the current Spring `Authentication` is normalised the same way: `sub` and `realm_access.roles` are
-read from the token (`JwtAuthenticationToken`, `BearerTokenAuthentication`), so `hasRole('x')` means the realm role
-regardless of how the application maps authorities for its own REST endpoints.
+The token is checked before the handler is looked up, so a bad token is `UNAUTHENTICATED` for every handler, guarded or
+not, and also for a type this instance does not handle. On the local short-circuit the handler sees the caller the hub
+path would carry: with `security.forward-jwt` on, the current Spring `Authentication`, normalised the same way (`sub`
+and `realm_access.roles` are read from the token of a `JwtAuthenticationToken` or `BearerTokenAuthentication`, so
+`hasRole('x')` means the realm role regardless of how the application maps authorities for its own REST endpoints);
+with it off, an anonymous caller and no token.
 
 Notes:
 
@@ -160,8 +166,9 @@ Notes:
 - A string result such as `'true'` is not a grant; the expression must evaluate to the Boolean `true`.
 - An expression that throws (for example `#message.owner.id` on a null `owner`) is a denial, not a handler error.
 
-The resolved identity is installed in the `SecurityContext` while the handler runs, so `CallerContext` works inside
-handlers and nested sends re-forward the same token. `snodra.messaging.security.require-jwt` was removed; setting it
+The verified identity is installed in the `SecurityContext` while the handler runs, so `CallerContext` works inside
+handlers and nested sends re-forward the same token. Without a `JwtDecoder` the `SecurityContext` stays empty
+(anonymous) and the forwarded token is kept aside, only to be forwarded by nested sends. `snodra.messaging.security.require-jwt` was removed; setting it
 fails startup with a hint.
 
 ## Hub security: token, ACL and TLS
@@ -395,6 +402,7 @@ PKIX validation rules apply to the hub's certificate (the Rust library uses rust
 | `snodra.messaging.hub.enabled` | `true` | Set false to skip the hub connection (publish-only tools, unit tests) |
 | `snodra.messaging.hub.address` | `static://snodra-server:7000` | The hub or hubs (plaintext gRPC): one target (`host:port`, `static://` optional), a comma-separated list (`static://hub:7000,hub-2:7000`; `static://` optional per entry, blanks and repeats dropped), or one `dns:///name:port` (port required, not combinable with other entries) whose addresses are re-resolved every 30 s. One connection per hub, see [Several hubs](api.md#several-hubs). A malformed value fails startup |
 | `snodra.messaging.hub.status-interval` | `5s` | Period of the `InstanceStatus` report (connected hub ids, handlers in flight) to every live hub; also sent whenever the set of live hubs changes. Must be positive |
+| `snodra.messaging.hub.always-route-through-hub` | `false` | Send every command and query through the hub, also one of a type this instance handles itself (and the saga relay's commands). Off: such a request (a command, or a query of a type not declared `shared`) is answered in-process and its routing key is ignored. Environment: `SNODRA_MESSAGING_HUB_ALWAYSROUTETHROUGHHUB` |
 | `snodra.messaging.hub.request-timeout` | unset | Per-request timeout chosen by this service. Unset: the hub decides (`timeout_ms = 0`: its default, 5 s, or the type's override) and the client guards with the hub's bound for the type + 1 s. Set: sent as `timeout_ms` (the hub still clamps it, and its per-type override can then only shorten it), so leave it unset unless the service needs its own deadline; `0s` counts as unset |
 | `snodra.messaging.hub.reconnect-backoff.min` | `500ms` | Exponential backoff floor when the stream drops; the backoff returns to it once an attempt reached the handshake |
 | `snodra.messaging.hub.reconnect-backoff.max` | `5s` | Exponential backoff ceiling; every wait gets ±20 % jitter and never exceeds this (at the ceiling: 80-100 % of it) |
@@ -404,7 +412,7 @@ PKIX validation rules apply to the hub's certificate (the Rust library uses rust
 | `snodra.messaging.hub.priorities.<type>` | none (0) | Default `Request.priority` per message type; `SendOptions.priority` wins |
 | `snodra.messaging.hub.max-subscriptions` | `1024` | Subscription queries this instance serves at once, over every hub (at least 1, else startup fails). The next one is refused with `ReplyEnd{RESOURCE_EXHAUSTED, "subscription limit (N) reached"}`, which the subscriber sees as a `HandlerBusyException`. A subscription holds no handler permit, so `max-concurrent-handlers` does not bound it; the default equals the hub's `SNODRA_SERVER_MAX_SUBSCRIPTIONS_PER_INSTANCE`. See [Subscription queries](api.md#subscription-queries) |
 | `snodra.messaging.hub.token` | none | Static token sent in `Register.credentials.token` of every hub stream (hub access control, Hub token and TLS). An empty or blank value is no token. Never logged, redacted in `toString` and in the actuator's `configprops` and `env`. Environment: `SNODRA_MESSAGING_HUB_TOKEN`, or `SNODRA_SERVER_TOKEN` when the key is unset |
-| `snodra.messaging.hub.token-file` | none | File holding the token (a container secret such as `/run/secrets/snodra-server-token`). Read at startup (an unreadable file fails it) and again on every reconnect; if a later read fails the last good token is kept. **Wins over `hub.token` when both are set.** Environment: `SNODRA_MESSAGING_HUB_TOKEN_FILE`, or `SNODRA_SERVER_TOKEN_FILE` when the key is unset |
+| `snodra.messaging.hub.token-file` | none | File holding the token (a container secret such as `/run/secrets/snodra-server-token`). Read at startup (an unreadable file fails it), again on every reconnect and on every heartbeat of a registered stream (a changed token is sent as a credentials refresh); if a later read fails the last good token is kept. **Wins over `hub.token` when both are set.** Environment: `SNODRA_MESSAGING_HUB_TOKEN_FILE`, or `SNODRA_SERVER_TOKEN_FILE` when the key is unset |
 | `snodra.messaging.hub.tls.enabled` | `false` | TLS to every hub of `hub.address` (every address form). The hub must serve TLS (`SNODRA_SERVER_TLS_CERT` / `SNODRA_SERVER_TLS_KEY`). Environment: `SNODRA_MESSAGING_HUB_TLS_ENABLED` |
 | `snodra.messaging.hub.tls.ca-file` | JVM trust store | PEM file with the CA that signed the hub's certificate; read on every connection attempt. Set without `tls.enabled` it is ignored with a warning. Environment: `SNODRA_MESSAGING_HUB_TLS_CA_FILE` |
 | `snodra.messaging.hub.tls.server-name` | the address's host | Name the hub's certificate must carry (and the SNI), for an address that is an IP or an alias the certificate does not list. Environment: `SNODRA_MESSAGING_HUB_TLS_SERVER_NAME` |

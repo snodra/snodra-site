@@ -94,9 +94,10 @@ snodra:
 fun handle(command: PlaceOrder): PlaceOrderResult { /* ... */ }
 ```
 
-The receiving library checks the expression before the handler runs. Without a `JwtDecoder` it reads
-a signed token without verification and warns; use `principal.verified` when a handler must insist on
-a verified identity.
+The receiving library checks the expression before the handler runs, against the token verified with
+the service's JWKS (`spring.security.oauth2.resourceserver.jwt.jwk-set-uri` or `issuer-uri`). A
+guarded handler needs it: without a `JwtDecoder` the service does not start, and no forwarded token is
+taken as an identity.
 
 ## Read next
 

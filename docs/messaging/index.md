@@ -94,7 +94,7 @@ let mut parts = app.queries().scatter_gather_stream(&SearchEverything { text }, 
   `failed` counts the parts with an error, `timedOut` / `timed_out` the targets without an answer
   at the deadline (they have no part). **Partial answers are answers:** the call succeeds; check
   `failed + timedOut` for "all or nothing". The flow / stream carries the parts only, no counts.
-- **The gather always goes through the hub**, also from a Kotlin service that owns the type (no
+- **The gather always goes through the hub**, also from a service that owns the type (no
   local short-circuit; that instance is one of the targets).
 
 **Errors.**
@@ -212,7 +212,7 @@ while let Some(row) = rows.next().await { writer.write(row?); }
   gets `max_results = 0`). `priority` is the forwarded request's (default per type, else 0).
   `initialCredit` / `initial_credit` is the credit window, below. The hub also bounds a stream's
   whole life (`SNODRA_SERVER_MAX_STREAM_DURATION`, 10 min by default): `CANCELLED`.
-- **The stream always goes through the hub**, also from a Kotlin service that owns the type (no
+- **The stream always goes through the hub**, also from a service that owns the type (no
   local short-circuit).
 - **Owned stream (Rust).** `Sender::stream` borrows the `Sender` for the stream's life;
   `Sender::stream_owned(self: &Arc<Self>, &q, StreamOptions) -> Result<BoxStream<'static,
@@ -379,12 +379,16 @@ returning a `Flow`, or `@CommandHandler` on a subscription query, fails at start
 handler is a `Fn(Q, MessageContext) -> Future<Output = Result<Q::Initial, MessagingError>>`.
 `@RequiresAuthentication` (Kotlin) is checked when the subscription is registered and again on the
 initial request; Rust guards run before the handler. On the wire a subscription type is announced
-like any query type (`Register.query_types`, or `shared_query_types` when shared), and the hub sends
+like any query type (`Register.query_types`, or `shared_query_types` when shared) and is also declared
+in `Register.subscription_query_types`, which the library fills from its subscription handlers (nothing
+to configure). The hub then serves the type with a subscription only: a point query, a stream or a
+gather of it, and a subscription of a type nobody declared, fail with `INVALID_REQUEST`. The hub sends
 each live instance a `SUBSCRIPTION` request, on which the library only registers the
 subscription (the decoded query, its request id, the hub stream it arrived on): no handler runs,
 no permit is held. The initial result is a separate ordinary request (`<id>#0`, mode `UNARY`) that
 the same handler answers, recognised by that id. Rust `registered_types()` lists the exclusive
-subscription types in `RegisteredTypes.subscription_queries`.
+subscription types in `RegisteredTypes.subscription_queries` and the shared ones in
+`RegisteredTypes.shared_subscription_queries`.
 
 **The emitter.**
 
@@ -735,8 +739,10 @@ In plain words, for a service with a saga:
   `sagas.relay.lease`**: a call that never returns keeps its saga blocked and one of the four worker threads busy, and four
   such calls stop dispatch on that instance.
 - **Local before hub.** The relay sends a command by the hub bus's rules: a handler in the same service is invoked
-  in-process (an adapter in the saga's own service is the intended case), else it goes through the hub. A service with
-  `hub.enabled=false` sends to its own handlers only; a type it does not handle is `NO_HANDLER`.
+  in-process (an adapter in the saga's own service is the intended case), else it goes through the hub. With
+  `hub.always-route-through-hub` (Rust: `SNODRA_SERVER_ALWAYS_ROUTE_THROUGH_HUB`) every command goes through the hub,
+  and the relay waits for it as for any call through the hub. A service with `hub.enabled=false` sends to its own
+  handlers only, whatever that option; a type it does not handle is `NO_HANDLER`.
 - **Identity.** A saga's command carries no user token and no caller identity (the triggering event's user is not a caller).
   A handler with `@RequiresAuthentication` refuses it with `DENIED`, until the `snodra-system` service identity
   (06-security.md, planned) is forwarded.
@@ -1336,7 +1342,8 @@ Reference: ``protocol/hub.proto``, hub internals in
    and a client of different builds are not supported.
 2. **Heartbeat.** The client heartbeats at the interval from the ack (3 s by default); the hub echoes it with
    `sent_at_ms` unchanged. Silence for the hub's heartbeat timeout (10 s) or a closed stream removes the instance and fails its in-flight requests with `HANDLER_DISCONNECTED`. A
-   client that gets no echo for three intervals drops the stream and reconnects.
+   client drops the stream and reconnects when the hub is silent: on a heartbeat tick, more than three intervals since
+   the last echo and the three heartbeats sent since then all unanswered.
 3. **Send.** `CommandBus.send` builds `Request{id, kind, type, routing_key, payload, headers,
    timeout_ms}` and writes it to the stream, then awaits a `Reply` or `Error` with the same id.
    `timeout_ms` is 0 unless the caller chose a timeout, so the hub's default or per-type override

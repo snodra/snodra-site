@@ -4,11 +4,17 @@
 
 - **Typed facades.** `Command<R>` and `Query<R>` carry the response type; it is read from the interface type argument at
   runtime. Generic responses such as `List<X>` are erased, so wrap them in a response class.
-- **Local short-circuit.** A command or query whose handler lives in the same service is invoked locally and does not go
-  through the hub. The handler runs on the caller's thread and coroutine, so it joins the caller's thread-bound
-  transaction (a failure in it rolls back the caller's writes too) and sees the caller's security context. A query on a
-  type this service declares `@QueryHandler(shared = true)` is the exception: it always goes through the hub (see
-  Scatter-gather below), and so is a streaming query (see Streaming queries).
+- **Local short-circuit.** A command or query whose handler lives in the same instance is invoked locally and does not
+  go through the hub. The handler runs on the caller's thread and coroutine, so it joins the caller's thread-bound
+  transaction (a failure in it rolls back the caller's writes too). It sees the caller the hub path would carry: the
+  caller's identity and token with `security.forward-jwt` on, an anonymous caller with it off; the caller's trace
+  context and correlation id either way. The routing key is ignored, and the request gets no timeout, no retry and no
+  metrics; a handler's failure reaches the caller as the same exception the hub path gives. A query on a type this
+  service declares `@QueryHandler(shared = true)` is the exception: it always goes through the hub (see Scatter-gather
+  below), and so are a gather, a streaming query and a subscription. `snodra.messaging.hub.always-route-through-hub`
+  turns the short-circuit off: then every command and query, the saga relay's commands included, goes through the hub,
+  so a routing key keeps its instance affinity across the instances of the service
+  ([Configuration](configuration.md)).
 - **Incoming hub requests** run on virtual threads, at most `hub.max-concurrent-handlers` at once, never on the threads
   that read the hub stream; a handler may block (for example on a nested `sendBlocking`).
 - **Correlation id.** Every message carries a `correlationId`. Messages sent while handling a hub request or a Kafka
@@ -60,8 +66,10 @@
 - **Timeouts.** Unless `hub.request-timeout` is set, requests go out with `timeout_ms = 0` and the hub decides (default
   or per-type override). The client gives up locally only when the hub never answers: after the hub's deadline bound
   from the ack (`min(timeout, override or max)`, or `override or max` for 0) plus 1 s, with `MessageTimeoutException`.
-- **Dead connections.** A hub stream whose heartbeats stay unanswered for three heartbeat intervals (9 s with the hub's
-  default of 3 s) is closed and re-established; HTTP/2 keepalive pings (every 10 s, 5 s timeout, also without calls) run on the
+- **Dead connections.** A hub stream is closed and re-established when its hub is silent: on a heartbeat tick, more
+  than three heartbeat intervals since the last echo (the `RegisterAck` counts as the first) and the three heartbeats
+  written since then all unanswered, so between 9 and 12 s after the last echo with the hub's default of 3 s. Nothing
+  is checked before the `RegisterAck` (the 10 s handshake timeout covers that); HTTP/2 keepalive pings (every 10 s, 5 s timeout, also without calls) run on the
   channel.
 - **Lost connections.** A request the stream never accepted (including one still queued on the client when the stream
   broke) fails with `HubUnavailableException` (the handler did not run, retrying is safe; with several hubs it is sent to
@@ -124,10 +132,12 @@ snodra.messaging.hub.address: static://hub-1:7000,static://hub-2:7000   # or: dn
   k *= 0xff51afd7ed558ccd; k ^= k >>> 33; k *= 0xc4ceb9fe1a85ec53; k ^= k >>> 33`). Vectors: `score("hub-a",
   "order-1") = 0xd8d5618ff3a93f55`, `score("hub-b", "key-0") = 0xbd443f5acaf98254` (`RendezvousTest`).
 - **Failover.** A request its hub could not take before it was written (the stream had just closed, or broke while the
-  request was still queued on the client) is sent to another live hub; with no hub left the call waits for one. The
-  call has one deadline: its own timeout (`SendOptions.timeout`, else `hub.request-timeout`; 5 s when neither is set);
-  waiting ends there with `HubUnavailableException`, and a request sent again carries what is left of its
-  `timeout_ms`, so failover never stretches a call beyond its timeout. A request already written fails with `HubConnectionLostException` (or the hub's `HandlerDisconnectedException`), and the retry policy
+  request was still queued on the client) is sent to another live hub with the same id; with no hub left the call
+  waits for one. The call has one deadline: its own timeout (`SendOptions.timeout`, else `hub.request-timeout`; 5 s
+  when neither is set); waiting ends there with `HubUnavailableException`, and no new hub is tried after it. A request
+  sent again carries its `timeout_ms` unchanged, each hop guarded by the full bound, so a call ends within its deadline
+  plus one hop's guard. A request lost while still queued moves at most 8 times; the ninth loss fails it with
+  `HubUnavailableException` (`'<type>' not written: 9 hub streams lost before it was`). A request already written fails with `HubConnectionLostException` (or the hub's `HandlerDisconnectedException`), and the retry policy
   applies. With no live hub at all: `HubUnavailableException`, as with one hub.
 - **Permits.** A stream announces `ceil(hub.max-concurrent-handlers / N)` initial permits, where N = 1 (the hub being
   registered on) + the other hubs that are live or still on their first connect attempt (a hub down after a failed
@@ -145,7 +155,8 @@ snodra.messaging.hub.address: static://hub-1:7000,static://hub-2:7000   # or: dn
 - **Status.** Every `hub.status-interval`, and whenever the live set changes, each live hub gets an `InstanceStatus`:
   `connected_hub_ids` (the ids of the live hubs), `handlers_in_flight` (over all hubs) and the event processors. The hub shows
   the report in its topology (`connectedHubIds`, `statusAgeMs`) and the dashboard flags instances missing a hub.
-- **Shutdown** announces the empty registration on every hub, waits for the handlers, then closes every stream.
+- **Shutdown** announces the empty registration on every hub (waiting at most 1 s for the acks), ends the
+  subscriptions it serves, waits at most 5 s for the handlers, then half-closes every stream.
 
 ## Scatter-gather
 
@@ -330,9 +341,14 @@ result.updates.collect { change -> render(change) }   // completes when the hand
   answers the **initial result**; a handler returning a `Flow`, or `@CommandHandler` on a subscription query, fails at
   startup. The hub sends every live instance of the type a `SUBSCRIPTION` request, and the library registers the
   subscription (the decoded query, its request id and the hub stream it came from); the initial result is a separate
-  ordinary request answered by the same method, which the library recognises by the hub's request id (`<id>#0`). A unary
-  request for the type is answered `INVALID_REQUEST` ("is a subscription query: send it with QueryBus.subscribe"), a
-  `SUBSCRIPTION` request for a type without a subscription handler ends with `INVALID_REQUEST`, and
+  ordinary request answered by the same method, which the library recognises by the hub's request id (`<id>#0`). The
+  library declares every such type (exclusive or shared) to the hub in `Register.subscription_query_types` on every
+  registration; nothing is configured. So the hub serves the type in mode `SUBSCRIPTION` only: a point query, a
+  stream or a gather of it (only a raw transport caller can send one: the typed API cannot), and a subscription of a
+  type nobody serves with a subscription handler, end with the hub's `INVALID_REQUEST` (`InvalidMessageException`,
+  not retried). The handler side still answers a unary request for the type `INVALID_REQUEST` ("is a subscription
+  query: send it with QueryBus.subscribe"), and a `SUBSCRIPTION` request for a type without a subscription handler
+  ends with `INVALID_REQUEST`; and
   `@RequiresAuthentication` is checked when the subscription is registered and again on the initial request.
 - **`QueryUpdateEmitter`.** An auto-configured bean: `emit(queryType, filter, update)`, `complete(queryType, filter)` and
   `completeExceptionally(queryType, filter, cause)`, plus reified overloads (`emitter.emit<WatchAccount, AccountChanged>(
@@ -1013,8 +1029,8 @@ data class SendOptions(                      // every field null = the configure
   with zero attempts fails the send with `InvalidMessage` before anything is written. The 250 ms
   floor is `hub::RETRY_MIN_REMAINING`. The table's rows are `MessagingError::HubUnavailable`, `NoHandler`,
   `HandlerBusy` (both kinds) and `HandlerDisconnected`, `Timeout`, `HubConnectionLost` (queries only);
-  `RemoteHandler` "handler busy" is not retried either. The crate has no local short-circuit, so
-  every send goes through the hub (and may be queued and retried).
+  `RemoteHandler` "handler busy" is not retried either. The crate answers its own types in-process too
+  (unless `hub_always_route_through_hub` is set), and a local handler is never retried.
 
 
 `EventBus.publish` does not talk to Kafka directly. Inside a Mongo transaction it writes an
@@ -1023,8 +1039,9 @@ data class SendOptions(                      // every field null = the configure
 domain write.
 
 `CommandBus.send` and `QueryBus.send` resolve the handler locally first (local short-circuit); when
-the current service has a handler for the type, it is invoked in-process with the same semantics and
-no hub round trip. Otherwise the message goes to the hub.
+the current instance has a handler for the type (for a query, one not declared `shared`), it is invoked in-process
+with the same semantics and no hub round trip. Otherwise, and always with
+`snodra.messaging.hub.always-route-through-hub`, the message goes to the hub.
 
 ## Annotations
 
@@ -1110,8 +1127,8 @@ FNV-1a, MurmurHash3's finalizer; vector `("hub-1", "order-42")` -> `0x5c855509f5
 keeps its hub while the hubs are stable. A request that could not be written goes to another hub;
 one already written fails with `HubConnectionLostException` when its stream drops (what counts as
 written may differ between the libraries, see each README). The whole call keeps one deadline, its
-own timeout: waiting for a live hub ends there with `HubUnavailableException`, and a request sent
-again carries what is left of its `timeout_ms`. Each stream announces
+own timeout: waiting for a live hub ends there with `HubUnavailableException`, no new hub is tried after
+it, and a request sent again carries its `timeout_ms` unchanged (at most 8 moves). Each stream announces
 `ceil(max-concurrent-handlers / N)` permits, N = the hub being registered on plus the other hubs
 that are live or still on their first connect attempt (a failed first attempt counts as gone).
 When N shrinks, every live stream gets a top-up
@@ -1122,7 +1139,8 @@ joins or returns gets `ceil(max / N)` on its new stream; nothing is ever revoked
 `max-concurrent-handlers` handlers run in total. A `dns:///` answer is used in one address family:
 its IPv4 addresses when it has any, else its IPv6 ones, without repeats (a dual-stack name lists
 each hub twice, and the hub keeps one session per instance id). The first target to acknowledge a
-`hub_id` keeps it while it is kept; a later one answering the same id is parked, never takes over.
+`hub_id` keeps it while it is kept; a later one answering the same id is parked, and connected again
+once no kept target owns that id (the owner answers another id or leaves the DNS answer).
 An ack with an empty `hub_id` is identified by its target id: the bare `host:port` (no
 `static://`; a resolved IPv6 address as `[ip]:port` without zone).
 `HubConnections.awaitRegistered` (Kotlin) is true only once every kept hub confirmed the
