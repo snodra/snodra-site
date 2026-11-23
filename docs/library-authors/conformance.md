@@ -30,7 +30,9 @@ and the runner's own mutation matrix proves that each check fails when it should
 The runner starts the service itself, once or more per check, with its configuration in `CONFORMANCE_*` environment
 variables (the hubs, the service name and instance id, the capacity, the retry policy, credentials), so the service
 is a program that reads them, maps them onto your library's configuration, registers its handlers and stops on
-SIGTERM within 5 s.
+SIGTERM within 5 s. A guarded handler needs a JWKS ([messages.md, Forwarded identity](messages.md#forwarded-identity)),
+and the runner gives one (`CONFORMANCE_JWKS_URL`) only to the checks that need it, so the service registers
+`conformance.Guarded` only when it is given one, as the Kotlin and Go conformance services do.
 
 ## Running the runner
 
@@ -94,8 +96,11 @@ parts of the level-1 rules cannot be observed from outside a library, and stay w
 - `L1-HANDSHAKE-ACK`: never waiting on the ack of a later `Register` (the conformance service registers no handler after
   start).
 - `L1-NEVER-SENT` and `L1-HUB-FAILOVER`: a request still in the library's own outbound buffer when its stream breaks
-  (reported as never sent, and moved to another hub with the same id); nothing outside the library can hold a request
-  there deterministically.
+  (reported as never sent, and moved to another hub with the same id and its full timeout, at most 8 times and never
+  after the call's deadline); nothing outside the library can hold a request there deterministically.
+- `L1-SUBSCRIBE`: that every `Register` declares the subscription types in `Register.subscription_query_types`.
+- `L1-IDENTITY`: that a guarded handler without a JWKS is a startup error, and that without a JWKS no token is an
+  identity.
 - `L1-TOKEN`: never logging the token.
 - `L1-TOKEN`, `L1-JWT`, `L1-MTLS`, `L1-TLS`: they are proved on the frames and the TLS handshakes the runner's fake hubs
   see, not against snodra-server's access control in mode `enforce`.
@@ -112,8 +117,9 @@ request without an id, kind or type, and no `Cancel` for a command. The runner's
 against a fake hub and against snodra-server and require the same answers. What remains different, on purpose:
 
 - A fake hub routes nothing between instances: it is the only other party. It forwards what a check sends, including
-  requests snodra-server would not route (a type the instance does not list, a unary request to a streaming handler), and
-  answers the library's own requests as the check scripts them, including parts with a gap and ends with a wrong count.
+  requests snodra-server would not route (a type the instance does not list, a unary request to a streaming handler, a
+  request of a subscription type in another mode), and answers the library's own requests as the check scripts them,
+  including parts with a gap and ends with a wrong count. It does not read `Register.subscription_query_types`.
 - It acknowledges late or never, and echoes heartbeats before the ack, only where a check asks for it
   (`L1-HANDSHAKE-ACK`, `L1-EARLY-REQUESTS`, `L1-NEVER-SENT`).
 - It evicts nobody and has no handshake deadline, no queue bounds, priorities or deadlines of its own, and no hub-side

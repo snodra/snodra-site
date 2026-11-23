@@ -24,12 +24,13 @@ Every message has a type name, the one thing the hub routes on and an event cons
 | Queries start with Get, Find or List | `orders.GetOrder`, `orders.FindOrderById`, `orders.ListOrders` |
 | A response class is named `<CommandOrQuery>Result` (it has no type name of its own on the wire) | GetOrderResult |
 
-- **Names are explicit and stable.** Both official libraries let a message declare its wire name (Kotlin
-  `@MessageType`, Rust `message_type!`), so that a class can be renamed without changing the contract. Senders and
+- **Names are explicit and stable.** The official libraries let a message declare its wire name (Kotlin
+  `@MessageType`, Rust `message_type!`, Go a `MessageType()` method), so that a class can be renamed without changing the contract. Senders and
   handlers in any language agree on the text, nothing else.
 - **A type has one kind while it is owned.** A type registered as a command cannot be registered as a query by another
-  instance (`ALREADY_EXISTS`); a streaming or subscription query is a query type to the hub (the mode is the
-  sender's choice).
+  instance (`ALREADY_EXISTS`). A streaming query is a query type to the hub (the mode is the sender's choice). A
+  subscription query is a query type its service also declares in `Register.subscription_query_types`, and the hub
+  serves it in `RequestMode.SUBSCRIPTION` only ([protocol.md, Subscription types](protocol.md#subscription-types)).
 - **Reserved namespace.** `snodra.events.*` belongs to the event browser
   ([event-store-add-ons.md, The event browser's queries](event-store-add-ons.md#the-event-browsers-queries)): with the
   hub's access control on, only a credential with the `event-browser` right may register those types.
@@ -146,12 +147,30 @@ The acting user's JWT travels in the
 - **Sender:** a request sent while a request is being handled carries that request's `authorization` header on, so a
   downstream service acts for the same user (`L1-PROPAGATION`). A request without a user (a scheduler, an event-driven
   follow-up, a saga's command) carries none.
-- **Handler:** a library must validate the token before it runs a handler that requires an authenticated caller,
-  exactly as the service validates a REST call (signature against the issuer's JWKS, expiry, issuer), and must decide
-  before decoding the payload, so an anonymous caller cannot probe payload shapes (`L1-IDENTITY`). No readable
-  identity, or a token that fails validation, is `ErrorCode.UNAUTHENTICATED`; an authenticated caller the handler
-  refuses is `ErrorCode.PERMISSION_DENIED`. A token that cannot be checked because the JWKS endpoint is down is
-  `ErrorCode.UNAUTHENTICATED` for the caller, never an internal error.
+- **Handler:** a token is the caller's identity only once it is verified against the issuer's JWKS, exactly as the
+  service validates a REST call (signature, expiry, issuer):
+    - **A guard needs a JWKS.** A handler that requires an authenticated caller (any caller, a role, a given caller)
+      cannot be registered in a service without a JWKS: that is a startup error naming the handler (a library's own
+      test: the runner sees no startup).
+    - **Without a JWKS no token is an identity.** Its claims are never read into a caller: the caller is anonymous, and
+      the token is only carried on by the requests the handler sends.
+    - **Every request's token is checked first**, before the handler is looked up: for every handler, guarded or not,
+      and for a type the instance does not serve. A token that fails is `ErrorCode.UNAUTHENTICATED`, never
+      `ErrorCode.NO_HANDLER`. With a JWKS a token fails when it does not verify, also when the JWKS endpoint is down
+      (`ErrorCode.UNAUTHENTICATED` for the caller, never an internal error). With or without a JWKS, a request fails
+      when its `authorization` header is not `Bearer <token>` ("malformed authorization header"; the scheme is matched
+      in any letter case, and a blank header is no token), or when the token is not a signed compact JWS: five segments,
+      an encrypted token ("unsupported token"); not three segments, a header or claims segment that is not base64url of
+      a JSON object, or an `alg` that is not a string ("unreadable token"); `alg` `none` or an empty signature
+      ("unsigned token").
+    - **An anonymous caller is refused before the payload is decoded**, so it cannot probe payload shapes
+      (`L1-IDENTITY`): no identity, for a handler that requires one, is `ErrorCode.UNAUTHENTICATED`. The handler's
+      rule (a role, a given caller) is applied once the payload is decoded, since a rule may read the message: an
+      authenticated caller it refuses is `ErrorCode.PERMISSION_DENIED`, and a payload that does not decode is
+      `ErrorCode.INVALID_REQUEST`.
+- **A request answered in-process** ([protocol.md, Requests a service answers itself](protocol.md#requests-a-service-answers-itself))
+  shows its handler the caller the hub path would carry: the sending handler's caller when the library forwards the
+  token, else an anonymous caller.
 - The **service's** own credential (a token, a JWT or a certificate on the hub stream) is a different thing: it says
   which service connects, not who acts ([protocol.md, Credentials](protocol.md#credentials)).
 

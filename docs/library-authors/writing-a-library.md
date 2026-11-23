@@ -4,8 +4,10 @@ This page is for anyone writing a Snodra library for a new language (Go, TypeScr
 it you know in which order to build one so that each step can be tried against a real hub, the states a connection, a
 request, a stream and a subscription go through, and the mistakes the official libraries made on the way, each as a
 rule with its reason. The protocol itself is in [protocol.md](protocol.md), the messages in [messages.md](messages.md),
-the levels and their checks in [feature-levels.md](feature-levels.md). The Kotlin and Rust libraries are reference
-implementations ([Kotlin](../messaging/kotlin/index.md), [Rust](../messaging/rust/index.md)), never the specification.
+the levels and their checks in [feature-levels.md](feature-levels.md). The official libraries are reference
+implementations ([Kotlin](../messaging/kotlin/index.md), [Rust](../messaging/rust/index.md),
+[Go](../messaging/go/index.md)), never the specification; where these pages are silent, the Kotlin library's behaviour
+is the reference, and every official library follows it.
 
 ## Before you start
 
@@ -59,7 +61,7 @@ stateDiagram-v2
     AwaitingAck --> Rejected: closed with ALREADY_EXISTS, INVALID_ARGUMENT, UNAUTHENTICATED or PERMISSION_DENIED
     AwaitingAck --> Backoff: no ack within the handshake timeout, or the stream failed
     Live --> Live: Heartbeat every interval, later Register acked, credentials refreshed
-    Live --> Backoff: stream failed or closed, or no echo for three intervals
+    Live --> Backoff: stream failed or closed, or the hub silent (three heartbeats unanswered, more than three intervals since the last echo)
     Rejected --> Connecting: after the backoff cap, reason kept
     Backoff --> Connecting: after the wait (reset to the floor if the last attempt reached Live)
     Live --> Draining: shutdown (empty Register first, then handlers drained and subscriptions ended in either order, half-close)
@@ -79,7 +81,7 @@ handlers bound to the stream end ([protocol.md, A lost stream](protocol.md#a-los
 ```mermaid
 stateDiagram-v2
     [*] --> Built: fresh Request.id
-    Built --> NeverSent: no live stream
+    Built --> NeverSent: no live stream until the call's deadline
     Built --> Buffered: queued for a live stream
     Buffered --> NeverSent: stream lost before the transport took it
     Buffered --> Pending: handed to the transport
@@ -88,7 +90,7 @@ stateDiagram-v2
     Pending --> TimedOut: local guard (hub bound + 1 s)
     Pending --> Unknown: stream lost
     Pending --> Built: NO_HANDLER from one hub, another hub left (the next hub in the ranking, same id)
-    NeverSent --> Built: another hub, same id (or a retry, fresh id)
+    NeverSent --> Built: another hub, same id and full timeout, before the call's deadline, at most 8 moves (or a retry, fresh id)
     NeverSent --> [*]: no hub left, failed as never sent
     Answered --> [*]
     Failed --> [*]
@@ -158,7 +160,8 @@ stateDiagram-v2
 ```
 
 The initial result is a separate unary request `<id>#0` to one of the targets, served like any unary request; the
-target recognises it by its `#0` id.
+target recognises it by its `#0` id. The hub sends a subscription type no other unary request, because the service
+declares the type in `Register.subscription_query_types`.
 
 ## Pitfalls the official libraries met
 
@@ -171,6 +174,10 @@ Each is a rule, with the reason it exists and the check that proves it.
   because it carries what the client must apply (the heartbeat interval, the timeout rules, the hub id), and the hub
   writes it before the echo of the heartbeat that follows the `Register`. A client that went live on an echo would
   heartbeat and time out on guesses, and could not tell two targets of one hub apart.
+- **Drop a silent hub on the tick after its third unanswered heartbeat, and only after the ack** (`L1-SILENT-HUB`). A
+  rule on the time since the last echo alone drops a healthy stream when a tick fires a little late, exactly three
+  intervals after the echo; a check before the ack drops a slow handshake that the handshake timeout is there to wait
+  for.
 - **Serve requests that arrive before the ack** (`L1-EARLY-REQUESTS`): the hub routes to an instance as soon as its
   `Register` is processed, so dropping them fails a sender's request for nothing.
 - **A refused `Register` is not fatal** (`L1-REJECTION`): two services registering one type is a deployment error; a
@@ -198,6 +205,9 @@ Each is a rule, with the reason it exists and the check that proves it.
   `ErrorCode.NO_HANDLER` through would get a command that already did part of its work run again.
 - **Check the caller before decoding the payload** (`L1-IDENTITY`), so an anonymous caller cannot learn payload
   shapes from the decode errors.
+- **A guard needs a JWKS, and an unverified token is no identity** (a library's own test). Claims read without the
+  issuer's keys can be forged by anyone who reaches the hub; a guard without a JWKS could only refuse every caller, so
+  registering one is a startup error ([messages.md, Forwarded identity](messages.md#forwarded-identity)).
 - **Send `Request.timeout_ms` = 0 unless the caller chose a timeout** (`L1-TIMEOUT`). When clients always sent a
   value, the hub's per-type timeouts could never apply. The local
   guard waits one second longer than the hub's bound, so the hub's answer, which says what happened, normally comes
@@ -207,6 +217,9 @@ Each is a rule, with the reason it exists and the check that proves it.
 - **Only what never left your own buffer was never sent** (`L1-NEVER-SENT`, `L1-HUB-FAILOVER`). A request still in the
   library's outbound buffer when its stream breaks can go to another hub with the same id; one the transport took may
   be on the wire, and resending it could run a command twice.
+- **A moved request keeps its full timeout, and one deadline bounds the call** (`L1-HUB-FAILOVER`). Each hop is a new
+  request to a hub, which bounds it on its own, so it carries the caller's timeout whole; the call's deadline, at most
+  8 moves and no new hop after the deadline keep a request whose streams keep breaking from moving for ever.
 
 **Flow control and several hubs**
 
@@ -218,9 +231,18 @@ Each is a rule, with the reason it exists and the check that proves it.
   new share per stream keeps repeated flaps from adding up, and never revoking keeps a hub's queue from stalling.
 - **One address family from DNS, one stream per `RegisterAck.hub_id`** (`L1-HUBS`). A dual-stack name lists every hub
   twice, and two streams of one instance id to one hub replace each other at the hub, over and over.
+- **Park a duplicate address, never close it for good** (`L1-HUBS`). Connect it again once no kept target owns its hub
+  id: behind aliases, an address closed for good leaves the instance one hub short after a rolling restart of the
+  hubs.
+- **Keep a hub being rolled over to a renewed certificate in the permit split** (`L1-HUB-PERMITS`). Its new stream
+  offers `ceil(max / N)` again; counting it out would offer it the share of every hub while the others still hold
+  theirs.
 
 **Query modes**
 
+- **Declare the subscription types in every `Register`** (`L1-SUBSCRIBE`). The hub serves a subscription of a declared
+  type only, so without the list the subscription handlers are unreachable; and the declaration is what lets the hub
+  refuse a point query, a stream or a gather of the type, so the handler's `#0` request is always the hub's.
 - **Register a subscription the moment its `<id>#n` request is read** (`L1-SUBSCRIBE`), before checking the caller,
   and buffer emits until that check is done. The hub writes `#n` before `#0` to the same instance; a library that
   registered later lost the updates emitted between serving the initial result and registering.
@@ -238,8 +260,10 @@ Each is a rule, with the reason it exists and the check that proves it.
 - **Reconnect with a renewed client certificate before `notAfter`** (`L1-MTLS`): a TLS session cannot be refreshed on a
   live stream, so the hub closes it at `notAfter` with no grace. The official libraries watch the files, wait a random
   delay so replicas do not all leave at once, and roll their hubs over one at a time.
-- **A token file is read again before every connect**, and an empty file after a good read is a rotation caught half
-  way: keep the last good token (not checked yet: a library's own test).
+- **A token file is read again before every connect and on every heartbeat tick of a registered stream**, and a changed
+  token goes to the hub as `ClientMessage.credentials`, so a rotated secret needs no reconnect. A file that cannot be
+  read or is empty at startup is a startup error; an empty file after a good read is a rotation caught half way: keep
+  the last good token (not checked yet: a library's own test).
 
 **Events and processors**
 
@@ -346,8 +370,10 @@ with one message store, share the same records. The records themselves are the m
     - no `authorization` header and no caller identity: a saga's triggering event is not a caller, so a handler that
       requires an authenticated caller refuses the command;
     - no retry of the sender's own: the relay owns the retries below, and a sender's retry would multiply them.
-- A command type the service handles itself goes to its own handler without the hub; every other type goes through
-  the hub. A service without a hub knows only its own handlers.
+- A command type the service handles itself goes to its own handler without the hub, unless the service routes every
+  request through the hub ([protocol.md, Requests a service answers itself](protocol.md#requests-a-service-answers-itself)):
+  then it goes through the hub like any other command, and the relay waits for it as for any call through the hub.
+  Every other type goes through the hub. A service without a hub knows only its own handlers, whatever that setting.
 - A command is marked sent only after its reply, so a crash in between sends it again with the same
   `idempotency-key`: every handler of a saga command must be idempotent by that header.
 
@@ -383,10 +409,12 @@ hub or to the service's own handler:
 - **A bound on the wait** (optional). A library may bound how long its relay waits for a command's answer, so that a
   call that never returns (a local adapter has no timeout of its own) cannot hold its saga forever. A send abandoned
   at that bound must count as a transient failure, retried later with the same `idempotency-key`, never as a
-  permanent one. Through the hub the bound must not be shorter than the hub's deadline for the call plus a margin, so
-  the relay never sends a command again while the hub may still be running the first. The Kotlin library bounds the
-  wait (`snodra.messaging.sagas.relay.send-timeout`, 1 min by default; through the hub at least the hub's deadline
-  plus 10 s); the Rust crate's relay has no such bound.
+  permanent one. Through the hub the bound must not be shorter than the longest the call can take, moves to other hubs
+  included ([protocol.md, Several hubs](protocol.md#several-hubs)), plus a margin, so the relay never sends a command
+  again while a hub may still be running the first. The Kotlin library bounds the
+  wait (`snodra.messaging.sagas.relay.send-timeout`, 1 min by default; through the hub at least the longest the call
+  can take, its deadline over several hubs plus the last hop's deadline and 1 s, plus 10 s); the Rust crate's relay has
+  no such bound.
 - **A permanent failure** is a known outcome: the entry records that it failed, the reason, the message and a
   pending notice, in one write, before anything else, so the command is never sent again. The saga's later entries
   are then sent: the saga decides what the failure means.

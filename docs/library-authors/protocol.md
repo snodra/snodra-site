@@ -14,7 +14,7 @@ scripts/check-library-spec.sh (described in its header); `make docs-check` check
 -->
 
 **The source of truth** is [`proto/hub.proto`](https://github.com/snodra/snodra-server/blob/main/proto/hub.proto) in
-`snodra-server`, package `snodra.hub.v1`; both official libraries vendor a byte-identical copy of it. This page quotes
+`snodra-server`, package `snodra.hub.v1`; every official library vendors a byte-identical copy of it. This page quotes
 it and never restates it differently; where they seem to differ, hub.proto wins and this page has a bug. The hub and
 the libraries ship together and there is one version of everything until v1: no negotiation, no capability flags, no
 compatibility layer. A library generates its bindings from hub.proto with the language's gRPC tooling.
@@ -81,6 +81,7 @@ client                                   hub
 | `Register.instance_id` | unique per process (a UUID generated at startup, or a pod name), not empty; the hub keeps one session per instance id |
 | `Register.command_types`, `Register.query_types` | fully qualified type names ([messages.md, Type names](messages.md#type-names)); a type in both is `INVALID_ARGUMENT` |
 | `Register.shared_query_types` | query types many services may own ([Shared query types](#shared-query-types)) |
+| `Register.subscription_query_types` | the query types this instance serves with a subscription handler, each also in `Register.query_types` or `Register.shared_query_types` ([Subscription types](#subscription-types)) |
 | `Register.initial_permits` | at least 1 (0 is `INVALID_ARGUMENT`): the requests the hub may forward before the next `Permits`, and the session's permit cap ([Flow control](#flow-control)) |
 | `Register.load_factor` | relative capacity, 0 reads as 100 |
 | `Register.tags` | free labels; unkeyed requests prefer instances whose tags match more of the sender's |
@@ -109,15 +110,20 @@ them against its permits like any other (`L1-EARLY-REQUESTS`).
 
 | Status | Why |
 |---|---|
-| `INVALID_ARGUMENT` | an empty `Register.service_name` or `Register.instance_id`, the service name `snodra-server` or an instance id starting with `snodra-server/` (reserved for the hub's own requests), `Register.initial_permits` 0, a type listed as both command and query, a type listed as shared and as a command or exclusive query in one `Register` |
-| `ALREADY_EXISTS` | a type another service owns (exclusive types have one owner), a type whose kind differs from the kind its current owner registered, a type registered exclusive by one registrant and shared by another |
+| `INVALID_ARGUMENT` | an empty `Register.service_name` or `Register.instance_id`, the service name `snodra-server` or an instance id starting with `snodra-server/` (reserved for the hub's own requests), `Register.initial_permits` 0, a type listed as both command and query, a type listed as shared and as a command or exclusive query in one `Register`, a type in `Register.subscription_query_types` that is in neither query list of that `Register` |
+| `ALREADY_EXISTS` | a type another service owns (exclusive types have one owner), a type whose kind differs from the kind its current owner registered, a type registered exclusive by one registrant and shared by another, a type declared a subscription type by one registrant and not by another |
 | `UNAUTHENTICATED`, `PERMISSION_DENIED` | the hub's access control ([Credentials](#credentials); the cases are in [Connection lifecycle, Failure modes](../server/lifecycle.md#failure-modes)) |
 
 A refusal is a deployment problem, not a crash: a library must keep the service running, keep retrying at its backoff
 cap (no tight loop: after a refused `Register` it waits at least 1 s, and at most its backoff cap of at most 5 s,
 before the next attempt to that hub) and expose the reason (the official libraries log it once per distinct message and keep it as the
-connection's last rejection) (`L1-REJECTION`). A stream the hub closes with `UNAVAILABLE` (for example "jwks not
-loaded yet") is an ordinary closure: reconnect from the backoff floor.
+connection's last rejection) (`L1-REJECTION`). These bounds are those of the default backoff: the official libraries
+accept a configured backoff outside them, and then wait 80 to 100 % of its maximum after a refusal. A stream closed
+with one of these codes after its ack (access revoked on a live session, for example) is a refusal too, with one
+exception: the hub's close of a certificate session at the certificate's end, `UNAUTHENTICATED` "certificate expired",
+is an ordinary reconnect ([Credentials](#credentials)). A stream the hub closes with `UNAVAILABLE` (for example "jwks
+not loaded yet") is an ordinary closure, not a refusal: reconnect at the ordinary backoff, which goes back to its floor
+only after a stream that reached its ack ([Reconnect and backoff](#reconnect-and-backoff)).
 
 **Later `Register`s.** A later `Register` on the same stream replaces the instance's type lists (handlers added after
 startup) and is acked too, but the ack of a later `Register` is dropped, like a heartbeat echo, when the session's
@@ -137,8 +143,13 @@ instance id held by a live session of another service is refused with `PERMISSIO
   diagnostics only. The hub echoes a client `Heartbeat` with `Heartbeat.sent_at_ms` unchanged.
 - The hub evicts a session after `RegisterAck.heartbeat_timeout_ms` (10 s by default) without a heartbeat, and at once
   when the stream closes; requests forwarded to an evicted instance fail with `ErrorCode.HANDLER_DISCONNECTED`.
-- A library must drop a stream that brought no echo for three heartbeat intervals and reconnect (`L1-SILENT-HUB`).
-  The official libraries also send HTTP/2 keepalive pings every 10 s, answered within 5 s, also while idle, so a
+- A library must drop the stream of a silent hub and reconnect (`L1-SILENT-HUB`). It looks on each heartbeat tick from
+  the `RegisterAck` on, before that tick's heartbeat is written: the hub is silent when more than three heartbeat
+  intervals have passed since its last echo (the `RegisterAck` counts as the first) and the three heartbeats written
+  since that echo are all unanswered. The drop then comes on the tick after the third unanswered heartbeat, between
+  three and four intervals after the last echo, never before three. There is no silence check before the
+  `RegisterAck`: the handshake timeout (10 s) closes a stream that brings no ack.
+- The official libraries also send HTTP/2 keepalive pings every 10 s, answered within 5 s, also while idle, so a
   one-way partition is noticed by the transport too.
 
 ## Reconnect and backoff
@@ -160,9 +171,9 @@ comes first, and the order between ending the served subscriptions and draining 
 2. end the subscriptions it serves with a `ReplyEnd`, and let the handlers in flight finish (bounded), in either order;
 3. half-close each stream and wait (bounded) for the hub to finish its side, so nothing still on its way is lost.
 
-Both official libraries do all three, and both wait at most 1 s for the acks of the empty `Register` before they go
-on. The Kotlin library ends its subscriptions before it waits for its handlers, so subscribers hear at once; the Rust
-library waits for its handlers first, then ends its subscriptions and closes its streams.
+The official libraries do all three: they wait at most 1 s for the acks of the empty `Register`, then end the
+subscriptions they serve, so subscribers hear at once, then wait at most 5 s for the handlers in flight, then half-close
+each stream and wait at most 2 s for the hub to finish it.
 
 ## Credentials
 
@@ -175,14 +186,18 @@ configuration that combines them):
 - **A static token** in `Register.credentials.token` on every stream to every hub (the hub reads it from the first
   `Register` of a stream). A library must never log it (`L1-TOKEN`).
 - **A JWT** in `Register.credentials.jwt`: a client-credentials access token whose `azp` claim is the service name. A
-  library must renew it before it expires (both official libraries renew at 80 % of its lifetime) and send each new
+  library must renew it before it expires (the official libraries renew it when a fifth of its lifetime is left, at
+  least 5 s and at most half of it: at 80 % of a long lifetime, after 5 s of a 10 s token) and send each new
   token on the live streams as `ClientMessage.credentials`, at most one per renewal: the hub looks at most at one
   refresh per second per session and drops the rest without a reply. There is no reply on success. After a stream the
   hub closed with `UNAUTHENTICATED`, the next stream must register with a newly fetched token; after
   `PERMISSION_DENIED` a new token would not help (`L1-JWT`). In mode `enforce` the hub closes a JWT session that got
   no successful refresh by the token's `exp` plus its expiry grace (30 s by default, `SNODRA_SERVER_JWT_EXPIRY_GRACE`)
   with `UNAUTHENTICATED` "credentials expired". A hub that has no JWT issuer configured refuses a JWT with
-  `UNAUTHENTICATED`.
+  `UNAUTHENTICATED`. When no token can be had at all (the token endpoint refuses, fails or cannot be reached), the
+  official libraries open no stream, keep the failure as the connection's last rejection (`UNAUTHENTICATED`, naming
+  the access token; it is not a hub's refusal) and try again at the ordinary backoff, not at a refusal's wait; a failed
+  renewal while a stream is registered keeps the current token and is tried again after 1 s, doubling up to 30 s.
 - **A client certificate** (mutual TLS): no field in hub.proto, the certificate comes from the connection. It must carry
   exactly one URI SAN `snodra://service/<name>` naming the service of `Register.service_name`. The hub closes the
   session at the certificate's `notAfter` with `UNAUTHENTICATED` "certificate expired", with no grace, so a library must
@@ -265,7 +280,7 @@ code as its own error, and keep `Error.message` for the codes a handler produces
 | `ErrorCode.HANDLER_ERROR` | handler | the handler failed; `Error.message` and `Error.details` say how | the application decides |
 | `ErrorCode.UNAUTHENTICATED` | handler; hub (access control) | no readable caller identity, or the forwarded JWT failed validation; at the hub, a credential that left the ACL | no |
 | `ErrorCode.PERMISSION_DENIED` | handler; hub (access control) | the caller lacks the right the handler requires; at the hub, a type outside the ACL entry's `send` | no |
-| `ErrorCode.INVALID_REQUEST` | hub; handler | malformed or duplicate request, unknown mode, a part without credit (hub); a payload that does not decode, or the wrong mode for the handler (handler) | no: a contract mismatch |
+| `ErrorCode.INVALID_REQUEST` | hub; handler | malformed or duplicate request, unknown mode, a mode the type is not served in ([Subscription types](#subscription-types)), a part without credit (hub); a payload that does not decode, or the wrong mode for the handler (handler) | no: a contract mismatch |
 | `ErrorCode.RESOURCE_EXHAUSTED` | hub; a handler's subscription limit | the target cannot take the request now (its queue or session buffer is full); the handler never saw it | yes, with backoff |
 | `ErrorCode.CANCELLED` | hub | a stream or subscription outlived the hub's maximum duration | no: open a new one |
 
@@ -287,7 +302,13 @@ A library must tell a caller apart whether a failed request was **never sent** o
 command only when the handler never ran (never sent, `ErrorCode.NO_HANDLER`, `ErrorCode.RESOURCE_EXHAUSTED`) and never
 after an unknown outcome, `ErrorCode.TIMEOUT` or `ErrorCode.HANDLER_DISCONNECTED`; a query may also be retried after
 those. Each attempt gets a fresh `Request.id`, all attempts share the caller's time budget, and each attempt sends what
-is left of it as `Request.timeout_ms`, never 0 (0 would let the hub apply its default) (`L1-RETRY`).
+is left of it as `Request.timeout_ms`, never 0 (0 would let the hub apply its default) (`L1-RETRY`). The budget is the
+caller's timeout (or the library's configured default timeout); without one, the hub's per-type override for the type
+(`RegisterAck.type_timeouts_ms`), else `RegisterAck.default_timeout_ms` of a live hub, else 5 s. A retry starts only
+when at least `max(initial backoff, 250 ms)` of the budget is left after its wait; otherwise the call ends with the
+last error. A streaming query is retried only until its first part, and each attempt sends the caller's chosen idle
+timeout again (the budget only bounds when an attempt may start); a subscription is retried only until its initial
+result, each attempt sending what is left of the budget. Nothing is retried after the first part.
 
 ### Handling a request
 
@@ -313,6 +334,45 @@ When a `ServerMessage.request` arrives, a library must:
   ([messages.md, Forwarded identity](messages.md#forwarded-identity)) (`L1-IDENTITY`).
 - **Give the permit back** once the request is finished, whatever the outcome ([Flow control](#flow-control)).
 
+**A request in a mode its handler does not serve.** The hub forwards only what the type's registration allows
+([Query modes](#query-modes)), but a library answers every combination, because a fake hub or a request
+answered in-process ([Requests a service answers itself](#requests-a-service-answers-itself)) does not go through the
+hub's checks. After the token check ([messages.md, Forwarded identity](messages.md#forwarded-identity)), by the
+request's mode and the handler the type has on this instance (`L1-HANDLER-ERRORS`):
+
+| Request | Command handler | Query handler | Streaming handler | Subscription handler | Type not served |
+|---|---|---|---|---|---|
+| `RequestMode.UNARY`, kind `RequestKind.COMMAND` | runs | `ErrorCode.NO_HANDLER` | `ErrorCode.NO_HANDLER` | `ErrorCode.NO_HANDLER` | `ErrorCode.NO_HANDLER` |
+| `RequestMode.UNARY`, kind `RequestKind.QUERY` | `ErrorCode.NO_HANDLER` | runs | `ErrorCode.INVALID_REQUEST` | `<id>#0`: runs (the initial result); any other id: `ErrorCode.INVALID_REQUEST` | `ErrorCode.NO_HANDLER` |
+| `RequestMode.STREAMING` | `ErrorCode.NO_HANDLER` | `ErrorCode.INVALID_REQUEST` | runs | `ErrorCode.INVALID_REQUEST` | `ErrorCode.NO_HANDLER` |
+| `RequestMode.SUBSCRIPTION` | `ErrorCode.INVALID_REQUEST` | `ErrorCode.INVALID_REQUEST` | `ErrorCode.INVALID_REQUEST` | admitted | `ErrorCode.INVALID_REQUEST` `no subscription handler for <type> on this instance` |
+
+- A unary request is looked up by its kind: a command looks for a command handler, a query for a query handler; any
+  other kind is `ErrorCode.INVALID_REQUEST` `unsupported request kind <kind>`, naming the enum value. A streaming or
+  subscription request always looks for the query handler, and its kind is not read. Any other mode value is served
+  as unary.
+- A unary request is answered with one `Reply`, a streaming or subscription request with one `ReplyEnd` and no part.
+- The texts name the type and the mode to use, for example `<type> is a streaming query: send it with ... (mode
+  STREAMING)` and `<type> is not a subscription query handler (it answers mode UNARY)`; a type not served is
+  `no handler for type <type>`.
+
+### Requests a service answers itself
+
+By default a library answers in-process, without the hub, a command of a type the instance has a command handler for,
+and a point query (`RequestMode.UNARY`) of a type it has a query handler for that is not shared. Nothing goes on the
+wire: the routing key is ignored, no permit is taken, and the library's own timeout, retries and request metrics do not
+apply. The rest is as through the hub: the handler sees the caller the hub path would carry (none when the library does
+not forward the caller's token), the correlation id and the trace context; the guards and the mode answers above apply
+(a point query of an own streaming or subscription type is `ErrorCode.INVALID_REQUEST`); and the caller gets the
+error the hub path would give. A query of a shared type, a scatter-gather, a stream and a subscription always go
+through the hub, so the hub spreads them over every owner.
+
+A library must offer one setting that turns this off, "always route through the hub", off by default (a library's own
+test). With it on, every command and query, the saga relay's commands included, goes through the hub like a request
+of another service: a routing key keeps its instance affinity across the instances of the service, and the request
+gets the hub's flow control, priorities, deadline and metrics. The Kotlin library names it
+`snodra.messaging.hub.always-route-through-hub`; the Rust and Go libraries read `SNODRA_SERVER_ALWAYS_ROUTE_THROUGH_HUB`.
+
 ## Flow control
 
 - Every session is flow-controlled. `Register.initial_permits` are its first permits: the hub forwards a request only
@@ -322,7 +382,8 @@ When a `ServerMessage.request` arrives, a library must:
 - A library must offer its local capacity (the handlers it runs at once) as `Register.initial_permits` and give one
   permit back for every finished request, on the stream the request arrived on (`L1-PERMITS`). It sends the pending
   grants in one `Permits` message at once when the hub holds `min(16, initial_permits / 2)` or fewer of its permits
-  (with one permit: every completion), and otherwise batched, at 16 pending grants or 50 ms after the first unsent
+  (with one permit: every completion; `initial_permits` is that of the stream's `Register`, and a top-up from
+  [several hubs](#several-hubs) raises what the hub holds, not this mark), and otherwise batched, at 16 pending grants or 50 ms after the first unsent
   one. The hub still holds `initial - received + returned` permits for a stream: offered, minus requests that arrived,
   plus permits written back. Without the immediate return, a one-permit instance would be paced at about 20 requests
   per second by the batching timer.
@@ -342,7 +403,8 @@ loaded, then round-robin for the rest; `Register.load_factor` weighting) is the 
 delivers a request and its answers: `RequestMode.UNARY` (0, the default), `RequestMode.SCATTER_GATHER`,
 `RequestMode.STREAMING` and `RequestMode.SUBSCRIPTION`. The modes other than `RequestMode.UNARY` are for queries only:
 a command fails with `ErrorCode.INVALID_REQUEST`, and so does a mode value hub.proto does not define. Every session may
-use every mode.
+use every mode. A subscription type is served in `RequestMode.SUBSCRIPTION` only, and `RequestMode.SUBSCRIPTION`
+serves subscription types only ([Subscription types](#subscription-types)).
 
 ### Shared query types
 
@@ -352,6 +414,29 @@ use every mode.
 - A **point query** (`RequestMode.UNARY`) on a shared type goes to one live instance of any owner.
 - A library must let a handler register a query type as shared and answer point queries on it like any query
   (`L1-SHARED`).
+
+### Subscription types
+
+- `Register.subscription_query_types`: the query types the instance serves with a subscription handler, exclusive or
+  shared. Each must also be in `Register.query_types` or `Register.shared_query_types` of the same `Register`, otherwise
+  the `Register` is refused with `INVALID_ARGUMENT`.
+- A library must fill the list from its subscription handlers (the application declares nothing more), send it on
+  every `Register`, the first of each stream and every later one, and empty it with the other lists in a `Register`
+  with no types (`L1-SUBSCRIBE`; the runner's fake hubs do not check it yet: a library's own test). Without it, every
+  subscription of its types is refused.
+- Registrants must agree: a type declared a subscription type by one registrant and not by another is
+  `ALREADY_EXISTS` for the later `Register`, also when the type's only instance registers it again with the other
+  declaration. The hub forgets the declaration only together with the type (after the owner grace,
+  [Routing and ownership](../server/routing.md)), so changing a handler between a plain query and a subscription waits
+  that long, as changing exclusive to shared does.
+- The hub serves a subscription type in `RequestMode.SUBSCRIPTION` only: a sender's request of one in
+  `RequestMode.UNARY`, `RequestMode.STREAMING` or `RequestMode.SCATTER_GATHER` gets one `Error{INVALID_REQUEST}`
+  (`invalid request: <type> is a subscription type; <mode> is not for it`, with `<mode>` `unary`, `streaming` or
+  `scatter_gather`), and no instance gets anything. A `RequestMode.SUBSCRIPTION` request of a query type that no
+  registrant declared gets one `Error{INVALID_REQUEST}` (`invalid request: <type> is not a subscription type
+  (Register.subscription_query_types); subscription is for subscription types only`).
+- The initial request `<id>#0` of a subscription is the hub's own and reaches the handler as usual. So a `#0` request
+  at a subscription handler always comes from the hub.
 
 ### Scatter-gather
 
@@ -397,9 +482,13 @@ sender                         hub                                targets (every
 |---|---|
 | No live target (unknown type, or owners without instances) | `Error{NO_HANDLER}`, no `ReplyEnd` |
 | The type is a command (request kind or registered kind) | `Error{INVALID_REQUEST}` |
+| The type is a subscription type | `Error{INVALID_REQUEST}` |
 | A mode hub.proto does not define | `Error{INVALID_REQUEST}` |
 | `Request.id` (or a derived `<id>#<n>`) already in flight | `Error{INVALID_REQUEST}` "duplicate id" |
 | The sender disconnects | the gather and its targets end; late answers are dropped |
+
+The gates apply in this order, all before anything is sent: the mode, the request kind, a live target, the
+registered kind, the subscription type, the duplicate id.
 
 ### Streaming
 
@@ -467,10 +556,12 @@ sender                                   hub                                    
 | The request's kind is `RequestKind.COMMAND` | `Error{INVALID_REQUEST}` |
 | No owner, or owners without a live instance that lists the type | `Error{NO_HANDLER}` |
 | The type is registered as a command | `Error{INVALID_REQUEST}` |
+| The type is a subscription type | `Error{INVALID_REQUEST}` |
 | `Request.id` or `<id>#1` already in flight | `Error{INVALID_REQUEST}` "duplicate id" |
 
-The gates apply in that order (request kind, target, registered kind, duplicate id): a registered command type with no
-live instance gets `ErrorCode.NO_HANDLER`; an unknown type with a duplicate id gets `ErrorCode.NO_HANDLER`.
+The gates apply in that order (request kind, target, registered kind, subscription type, duplicate id): a registered
+command type with no live instance gets `ErrorCode.NO_HANDLER`; an unknown type with a duplicate id gets
+`ErrorCode.NO_HANDLER`.
 
 ### Subscription
 
@@ -508,7 +599,8 @@ sender                                   hub                                    
   queues and priority like any unary request, holding its handler permit. Its `Reply{payload}` reaches the sender as
   `ReplyPart{<id>, seq 1, responder_*}`; `Request.timeout_ms` (usual rules) bounds only this request (queue wait plus
   handler). The handler of a subscription type recognises the initial request by its `#0` id and answers any other
-  unary request with `ErrorCode.INVALID_REQUEST`.
+  unary request with `ErrorCode.INVALID_REQUEST`; through the hub it gets no other unary request
+  ([Subscription types](#subscription-types)).
 - **Updates:** a target sends `ClientMessage.part` (a `ReplyPart` for `<id>#n`) per update and `ClientMessage.end` (a
   `ReplyEnd` for `<id>#n`, with `ReplyEnd.error` when it failed) when its emitter completes. The hub relays the updates
   to the sender in arrival order with its **own** `ReplyPart.seq` (2, 3, ... after the initial part; the handlers'
@@ -523,12 +615,14 @@ sender                                   hub                                    
   per subscription, up to the hub's subscriber buffer (256 by default); one more ends it (table below). A `Flow`
   drains the buffer in order. Nothing is relayed to the targets: updates are pushed, and a slow sender is the hub's
   problem, not the emitters'. A `Flow` for an unknown id, from anyone but the sender, or with 0 credits is ignored.
-- **A library must** (`L1-SUBSCRIBE`), on the handler side: register a subscription synchronously when its `<id>#n`
-  request is read, before any admission check, and buffer emits until the admission is decided (the hub writes `#n`
-  before `#0` to the same instance, so an update emitted after the initial result was read is never lost); remove it
-  on a `ServerMessage.cancel`; end it with `ReplyEnd` when its emitter completes (with `ReplyEnd.error` when it
-  failed); and refuse a subscription beyond its own limit with `ReplyEnd{error = RESOURCE_EXHAUSTED}` (both official
-  libraries: 1024 per instance). On the sender side: return the initial result, then the updates, and refill credit
+- **A library must** (`L1-SUBSCRIBE`), on the handler side: declare the type ([Subscription types](#subscription-types));
+  register a subscription synchronously when its `<id>#n` request is read, before any admission check, and buffer
+  emits until the admission is decided (the hub writes `#n` before `#0` to the same instance, so an update emitted
+  after the initial result was read is never lost); remove it on a `ServerMessage.cancel`; end it with `ReplyEnd` when
+  its emitter completes (with `ReplyEnd.error` when it failed); and refuse a subscription beyond its own limit with
+  `ReplyEnd{error = RESOURCE_EXHAUSTED}` (the official libraries: 1024 per instance). The limit, and an id already open
+  (`ReplyEnd{error = INVALID_REQUEST}` `subscription <id> is already open`, the open one kept), are decided when the
+  request is read, before the token check. On the sender side: return the initial result, then the updates, and refill credit
   counting the initial part as consumed (`Flow{max(1, initial / 2)}` after every `max(1, initial / 2)` parts, as for a
   stream, so a window of 1 works), and detect lost parts as for a stream (the hub numbers a subscription's parts 1, 2,
   3, ... itself).
@@ -554,6 +648,7 @@ sender                                   hub                                    
 | The request's kind is `RequestKind.COMMAND` | `Error{INVALID_REQUEST}` |
 | No owner, or owners without a live instance that lists the type | `Error{NO_HANDLER}` |
 | The type is registered as a command | `Error{INVALID_REQUEST}` |
+| The type is not a subscription type (`Register.subscription_query_types`) | `Error{INVALID_REQUEST}` |
 | `Request.id`, `<id>#0` or a pending `<id>#n` already in flight | `Error{INVALID_REQUEST}` "duplicate id" |
 | A target already serves the hub's limit of subscriptions per instance (1024 by default) | `Error{RESOURCE_EXHAUSTED}` naming the instance |
 
@@ -592,8 +687,11 @@ A library connected to several hubs must (`L1-HUBS`):
   `host:port`, with a `static://` prefix (and in the Rust library `http://` or `https://`) stripped and a resolved IPv6
   address written `[ip]:port` without a zone. The first target to
   acknowledge a `hub_id` owns it while it is kept, live or reconnecting; a later target answering the same id is closed
-  and parked (its `Register` has already replaced the owner's session, so the owner reconnects once) and is retried
-  only once the owner is gone;
+  and parked (its `Register` has already replaced the owner's session, so the owner reconnects once): no stream, out of
+  the routing, the permit split and the status. It is connected again at once when no kept target owns that id any
+  more: the owner answers another id (also when that makes the owner a parked duplicate itself), or the owner's
+  address left the DNS answer. An owner that is only reconnecting keeps its id, and a parked address that leaves the
+  DNS answer is dropped;
 - send replies on the stream the request arrived on.
 
 It routes (`L1-HUB-ROUTING`): an unkeyed request round-robin over the hubs whose stream is acknowledged (reconnecting
@@ -618,7 +716,9 @@ test vectors: ("", "") -> 0xb9034ad37056f5fb, ("hub-1", "order-42") -> 0x5c85550
 It splits its permits (`L1-HUB-PERMITS`):
 
 - N counts the hubs that are live or still on their first connect attempt (a first attempt that fails counts as gone).
-  A stream offers `ceil(max / N)` initial permits, `max` being the instance's local capacity.
+  A stream offers `ceil(max / N)` initial permits, `max` being the instance's local capacity. A hub being rolled over
+  to a renewed client certificate stays counted in N, so its new stream offers `ceil(max / N)` too; the other hubs are
+  topped up only once its old stream has ended.
 - When N shrinks (a hub went down, failed its first attempt, was parked as a duplicate or was drained), every live
   stream gets `Permits{count = max(0, ceil(max / N) - offered), grant = ceil(max / N)}`, offered being what that stream
   already offered the hub (its `Register.initial_permits` plus earlier top-ups). The grant raises the hub's cap on the
@@ -629,10 +729,21 @@ It splits its permits (`L1-HUB-PERMITS`):
 It fails over (`L1-HUB-FAILOVER`): a request never handed to a stream's transport (the stream dropped before the client
 noticed, or the request still sat in the library's outbound buffer) goes to the next hub with the same id: it was never
 sent. A unary request a hub answers with `ErrorCode.NO_HANDLER` was never delivered, so the other live hubs get it in
-turn, each at most once and within the caller's remaining timeout, in the same order the request chose its first hub
-by (a keyed request: descending rendezvous score; an unkeyed one: round-robin order from its hub); if all decline,
-the last answer comes back at once.
-Streaming queries and subscriptions are bound to the hub they were sent through.
+turn, each at most once, in the same order the request chose its first hub by (a keyed request: descending rendezvous
+score; an unkeyed one: round-robin order from its hub); if all decline, the last answer comes back at once. A
+scatter-gather, a stream or a subscription moves like a unary request while it is not written; once written, it is
+bound to the hub it was sent through.
+
+- **Every hop carries the full timeout.** A moved request is sent as it was built, with the caller's
+  `Request.timeout_ms` unchanged, never what is left of it, and each hop is guarded by the full bound
+  ([Timeouts](#timeouts)).
+- **One deadline per call.** The call's deadline is its timeout (the caller's, else the library's configured default),
+  else 5 s, from the moment the call began. While no hub can take the request (none is live yet, a hub is
+  restarting), the call waits for one until that deadline. No new hop starts after the deadline: the call then fails
+  as never sent ("no hub took the request within ..."). So one call ends within its deadline plus one hop's guard.
+- **At most 8 moves.** Only a request lost while it sat in a stream's buffer counts as a move; a hub that was not live
+  when chosen, a stream that closed before the request could be queued and an `ErrorCode.NO_HANDLER` answer do not.
+  The ninth such loss fails the call as never sent (`'<type>' not written: 9 hub streams lost before it was`).
 
 **Addresses.** The official libraries take a list (`static://hub:7000,hub-2:7000`) or one `dns:///name:port`
 re-resolved every 30 s. A DNS answer is reduced to its IPv4 addresses when it has any, else its IPv6 ones, without
@@ -642,7 +753,9 @@ closed once nothing of the instance is in flight on it.
 
 ## Instance status
 
-At least every 5 s a library must send `ClientMessage.status` (an `InstanceStatus`) on every stream (`L1-STATUS`); it may send more, for example at once when its set of live hubs changes:
+At least every 5 s a library must send `ClientMessage.status` (an `InstanceStatus`) on every stream (`L1-STATUS`); it may
+send more, and the official libraries also send it at once on every stream whenever their set of acknowledged hubs
+changes (a stream acknowledged or lost, an address leaving the DNS answer):
 
 - `InstanceStatus.connected_hub_ids`: the `RegisterAck.hub_id` of every hub it holds an acknowledged stream to, this
   one included;
@@ -757,20 +870,22 @@ library's contract, in [writing-a-library.md, Level 3: Processors](writing-a-lib
 
 ## Timing summary
 
-The client-side values of both official libraries, next to the hub's defaults they follow (the hub's own settings are
+The client-side values of the official libraries, next to the hub's defaults they follow (the hub's own settings are
 in [Server settings](../server/configuration/server.md)):
 
 | Parameter | Value |
 |---|---|
 | Heartbeat interval | `RegisterAck.heartbeat_interval_ms` (3 s by default); 3 s before the ack |
 | Client handshake timeout | 10 s without a `RegisterAck`: close and reconnect |
-| Client gives up a silent hub | no echo for 3 heartbeat intervals (9 s) |
+| Client gives up a silent hub | on the tick after 3 unanswered heartbeats, more than 3 intervals after the last echo (between 9 and 12 s at 3 s); never before the `RegisterAck` |
 | HTTP/2 keepalive, client side | ping every 10 s, timeout 5 s, also while idle |
 | Client-side request guard | the hub's bound for the request ([Timeouts](#timeouts): the caller's timeout, the type's override or the maximum) + 1 s |
+| Client-side stream guard | twice the hub's bound + 1 s for the first part, the bound + 1 s between parts (the stream is then cancelled); a subscription's guard covers its initial result only (the bound + 1 s) |
+| A call's deadline over several hubs | the call's timeout (the caller's, else the configured default), else 5 s; at most 8 moves of an unwritten request, each with the full timeout |
 | Client reconnect backoff | 500 ms doubling to 5 s, ±20 % jitter (never above the maximum), back to 500 ms once an attempt reached the handshake; a refusal waits 80 to 100 % of the maximum |
 | Client permit grants | one per completed handler; sent at once while the hub holds `min(16, initial_permits / 2)` or fewer of the instance's permits, else batched at 16 or after 50 ms |
-| Instance status | every 5 s on every stream |
-| JWT renewal | at 80 % of the token's lifetime |
+| Instance status | every 5 s on every stream, and at once when the acknowledged hubs change |
+| JWT renewal | when a fifth of the token's lifetime is left, at least 5 s and at most half of it |
 | Streaming handler credit wait | 10 min, then `ErrorCode.TIMEOUT` |
 | Subscriptions served per instance | 1024 |
 | Default stream credit | 64 |
