@@ -22,7 +22,7 @@ What the hub deliberately does not do, and what is planned next.
   sending or handling what its own entry allows, a permitted sender forwarding any `authorization`
   header, a hub left in `off` or `permissive` (which refuse only a takeover), or the HTTP topology when no dashboard
   token is set.
-  Both libraries send the token, so `enforce` works with every service that has a token in its ACL
+  Every official library sends the token, so `enforce` works with every service that has a token in its ACL
   entry ([Client configuration](https://snodra.damoreira.com/server/configuration/mtls/)).
   Request contents are still protected by the forwarded JWT, which the handler validates; the
   ACL does not replace it. A static token is a long-lived secret per service (JWT credentials and client
@@ -68,7 +68,7 @@ table shows how the hub and libraries behave now.
 | Client reconnect after a drop | exponential backoff 500 ms → 5 s with ±20 % jitter, reset once an attempt reaches the handshake | **closed (F2)**: a healed service is back within 5 s of the hub being reachable. |
 | Request timeout default | 5 s hub default, per-type overrides (`SNODRA_SERVER_TIMEOUT_OVERRIDES`), clamp 60 s; clients send 0 unless the caller chose a timeout | Short timeouts suit a BFF-driven system; long-running types get an override (F4). |
 | Busy handler (no free capacity) | flow control: handlers grant `max-concurrent-handlers` permits and one per completed handler; the hub queues up to 10 000 requests or 64 MiB per instance, by priority then age, each with its own deadline; beyond that `RESOURCE_EXHAUSTED` (`HandlerBusyException`) | **closed (F3)** |
-| Caller-side retry | opt-in `RetryPolicy` in both libraries, transient codes only, fresh request id per attempt, within the caller's time budget | **closed (F5)** |
+| Caller-side retry | opt-in `RetryPolicy` in every official library, transient codes only, fresh request id per attempt, within the caller's time budget | **closed (F5)** |
 
 Improvements, in the order they are worth doing:
 

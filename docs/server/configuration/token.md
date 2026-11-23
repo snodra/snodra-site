@@ -47,7 +47,8 @@ snodra:
       # or: token-file: /run/secrets/snodra-server-token
 ```
 
-`token-file` wins when both are set and is read again on every reconnect, so a rotation needs no
+`token-file` wins when both are set and is read again on every reconnect and on every heartbeat of a
+registered stream (a changed token goes to the hub as a credentials refresh), so a rotation needs no
 restart. The token is masked in logs and in `/actuator/env` and `/actuator/configprops`.
 
 ## Rust client
@@ -57,9 +58,16 @@ SNODRA_SERVICE_NAME=billing-service
 SNODRA_SERVER_TOKEN_FILE=/run/secrets/snodra-server-token   # or SNODRA_SERVER_TOKEN
 ```
 
-The file is read at startup and again before every reconnect; an empty file after a good read keeps
+The file is read at startup and again before every reconnect and on every heartbeat of a registered
+stream (a changed token goes to the hub as a credentials refresh); an empty file after a good read keeps
 the last token and logs one warning. Prefer the file to the variable: a variable is visible in
 `docker inspect` and `/proc`.
+
+## Go client
+
+The same variables, read by `snodra.FromEnv()` (or the options `Token` and `TokenFile`). The file is read at startup
+(an unreadable or empty file fails `New`), before every connection and on every heartbeat of a registered stream: a
+changed token goes to the hub as a credentials refresh ([Go configuration](../../messaging/go/configuration.md#token)).
 
 ## What a refusal looks like
 

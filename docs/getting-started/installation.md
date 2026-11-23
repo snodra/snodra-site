@@ -9,7 +9,7 @@ The published image contains the gRPC listener, the dashboard, the HTTP API and 
 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
-  snodra/snodra-server:0.5.0
+  snodra/snodra-server:0.6.0
 ```
 
 | Port | Purpose |
@@ -25,9 +25,9 @@ Linux (static musl, and gnu), macOS and Windows, on amd64 and arm64:
 
 ```sh
 curl -fsSL -o snodra-server.tar.gz \
-  https://github.com/snodra/snodra-server/releases/download/v0.5.2/snodra-server-v0.5.2-x86_64-unknown-linux-musl.tar.gz
+  https://github.com/snodra/snodra-server/releases/download/v0.6.0/snodra-server-v0.6.0-x86_64-unknown-linux-musl.tar.gz
 tar xzf snodra-server.tar.gz && ./snodra-server
-``` Replace `0.5.0` with another release when you
+``` Replace `0.6.0` with another release when you
 upgrade; `latest` exists, but a fixed tag keeps a restart reproducible.
 
 Check it:

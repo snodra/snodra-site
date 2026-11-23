@@ -76,9 +76,15 @@ SNODRA_SERVER_TLS_CLIENT_KEY=/etc/snodra/tls/billing-service.key
 SNODRA_SERVER_TLS_CA=/etc/snodra/hub-ca.pem
 ```
 
+## Go client
+
+The same variables, read by `snodra.FromEnv()` (or the options `ClientCertificate` and `TLS`); a client certificate
+turns TLS on and cannot be combined with a token or a JWT
+([Go configuration](../../messaging/go/configuration.md#authenticating-with-a-client-certificate-mtls)).
+
 ## Rotation and expiry
 
-Both libraries re-read the files every few seconds. A valid new pair triggers a rollover one hub at
+Every official library re-reads the files every few seconds. A valid new pair triggers a rollover one hub at
 a time, after a random delay so replicas do not roll in lockstep: deregister, drain in-flight work for
 up to 10 s, close the stream, reconnect with the new pair. With two hubs no request fails; with one
 hub there is a short gap.

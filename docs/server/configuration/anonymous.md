@@ -22,6 +22,11 @@ snodra:
 SNODRA_SERVER_ADDRESS=http://localhost:7000
 ```
 
+```sh
+# Go (snodra.FromEnv)
+SNODRA_SERVER_ADDRESS=localhost:7000
+```
+
 ## When it is acceptable
 
 - Local development and tests.

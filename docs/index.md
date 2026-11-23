@@ -88,7 +88,7 @@ handling and a control plane of your own.
 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
-  snodra/snodra-server:0.5.0
+  snodra/snodra-server:0.6.0
 ```
 
 The gRPC listener is on `7000`; the dashboard and its API are on <http://localhost:7001/ui/>. An

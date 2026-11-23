@@ -1,6 +1,6 @@
 # OpenTelemetry
 
-The server and both libraries export OpenTelemetry metrics and traces. Point them at your collector
+The server and the official libraries export OpenTelemetry metrics and traces. Point them at your collector
 and the same series feed the Snodra dashboards and your own.
 
 ## Server
@@ -8,7 +8,7 @@ and the same series feed the Snodra dashboards and your own.
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
   -e SNODRA_SERVER_OTLP_ENDPOINT=http://otel-collector:4317 \
-  snodra/snodra-server:0.5.0
+  snodra/snodra-server:0.6.0
 ```
 
 - **Traces**: one `hub.route` span per request, parented from the request's `traceparent`. The
@@ -42,7 +42,23 @@ opentelemetry::global::set_meter_provider(provider.clone());
 ```
 
 The Kotlin starter uses Micrometer, so the service's normal Actuator and OTLP configuration applies.
-Both libraries export the same instrument names, so one dashboard works for either.
+
+The Go library's core only defines an interface (`snodra.Instrumentation`). Its OpenTelemetry implementation is the
+separate module `github.com/snodra/snodra-messaging-go/observability` (package `observability`), on the OpenTelemetry
+API only: install the SDK and its exporters as for Rust, then pass it to the app.
+
+```go
+app, err := snodra.New(
+	snodra.Service("orders-service"),
+	snodra.Telemetry(observability.New()), // the global providers; or WithMeterProvider, WithTracerProvider, WithPropagator
+)
+```
+
+It also creates a server span for every request a handler serves, a child of the request's `traceparent`, which the
+Kotlin and Rust libraries do not; its instrumentation scope is the module's import path
+([Go API, Telemetry](../messaging/go/api.md#telemetry)).
+
+The official libraries export the same instrument names, so one dashboard works for every one.
 
 ## Signal names
 

@@ -7,7 +7,7 @@ the library and the server address.
 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
-  snodra/snodra-server:0.5.0
+  snodra/snodra-server:0.6.0
 ```
 
 | Port | Protocol | Use |
@@ -25,7 +25,7 @@ it speaks TLS and pins the server's own certificate, so the probe needs no chang
 ```yaml
 services:
   snodra-server:
-    image: snodra/snodra-server:0.5.0
+    image: snodra/snodra-server:0.6.0
     ports: ["7000:7000", "7001:7001"]
     environment:
       SNODRA_SERVER_OTLP_ENDPOINT: http://otel-lgtm:4317
@@ -60,7 +60,7 @@ The same image, with the binary's probe as an exec probe:
 ```yaml
 containers:
   - name: snodra-server
-    image: snodra/snodra-server:0.5.0
+    image: snodra/snodra-server:0.6.0
     ports:
       - { name: grpc, containerPort: 7000 }
       - { name: http, containerPort: 7001 }

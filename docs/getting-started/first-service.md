@@ -17,7 +17,7 @@ sagas.
 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
-  snodra/snodra-server:0.5.0
+  snodra/snodra-server:0.6.0
 ```
 
 Open <http://localhost:7001/ui/>. The topology is empty until a service registers. If the port is

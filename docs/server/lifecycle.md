@@ -60,7 +60,7 @@ The hub echoes a client `Heartbeat` with `sent_at_ms` unchanged.
 | Heartbeat interval | 3 s | hub, `SNODRA_SERVER_HEARTBEAT_INTERVAL`, announced in `RegisterAck.heartbeat_interval_ms` |
 | Instance considered dead | 10 s without heartbeat, or stream closed | hub, `SNODRA_SERVER_HEARTBEAT_TIMEOUT`, announced in `RegisterAck.heartbeat_timeout_ms` |
 | Eviction check | every tenth of the timeout (10 ms to 1 s) | fixed |
-| Client gives up a silent hub | no echo for 3 heartbeat intervals (9 s) | clients |
+| Client gives up a silent hub | on a heartbeat tick, more than 3 intervals since the last echo and 3 heartbeats unanswered (9 to 12 s); not before the `RegisterAck` | clients |
 | Default request timeout | 5 s | hub, for `Request.timeout_ms == 0` without override, `SNODRA_SERVER_DEFAULT_TIMEOUT_MS` |
 | Maximum request timeout | 60 s | hub clamps larger client values on types without override, `SNODRA_SERVER_MAX_TIMEOUT_MS` |
 | Per-type request timeout | none | `SNODRA_SERVER_TIMEOUT_OVERRIDES=type=ms,...`; replaces both default and clamp for its type |
@@ -103,6 +103,7 @@ without client configuration.
 | Handler returns `Reply{error}` | forward unchanged | `Error` with the handler's code |
 | Hub restarts | all streams drop; clients reconnect with backoff (at most 5 s apart) and re-register | requests already written: `HubConnectionLostException` (outcome unknown); requests sent while no stream is up: `HubUnavailableException` (never sent) |
 | Request has no kind, no type or no id | reply immediately | `Error{INVALID_REQUEST}` "invalid request: ..." |
+| A point query, a stream or a gather of a subscription type (`Register.subscription_query_types`), or a subscription of a query type no registrant declared | reply immediately; no instance gets anything | `Error{INVALID_REQUEST}` naming the type and the mode |
 | `Request.id` already in flight | reject the new request, the earlier request is untouched | `Error{INVALID_REQUEST}` "invalid request: duplicate id" |
 | Handler instance's outbound buffer full | reply immediately | `Error{RESOURCE_EXHAUSTED}` |
 | Handler has no permit | queue the request (priority, then age) | latency; the reply once a permit arrives |
@@ -112,8 +113,10 @@ without client configuration.
 | Handler reconnects (new stream, same instance id) with requests queued | the new session takes over the queue | forwarded: `Error{HANDLER_DISCONNECTED}`; queued: served by the new stream |
 | Handler re-registers without types (graceful stop) | no longer a routing target; its queue is routed to the other instances | what it was forwarded it still answers |
 | All queues of the hub hold `SNODRA_SERVER_QUEUE_BYTES_TOTAL` | reply immediately | `Error{RESOURCE_EXHAUSTED}` |
-| Two services register the same type | second `Register` rejected, stream closed with `ALREADY_EXISTS` | the second service does not fail startup: it keeps reconnecting (at the backoff cap) and none of its handlers is reachable through that hub. Kotlin surfaces the rejection as `HubRegistrationRejectedException` from `awaitRegistered` (`lastRejection` on the connection); Rust keeps retrying with the reason in `last_rejection` ([The messaging model](../messaging/index.md)) |
+| Two services register the same type | second `Register` rejected, stream closed with `ALREADY_EXISTS` | the second service does not fail startup: it keeps reconnecting (at the backoff cap) and none of its handlers is reachable through that hub. Kotlin surfaces the rejection as `HubRegistrationRejectedException` from `awaitRegistered` (`lastRejection` on the connection); Rust keeps retrying with the reason in `last_rejection`; Go with the reason in `App.Rejection` ([The messaging model](../messaging/index.md)) |
 | A type registered exclusive by one registrant and shared by another | the later `Register` rejected, stream closed with `ALREADY_EXISTS` | as above: the later registrant keeps reconnecting and exposes the rejection; it does not fail startup |
+| A type declared a subscription type by one registrant and not by another (also the type's only instance re-registering it the other way, until the hub forgets the type after the owner grace) | the later `Register` rejected, stream closed with `ALREADY_EXISTS` | as above |
+| A type in `subscription_query_types` that is in neither `query_types` nor `shared_query_types` of the same `Register` | stream closed with `INVALID_ARGUMENT` | as above |
 | `Register` without credentials, or with an unknown token (`enforce`) | stream closed with `UNAUTHENTICATED`; nothing is registered | the service's connection fails and retries at the backoff cap: a registration rejection (`lastRejection`, `HubRegistrationRejectedException` from `awaitRegistered`, `await_hub` false in Rust, one `ERROR` line; [Client configuration](https://snodra.damoreira.com/server/configuration/mtls/)). `jwt` credentials on a hub with no `SNODRA_SERVER_JWT_ISSUER`: `UNAUTHENTICATED` "jwt credentials are not configured on this hub" |
 | `Register` with an invalid JWT (`enforce`): expired, wrong issuer or audience, bad signature, `none`/`HS*`, an ID or refresh token | stream closed with `UNAUTHENTICATED` and a short reason ("token expired", "wrong token issuer", ...), never the token | as above (a registration rejection) |
 | `Register` with a JWT for another service (`azp` differs), or for a service with no `[[service]]` table (`enforce`) | stream closed with `PERMISSION_DENIED` "token azp `<a>` is not service `<b>`" or "no ACL entry for service `<a>`" | as above |

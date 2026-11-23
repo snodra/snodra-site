@@ -20,12 +20,14 @@ Every series carries `job` (the service name) and `instance` (the instance id). 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
   -e SNODRA_SERVER_OTLP_ENDPOINT=http://otel-lgtm:4317 \
-  snodra/snodra-server:0.5.0
+  snodra/snodra-server:0.6.0
 ```
 
 An empty endpoint disables export. The Rust library records through the OpenTelemetry API only: the
 application installs the meter provider before the builder runs. The Kotlin starter uses Micrometer,
-so the service's normal Actuator/OTLP setup applies. Set `OTEL_METRIC_EXPORT_INTERVAL` (milliseconds)
+so the service's normal Actuator/OTLP setup applies. The Go library records through its optional
+`observability` module (`github.com/snodra/snodra-messaging-go/observability`), on the OpenTelemetry API only: the
+application installs the SDK and passes `snodra.Telemetry(observability.New())`. Set `OTEL_METRIC_EXPORT_INTERVAL` (milliseconds)
 to change the 60-second default.
 
 ## The four signals to alert on

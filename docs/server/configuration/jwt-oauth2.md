@@ -79,6 +79,11 @@ SNODRA_SERVER_OAUTH2_CLIENT_SECRET_FILE=/run/secrets/billing-client-secret
 # client id defaults to SNODRA_SERVICE_NAME
 ```
 
+## Go client
+
+The same variables, read by `snodra.FromEnv()`, or the option `JWT(NewClientCredentials(...))`
+([Go configuration](../../messaging/go/configuration.md#authenticating-with-a-jwt)).
+
 ## Roles
 
 A forwarded token's roles become `ROLE_<role>` in the service. Which claim they come from is

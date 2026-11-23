@@ -180,8 +180,9 @@ Every rule from the client's side is in
   `snodra_server_stream_parts_total{service,type}`.
 - `tests/streaming.rs` drives it over gRPC with raw clients. The client APIs are in the
   libraries' READMEs: [snodra-messaging, Streaming queries](https://snodra.damoreira.com/messaging/kotlin/api/#streaming-queries)
-  (Kotlin) and [snodra-messaging-rs, Streaming queries](https://snodra.damoreira.com/messaging/rust/api/#streaming-queries)
-  (Rust).
+  (Kotlin), [snodra-messaging-rs, Streaming queries](https://snodra.damoreira.com/messaging/rust/api/#streaming-queries)
+  (Rust) and [snodra-messaging-go, The four query modes](https://snodra.damoreira.com/messaging/go/api/#the-four-query-modes)
+  (Go).
 - **Subscription.** A sender sends a query with
   `Request.mode = SUBSCRIPTION` (and `initial_credit`, `max_results`, `timeout_ms`). The targets
   are **every** live instance of every owner (exclusive or shared) that lists the type, as they
@@ -250,8 +251,9 @@ Every rule from the client's side is in
 - `tests/subscription.rs` drives it over gRPC with raw clients. The client libraries implement
   the sender and handler sides; their READMEs:
   [snodra-messaging, Subscription queries](https://snodra.damoreira.com/messaging/kotlin/api/#subscription-queries)
-  (Kotlin) and [snodra-messaging-rs, Subscription queries](https://snodra.damoreira.com/messaging/rust/api/#subscription-queries)
-  (Rust).
+  (Kotlin), [snodra-messaging-rs, Subscription queries](https://snodra.damoreira.com/messaging/rust/api/#subscription-queries)
+  (Rust) and [snodra-messaging-go, The four query modes](https://snodra.damoreira.com/messaging/go/api/#the-four-query-modes)
+  (Go).
 
 ### Request timeouts
 
