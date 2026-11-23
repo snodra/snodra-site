@@ -9,7 +9,7 @@ use it to get your library listed.
 - **Level 1** is proved by the conformance runner, `snodra-conformance`: a language-neutral binary that drives your
   library through a real hub and through fake hubs of its own, and checks every `L1-*` id of
   [feature-levels.md](feature-levels.md#level-1-core).
-- **Levels 2 to 4** are proved by the event-store and message-store conformance kits that ship with both official
+- **Levels 2 to 4** are proved by the event-store and message-store conformance kits that ship with the Kotlin and Rust
   libraries: every add-on runs them in its own tests
   ([event-store-add-ons.md](event-store-add-ons.md#the-conformance-kit),
   [message-store-add-ons.md](message-store-add-ons.md#the-conformance-kit)). A library in another language ports them.

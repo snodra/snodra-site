@@ -91,7 +91,7 @@ client                                   hub
 **The ack.** Every accepted `Register` is answered with a `RegisterAck`, written before the echo of any `Heartbeat`
 that follows it (the hub handles a stream's messages in order). The ack is the confirmation that the `Register` was
 processed. A library must count a stream as registered only once its `RegisterAck` arrived, and must close and reopen
-a stream that has no ack within its own handshake timeout (10 s in both official libraries); a heartbeat echo alone
+a stream that has no ack within its own handshake timeout (10 s in the official libraries); a heartbeat echo alone
 confirms nothing (`L1-HANDSHAKE-ACK`). The ack carries what the client aligns with:
 
 | `RegisterAck` field | Use |
@@ -298,7 +298,7 @@ A library must tell a caller apart whether a failed request was **never sent** o
 - **Outcome unknown**: the request was handed to the transport and the stream broke before the answer. It may be on
   the wire, handled or not. Treat it like `ErrorCode.TIMEOUT`.
 
-**Retries are opt-in.** When a library retries (both official libraries offer an opt-in policy), it must retry a
+**Retries are opt-in.** When a library retries (the official libraries offer an opt-in policy), it must retry a
 command only when the handler never ran (never sent, `ErrorCode.NO_HANDLER`, `ErrorCode.RESOURCE_EXHAUSTED`) and never
 after an unknown outcome, `ErrorCode.TIMEOUT` or `ErrorCode.HANDLER_DISCONNECTED`; a query may also be retried after
 those. Each attempt gets a fresh `Request.id`, all attempts share the caller's time budget, and each attempt sends what
@@ -330,8 +330,10 @@ When a `ServerMessage.request` arrives, a library must:
   including a failure of a call the handler made itself (its own `ErrorCode.NO_HANDLER`, say), is
   `ErrorCode.HANDLER_ERROR` with a short message and never a stack trace. A failure the library cannot catch
   (a crash of the handler's task) is `ErrorCode.HANDLER_ERROR` too.
-- **Check the caller before decoding the payload** when the handler requires an authenticated caller
-  ([messages.md, Forwarded identity](messages.md#forwarded-identity)) (`L1-IDENTITY`).
+- **Refuse an anonymous caller before decoding the payload** when the handler requires an authenticated caller, and
+  apply the handler's rule (a role, a given caller) after decoding, so a malformed payload from a caller with the
+  wrong role gets `ErrorCode.INVALID_REQUEST` ([messages.md, Forwarded identity](messages.md#forwarded-identity))
+  (`L1-IDENTITY`).
 - **Give the permit back** once the request is finished, whatever the outcome ([Flow control](#flow-control)).
 
 **A request in a mode its handler does not serve.** The hub forwards only what the type's registration allows
@@ -526,12 +528,12 @@ sender                                   hub                                    
   (`ReplyPart.seq`), send no more parts than the credit it was given (a part beyond it ends the stream with
   `ErrorCode.INVALID_REQUEST` "part without credit"), stop at a `ServerMessage.cancel`, and
   bound how long it waits for credit (a hub that forgot the stream, after a lost `Flow` or `Cancel`, would otherwise
-  hold the handler and its permit forever; both official libraries end the stream with `ErrorCode.TIMEOUT` "no credit
+  hold the handler and its permit forever; the official libraries end the stream with `ErrorCode.TIMEOUT` "no credit
   within ..." after 10 minutes); on the sender side, grant `Request.initial_credit` and refill it with `Flow` as the
-  caller consumes (both official libraries send `Flow{max(1, initial / 2)}` after every `max(1, initial / 2)` parts
+  caller consumes (the official libraries send `Flow{max(1, initial / 2)}` after every `max(1, initial / 2)` parts
   consumed), send `Cancel` when the caller stops reading, and detect lost parts: the hub drops a part it cannot
   deliver to a full sender buffer in time and counts it anyway, so a gap in `ReplyPart.seq`, or a clean `ReplyEnd`
-  whose `ReplyEnd.parts` is more than the parts received, is a loss that fails the stream (both official libraries
+  whose `ReplyEnd.parts` is more than the parts received, is a loss that fails the stream (the official libraries
   cancel it and report the lost parts).
 - **Endings** (the sender gets at most one `ReplyEnd`, the handler at most one `Cancel`):
 
@@ -684,7 +686,7 @@ A library connected to several hubs must (`L1-HUBS`):
 - open **one stream per hub**, each with its own handshake, heartbeat and reconnect backoff, all with the identical
   `Register`;
 - know each hub by `RegisterAck.hub_id`; for an empty `hub_id` (a real hub always names itself), by its target as
-  `host:port`, with a `static://` prefix (and in the Rust library `http://` or `https://`) stripped and a resolved IPv6
+  `host:port`, with a `static://` prefix (and in the Rust and Go libraries `http://` or `https://`) stripped and a resolved IPv6
   address written `[ip]:port` without a zone. The first target to
   acknowledge a `hub_id` owns it while it is kept, live or reconnecting; a later target answering the same id is closed
   and parked (its `Register` has already replaced the owner's session, so the owner reconnects once): no stream, out of
@@ -702,7 +704,7 @@ that leaves move. Why it must be the same function in every library: each hub pi
 own ring, and the rings agree only while every instance is registered on every hub; while memberships differ (an
 instance reconnecting, a rolling deploy), two hubs can pick two instances for one key. When every sender, in any
 language, sends a key through the same hub, one ring decides and the per-aggregate affinity holds. The function, as
-both official libraries implement it, with their shared test vectors:
+the official libraries implement it, with their shared test vectors:
 
 ```text
 score(hub_id, key) = fmix64(fnv1a64(utf8(hub_id) ++ [0x00] ++ utf8(key)))

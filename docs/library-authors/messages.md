@@ -70,7 +70,7 @@ of a Rust one.
 - These headers are the library's own: a library must refuse a call that sets one of them through its generic header
   option, before anything is sent (`L1-PROPAGATION`). The reserved names are `authorization`, `traceparent`,
   `tracestate`, `correlationId` and `correlation-id`, compared ignoring letter case (`AUTHORIZATION` and
-  `CORRELATIONID` are refused too); both official libraries refuse exactly these. A caller may add any other header,
+  `CORRELATIONID` are refused too); the official libraries refuse exactly these. A caller may add any other header,
   and the handler sees it.
 - A saga's commands carry `idempotency-key` (`<sagaId>:<seq>`) and `saga-id`, and no `authorization`; an idempotent
   adapter uses `idempotency-key` to act once (`L4-SAGA-DISPATCH`).
@@ -159,18 +159,18 @@ The acting user's JWT travels in the
       `ErrorCode.NO_HANDLER`. With a JWKS a token fails when it does not verify, also when the JWKS endpoint is down
       (`ErrorCode.UNAUTHENTICATED` for the caller, never an internal error). With or without a JWKS, a request fails
       when its `authorization` header is not `Bearer <token>` ("malformed authorization header"; the scheme is matched
-      in any letter case, and a blank header is no token), or when the token is not a signed compact JWS: five segments,
-      an encrypted token ("unsupported token"); not three segments, a header or claims segment that is not base64url of
-      a JSON object, or an `alg` that is not a string ("unreadable token"); `alg` `none` or an empty signature
-      ("unsigned token").
+      in any letter case, and a blank header is no token), and when the token is not a signed compact JWS. With a JWKS
+      the message is the verifier's; without one the texts are: five segments, an encrypted token ("unsupported
+      token"); not three segments, a header or claims segment that is not base64url of a JSON object, or an `alg` that
+      is not a string ("unreadable token"); `alg` `none` or an empty signature ("unsigned token").
     - **An anonymous caller is refused before the payload is decoded**, so it cannot probe payload shapes
       (`L1-IDENTITY`): no identity, for a handler that requires one, is `ErrorCode.UNAUTHENTICATED`. The handler's
       rule (a role, a given caller) is applied once the payload is decoded, since a rule may read the message: an
       authenticated caller it refuses is `ErrorCode.PERMISSION_DENIED`, and a payload that does not decode is
-      `ErrorCode.INVALID_REQUEST`.
+      `ErrorCode.INVALID_REQUEST` for any authenticated caller, also one with the wrong role.
 - **A request answered in-process** ([protocol.md, Requests a service answers itself](protocol.md#requests-a-service-answers-itself))
-  shows its handler the caller the hub path would carry: the sending handler's caller when the library forwards the
-  token, else an anonymous caller.
+  shows its handler the caller the hub path would carry (the token the library would forward, for example that of the
+  request being handled), else an anonymous caller.
 - The **service's** own credential (a token, a JWT or a certificate on the hub stream) is a different thing: it says
   which service connects, not who acts ([protocol.md, Credentials](protocol.md#credentials)).
 
@@ -191,5 +191,5 @@ subscription target), with `Error.request_id` the request's id ([protocol.md, Ha
   `{"snodra":"retryable"}` (an adapter asks for a later attempt) and `{"snodra":"unknown-outcome"}` (an adapter cannot
   tell whether the external call happened). A library at level 4 must write and read them exactly
   (`L4-ADAPTER-MARKERS`).
-- A sender that reads a code its library does not know treats it as `ErrorCode.HANDLER_ERROR` (both official libraries
+- A sender that reads a code its library does not know treats it as `ErrorCode.HANDLER_ERROR` (the official libraries
   do).

@@ -6,8 +6,8 @@ request, a stream and a subscription go through, and the mistakes the official l
 rule with its reason. The protocol itself is in [protocol.md](protocol.md), the messages in [messages.md](messages.md),
 the levels and their checks in [feature-levels.md](feature-levels.md). The official libraries are reference
 implementations ([Kotlin](../messaging/kotlin/index.md), [Rust](../messaging/rust/index.md),
-[Go](../messaging/go/index.md)), never the specification; where these pages are silent, the Kotlin library's behaviour
-is the reference, and every official library follows it.
+[Go](../messaging/go/index.md)), never the specification. The Kotlin library is the reference: where these pages are
+silent, its behaviour decides.
 
 ## Before you start
 
@@ -203,8 +203,10 @@ Each is a rule, with the reason it exists and the check that proves it.
 - **A failed nested call is the handler's `ErrorCode.HANDLER_ERROR`** (`L1-HANDLER-ERRORS`). `ErrorCode.NO_HANDLER`
   tells a sender that no handler ran, which makes a command safe to retry; a handler that passed its own downstream
   `ErrorCode.NO_HANDLER` through would get a command that already did part of its work run again.
-- **Check the caller before decoding the payload** (`L1-IDENTITY`), so an anonymous caller cannot learn payload
-  shapes from the decode errors.
+- **Refuse an anonymous caller before decoding the payload, and apply the handler's rule after decoding**
+  (`L1-IDENTITY`): an anonymous caller cannot learn payload shapes from the decode errors, and a rule may read the
+  message, so a malformed payload from a caller with the wrong role gets `ErrorCode.INVALID_REQUEST`
+  ([messages.md, Forwarded identity](messages.md#forwarded-identity)).
 - **A guard needs a JWKS, and an unverified token is no identity** (a library's own test). Claims read without the
   issuer's keys can be forged by anyone who reaches the hub; a guard without a JWKS could only refuse every caller, so
   registering one is a startup error ([messages.md, Forwarded identity](messages.md#forwarded-identity)).
@@ -360,7 +362,7 @@ with one message store, share the same records. The records themselves are the m
 - An **event** entry the outbox refuses (its payload can never become an outbox entry: not a JSON object, or one the
   store cannot hold) is given up at once, never retried: the entry records that it failed, the reason `INVALID` and
   the message, and the relay logs it at error level. No failure notice follows (the notice is about commands), and the
-  saga's later entries are sent as after a failed command. Both official libraries already refuse such an entry when
+  saga's later entries are sent as after a failed command. The Kotlin and Rust libraries already refuse such an entry when
   the saga records it; this rule is the backstop for one recorded anyway.
 - A **command** entry is sent by its wire type name with its stored JSON payload and its routing key, and with:
     - the headers `idempotency-key` = the entry's id `<sagaId>:<seq>` and `saga-id` = the saga's id;
@@ -379,7 +381,7 @@ with one message store, share the same records. The records themselves are the m
 
 ### Retries and failures
 
-Each attempt's outcome is classified the same way in both official libraries, whether the command went through the
+Each attempt's outcome is classified the same way in the Kotlin and Rust libraries, whether the command went through the
 hub or to the service's own handler:
 
 | The attempt ended with | Kind | `reason` once given up |
