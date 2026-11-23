@@ -77,7 +77,7 @@ The options of a call (`SendOption`):
 | `Timeout(d)` | this call's timeout, sent as `Request.timeout_ms`; wins over `DefaultTimeout`; a context deadline that comes sooner is the timeout instead; with none, the hub applies the type's own timeout or its default |
 | `RoutingKey(key)` | commands of one type with the same key go to the same instance of the owning service, typically the aggregate id; queries, streams and gathers ignore it |
 | `Priority(p)` | the request's priority, higher first while the target's queue at the hub is not empty; wins over `Priorities` |
-| `Header(name, value)` | adds a header, which the handler sees in `MessageInfo.Headers`; the names the library sets itself (`authorization`, `traceparent`, `tracestate`, `correlationId`) fail with `ErrReservedHeader` |
+| `Header(name, value)` | adds a header, which the handler sees in `MessageInfo.Headers`; the names the library sets itself (`authorization`, `traceparent`, `tracestate`, `correlationId`, `correlation-id`, in any letter case) fail with `ErrReservedHeader` |
 | `Retry(policy)`, `NoRetry()` | this call's retry policy; wins over `DefaultRetry` |
 | `InitialCredit(n)` | the credit window of a `Stream` or `Subscribe` (default 64) |
 | `MaxResults(n)` | ends a `Gather` after `n` successful parts, a `Stream` after `n` items, a `Subscribe` after `n` updates |
@@ -162,10 +162,10 @@ for u, err := range sub.Updates() {
 }
 ```
 
-  `Updates.Emit` reaches every open subscription whose match function accepts and returns how many it reached;
-  `Complete` and `Fail` end them. A subscription takes no permit and no handler slot, and `MaxSubscriptions` bounds
-  them. The caller's context bounds the whole subscription: when it ends, the subscription is cancelled at the hub.
-  `Updates()` can be ranged over once.
+`Updates.Emit` reaches every open subscription whose match function accepts and returns how many it reached;
+`Complete` and `Fail` end them. A subscription takes no permit and no handler slot, and `MaxSubscriptions` bounds
+them. The caller's context bounds the whole subscription: when it ends, the subscription is cancelled at the hub.
+`Updates()` can be ranged over once.
 
 ## Errors
 

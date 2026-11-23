@@ -1,6 +1,6 @@
 # Editions
 
-Snodra is built in the open. The core — the server, the protocol, both client libraries and the event browser — is
+Snodra is built in the open. The core — the server, the protocol, the client libraries and the event browser — is
 open source and stays that way. The paid side is support and the enterprise add-ons, not a locked core.
 
 ## Community
@@ -8,6 +8,7 @@ open source and stays that way. The paid side is support and the enterprise add-
 Free, for everyone:
 
 - **Snodra Server**: commands, queries, every query mode, several servers, the dashboard, processor control.
+- **Go library** (feature level 1): commands and queries in every query mode.
 - **Kotlin and Rust libraries**: the same model, the same wire, the Kafka, RabbitMQ Streams, MongoDB, SQL and in-memory
   stores as add-ons.
 - **Snodra Event Browser**: the dashboard's events, records, tails and lag.
@@ -24,7 +25,7 @@ Planned, sold separately, and outside the server process wherever possible:
 - **Operations**: a Kubernetes operator, backup and restore, long-term-support builds.
 - **Multi-tenancy**: isolated namespaces on one deployment.
 
-The protocol and both client libraries stay fully open: the add-ons add capabilities, they do not gate the core.
+The protocol and all the client libraries stay fully open: the add-ons add capabilities, they do not gate the core.
 
 ## Support and partnerships
 

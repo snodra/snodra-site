@@ -1,6 +1,6 @@
 # Installation
 
-Snodra has three installable pieces: the server, the Kotlin library and the Rust library. A
+Snodra has four installable pieces: the server, the Kotlin library, the Rust library and the Go library. A
 service uses one library; the server runs separately and every service connects to it.
 
 ## Server
@@ -113,6 +113,22 @@ snodra-messaging-rs = { version = "0.6", features = ["testing"] }
 
 Next: [the Rust quick start](../messaging/rust/quickstart.md), then
 [configuration](../messaging/rust/configuration.md) and [add-ons](../add-ons/index.md).
+
+## Go
+
+The Go library is pre-1.0 and at feature level 1: commands and queries, in every query mode, with no events, stores or
+sagas yet. No version is released, so take the module without one. It needs Go 1.26 or later:
+
+```sh
+go get github.com/snodra/snodra-messaging-go
+go get github.com/snodra/snodra-messaging-go/otel   # optional: OpenTelemetry metrics and traces
+```
+
+The package is named `snodra`; import it as `snodra "github.com/snodra/snodra-messaging-go"`. The core module depends
+only on gRPC and protobuf.
+
+Next: [the Go quick start](../messaging/go/quickstart.md), then
+[configuration](../messaging/go/configuration.md).
 
 ## After installation
 

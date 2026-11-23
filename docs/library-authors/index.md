@@ -39,7 +39,7 @@ for all three; levels 2 to 4 are proved by the add-on kits.
 
 ### Interoperability
 
-The two official libraries were run against each other on shared infrastructure (2026-11-15, one hub, Kafka 4.4.0,
+The Kotlin and Rust libraries were run against each other on shared infrastructure (2026-11-15, one hub, Kafka 4.4.0,
 RabbitMQ Streams 4.4.0, PostgreSQL 17.7, MySQL 8.4.7, MongoDB 8.3.13): events published by one were read by the other
 with identical key, headers, payload and id on both event stores, with the same partitions and routing; a Kotlin and a
 Rust instance shared one Kafka consumer group and one RabbitMQ Streams consumer name, handing partitions over at the

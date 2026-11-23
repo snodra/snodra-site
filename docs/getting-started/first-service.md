@@ -1,13 +1,14 @@
 # Your first service
 
 This walkthrough connects one service to a running server and sends it a command. It links the
-existing quickstarts for the code instead of repeating them: the Kotlin and Rust pages are the
-reference for handlers and buses.
+existing quickstarts for the code instead of repeating them: the Kotlin, Rust and Go pages are the
+reference for handlers and buses. The Go library is at feature level 1: it covers commands and queries, not events or
+sagas.
 
 ## Before you start
 
 - Docker, for the server.
-- A JVM with Gradle, or a Rust toolchain, depending on the service you write.
+- A JVM with Gradle, a Rust toolchain, or Go 1.26 or later, depending on the service you write.
 - A Kafka broker or a RabbitMQ Streams cluster for events, and MongoDB or PostgreSQL/MySQL for the
   message store. The quickstarts assume Kafka and MongoDB; substitute the stores you run. A service
   that only answers commands and queries needs neither store.
@@ -45,6 +46,17 @@ taken on macOS, see [the quick start](../server/quickstart.md) for the AirPlay n
     Follow [the Rust quick start](../messaging/rust/quickstart.md) through the builder and the
     handler. A closure passed to `.command(...)`, `.query(...)` or `.event(...)` is the handler; the
     builder opens the hub stream and registers the types.
+
+    ```sh
+    export SNODRA_SERVICE_NAME=orders
+    export SNODRA_SERVER_ADDRESS=static://localhost:7000
+    ```
+
+=== "Go"
+
+    Follow [the Go quick start](../messaging/go/quickstart.md) through the message types and the handlers. A
+    function passed to `snodra.HandleCommand` or `snodra.HandleQuery` is the handler; `app.Run` opens the hub stream and
+    registers the types. The Go library has no events yet, so the service below answers commands and queries only.
 
     ```sh
     export SNODRA_SERVICE_NAME=orders

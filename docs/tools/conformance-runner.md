@@ -68,5 +68,5 @@ listed.
   [Conformance](../library-authors/conformance.md).
 - The test kits you already have: [Testing](../operations/testing.md).
 - The wire contract the checks exercise: [Protocol](../library-authors/protocol.md).
-- The Kotlin and Rust test pages: [Kotlin testing](../messaging/kotlin/testing.md) and
-  [Rust testing](../messaging/rust/testing.md).
+- The library test pages: [Kotlin testing](../messaging/kotlin/testing.md),
+  [Rust testing](../messaging/rust/testing.md) and [Go testing](../messaging/go/testing.md).

@@ -10,7 +10,7 @@ Snodra gives a service commands, queries, events and sagas. Commands and queries
 **Snodra Server**, a stateless gRPC router. Events go to the event store you already run — Kafka or
 RabbitMQ Streams — through a transactional outbox, with the message store of your choice (MongoDB,
 PostgreSQL or MySQL) holding the outbox, the processed markers and the saga state. One protocol,
-first-class Kotlin and Rust libraries.
+first-class Kotlin and Rust libraries, and a Go library at feature level 1 (commands and queries).
 
 You run the server, point your services at it, and stop maintaining a service registry, deadline
 handling and a control plane of your own.
@@ -35,7 +35,7 @@ handling and a control plane of your own.
 
     ---
 
-    The server, the Kotlin library, the Rust library and the wire contract.
+    The server, the Kotlin library, the Rust library, the Go library (level 1) and the wire contract.
 
 -   :material-puzzle-outline:{ .lg .middle } **[Add-ons](add-ons/index.md)**
 
