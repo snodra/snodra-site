@@ -119,6 +119,12 @@ Every rule from the client's side is in
   (exclusive `query_types` keep the one-owner rule). A point query on a shared type goes to one
   live instance of any owner: one pool over every owner, then the routing above, with one
   round-robin rotation per type.
+- **Subscription types.** `Register.subscription_query_types` lists the query types an instance
+  serves with a subscription handler (each also in `query_types` or `shared_query_types`, else
+  `INVALID_ARGUMENT`; registrants agree, else `ALREADY_EXISTS`). The hub serves such a type in mode
+  `SUBSCRIPTION` only: a sender's `UNARY`, `STREAMING` or `SCATTER_GATHER` request for it, and a
+  `SUBSCRIPTION` request for any other type, get one `INVALID_REQUEST` before any instance gets
+  anything. The hub's own initial request `<id>#0` is not affected.
 - **Scatter-gather.** A sender sends a query with
   `Request.mode = SCATTER_GATHER`. Every live instance of every owner that lists the type (on an
   exclusive type, those instances of its owner; an old instance of a rolling deploy that adds the
@@ -130,8 +136,8 @@ Every rule from the client's side is in
   Answers after the end are dropped. A gather that ends early (`max_results`, the deadline,
   the sender gone) sends `Cancel{<id>#<n>, reason}` to each still-forwarded target (`max results`,
   `deadline`, `sender disconnected`); a late answer is dropped.
-- **Errors:** no live target is an ordinary `NO_HANDLER`; a command is `INVALID_REQUEST`. A
-  target that leaves, also while its request is still queued, is a failed part
+- **Errors:** no live target is an ordinary `NO_HANDLER`; a command is `INVALID_REQUEST`, and so is
+  a subscription type. A target that leaves, also while its request is still queued, is a failed part
   (`HANDLER_DISCONNECTED`).
 - **Accounting:** a scatter-gather is one request in flight, on its edge (latency to the
   `ReplyEnd`, an error when no part succeeded) and in `snodra_server_requests_total{mode="scatter_gather"}`;
@@ -170,8 +176,9 @@ Every rule from the client's side is in
   part) and the end (`Reply{error}` as `ReplyEnd{error}`).
 - **Streaming errors:** a request mode the hub does not know `INVALID_REQUEST`; a command by
   request kind `INVALID_REQUEST`; no owner, or no live instance that lists the type,
-  `NO_HANDLER`; a command by registered kind `INVALID_REQUEST`; a duplicate id (`<id>` or
-  `<id>#1`) `INVALID_REQUEST`. The gates apply in that order.
+  `NO_HANDLER`; a command by registered kind `INVALID_REQUEST`; a subscription type
+  `INVALID_REQUEST`; a duplicate id (`<id>` or `<id>#1`) `INVALID_REQUEST`. The gates apply in that
+  order.
 - **Streaming accounting:** one request in flight (the sender's `inFlightAsSender`, the
   handler's `inFlightAsHandler`, one handler permit from the forward to the end, released on
   every ending path); one count on its edge with the latency to the end (an error when the end
@@ -234,7 +241,8 @@ Every rule from the client's side is in
   session (as for unary requests).
 - **Subscription errors:** a command by request kind `INVALID_REQUEST`; no owner, or no live
   instance that lists the type, `NO_HANDLER`; a command by registered kind `INVALID_REQUEST`; a
-  duplicate id (`<id>`, `<id>#0`, or a pending `<id>#n`) `INVALID_REQUEST`;
+  type that is not a subscription type `INVALID_REQUEST`; a duplicate id (`<id>`, `<id>#0`, or a
+  pending `<id>#n`) `INVALID_REQUEST`;
   a target already serving `SNODRA_SERVER_MAX_SUBSCRIPTIONS_PER_INSTANCE` (1024) subscriptions
   `RESOURCE_EXHAUSTED`. The gates apply in that order, all before anything is sent. **Builder
   call:** an update target's id is no pending id (it is matched through its subscription), so a
