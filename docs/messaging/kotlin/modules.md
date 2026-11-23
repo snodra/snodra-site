@@ -54,23 +54,27 @@ Docker Compose from local builds together with the real `snodra-server` image, K
 
 ## CI/CD pipeline
 
-Defined in ``.gitlab-ci.yml``; runs on every push and merge request on
-`eclipse-temurin:25-jdk`.
+Two GitHub Actions workflows. `.github/workflows/ci.yml` runs on every push and pull request:
 
-```mermaid
-flowchart LR
-    build["build<br/>gradlew assemble"] --> test["test<br/>gradlew test (dind)"] --> publish["publish-api · tag api/vX.Y.Z<br/>Package Registry"]
-```
+| Job | Runs | Does |
+|---|---|---|
+| `build` | always | `./gradlew assemble` |
+| `proto-sync` | always | checks that `hub.proto` equals the server's |
+| `test` | always | `./gradlew test`, with the hub image the end-to-end tests need |
+| `throughput` | after `test` | `./gradlew throughputTest` |
+| `scripts` | always | the tests of the release scripts |
+| `version` | a push to `main` of `snodra/snodra-messaging`, once every job above passed | the next version from the Conventional Commit subjects since the last `vX.Y.Z` tag; none means no release |
+| `package` | when there is a version | builds the Maven Central bundle with it and checks it |
+| `tag` | after `package` | tags the tested commit `vX.Y.Z` |
+| `release` | after `tag` | calls `.github/workflows/release.yml` with the tag |
 
-| Stage | Job | Runs | Produces |
-|---|---|---|---|
-| build | `build` | always | compiled modules |
-| test | `test` | always, with a `docker:dind` service; the hub end-to-end test is skipped when the hub image is not reachable | JUnit report |
-| publish | `publish-api` | only on tags `api/vX.Y.Z` | `snodra-messaging-api`, `snodra-messaging` and `snodra-messaging-test` at `X.Y.Z` in the Package Registry |
+`.github/workflows/release.yml` checks the tag, creates the GitHub release, publishes every module to Maven Central
+(signed, with sources and javadoc; a version already there is not uploaded again) and attaches the JARs to the release.
+It can also be run by hand to publish an existing tag again; nobody pushes tags.
 
-Consumers resolve the artifacts from the group endpoint
-`https://registry.example.com/repository/maven-public/`. No Docker image is built: this
-is a library; the example services are built from source by the sandbox compose.
+Consumers resolve the artifacts from Maven Central (`mavenCentral()`), as `com.damoreira.snodra:snodra-messaging` and
+the other modules' coordinates at a released version. No Docker image is built: this is a library; the example services
+are built from source by their Docker Compose file.
 
 ## Known limitations
 
