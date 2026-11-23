@@ -12,7 +12,7 @@ A service does not need it. To test the wiring against a real hub, run the hub i
 
 ## The library's own tests
 
-The library's unit tests need no Docker and run against an in-process scripted hub, in the core module and in `otel/`:
+The library's unit tests need no Docker and run against an in-process scripted hub, in the core module and in `observability/`:
 
 ```sh
 go test -race ./...

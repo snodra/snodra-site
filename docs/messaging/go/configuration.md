@@ -14,7 +14,7 @@ A variable that is unset, or blank, changes nothing. Numbers are non-negative in
 | `SNODRA_SERVICE_NAME` | `Service` | required | the hub `service_name`: the logical name of the service, for example `orders-service` |
 | `SNODRA_INSTANCE_ID` | `Instance` | a random UUID | the instance id, unique per process (a pod name, for instance); a `Register` whose id is held by another service is refused |
 | `SNODRA_SERVER_ADDRESS` | `Hubs` | `static://snodra-server:7000` | the hubs: a comma-separated list of `host:port` (a `static://`, `http://` or `https://` prefix is accepted), or one `dns:///name:port` whose every address is a hub, resolved again every 30 s; see [Several hubs](api.md#several-hubs) |
-| `SNODRA_SERVER_STATUS_INTERVAL_MS` | `StatusInterval` | 5000 | how often every acknowledged hub gets an `InstanceStatus`; at least 1 |
+| `SNODRA_SERVER_STATUS_INTERVAL_MS` | `StatusInterval` | 5000 | how often every acknowledged hub gets an `InstanceStatus`, which also goes out at once whenever the acknowledged hubs change; at least 1 |
 | `SNODRA_MAX_CONCURRENT_HANDLERS` | `MaxConcurrent` | 256 | handlers run at once, at least 1; also the permits offered to the hubs, which queue further requests for this instance |
 | `SNODRA_RECONNECT_BACKOFF_MIN_MS`, `SNODRA_RECONNECT_BACKOFF_MAX_MS` | `ReconnectBackoff` | 500, 5000 | the wait between two attempts to reach a hub: the minimum, doubling up to the maximum, each wait jittered by +/-20 % and never above the maximum; back to the minimum once an attempt reached the `RegisterAck`; a refused `Register` waits 80 to 100 % of the maximum |
 | `SNODRA_SERVER_LOAD_FACTOR` | `LoadFactor` | 100 | `Register.load_factor`: the instance's relative capacity; `0` reads as 100 |
@@ -26,8 +26,9 @@ A variable that is unset, or blank, changes nothing. Numbers are non-negative in
 | `SNODRA_SERVER_RETRY_INITIAL_BACKOFF_MS`, `SNODRA_SERVER_RETRY_MULTIPLIER`, `SNODRA_SERVER_RETRY_MAX_BACKOFF_MS` | `RetryPolicy` | 100, 2, 2000 | the wait before the second attempt, the growth factor (a finite number of at least 1) and the cap of one wait; each wait is jittered by +/-20 % and never above the cap. The policy variables are checked even while retry is off |
 | `SNODRA_SERVER_STREAM_CREDIT_TIMEOUT_MS` | `StreamCreditTimeout` | 600000 | how long a streaming handler waits for the caller's credit before the stream ends with `TIMEOUT` and the handler's context is cancelled (the default is the hub's default maximum stream duration, 10 min); at least 1 |
 | `SNODRA_SERVER_MAX_SUBSCRIPTIONS` | `MaxSubscriptions` | 1024 | the most subscription queries this instance serves at once; one more is refused with `RESOURCE_EXHAUSTED`; at least 1 |
-| `SNODRA_JWKS_URL`, `SNODRA_ISSUER` | `JWKS` | unset | set both to verify forwarded tokens (RS256 signature, issuer, expiry); the issuer is required with the URL. Unset: signed tokens are read unverified and a warning is logged once |
+| `SNODRA_JWKS_URL`, `SNODRA_ISSUER` | `JWKS` | unset | set both to verify forwarded tokens (RS256 signature, issuer, expiry); the issuer is required with the URL. Unset: no token is an identity (every caller is anonymous), a guarded handler cannot be registered, and a warning is logged once |
 | `SNODRA_SECURITY_ROLES_CLAIM` | `RolesClaim` | `roles` | where a token's roles are read: a dotted path to a list of strings (`realm_access.roles`, `groups`), or `scope` for the space-separated scopes |
+| `SNODRA_SERVER_ALWAYS_ROUTE_THROUGH_HUB` | `AlwaysRouteThroughHub` | false | `true` sends every `Send` and `Query` through a hub, also one of a type this instance handles itself; `false` answers a command, or a query that is not shared, of an own type in-process ([API](api.md#requests-answered-in-process)) |
 | `SNODRA_FORWARD_JWT` | `ForwardJWT` | true | whether a request sent while handling one carries the handled request's token, so that the downstream handler acts for the same user |
 | `SNODRA_SERVER_TOKEN` | `Token` | none | the static access token sent in `Register.credentials.token` on every hub stream; needed when the hub enforces access control; never logged |
 | `SNODRA_SERVER_TOKEN_FILE` | `TokenFile` | none | a file holding the token, for mounted secrets; **wins over `SNODRA_SERVER_TOKEN`**; surrounding blanks are ignored; read again before every connection and on every heartbeat, so a rotated secret needs no restart |
@@ -112,6 +113,8 @@ the token or the access rules and the next attempt succeeds on its own.
 
 With `snodra.JWKS` (or `SNODRA_JWKS_URL` and `SNODRA_ISSUER`) every forwarded token is checked, before a handler runs,
 for its RS256 signature against the issuer's keys, its issuer and its expiry; a token that fails is answered
-`UNAUTHENTICATED`, also when the keys cannot be fetched. Without it, the claims of any signed token are read as they
-are, `Caller.Verified` is false, and whoever can reach the hub can forge them: set it wherever the hub is reachable by
-callers you do not trust.
+`UNAUTHENTICATED`, also when the keys cannot be fetched. Without it, no token is an identity: every caller is
+anonymous, the token only goes on with the requests the handler sends, and registering a handler with a guard
+(`RequireAuthenticated`, `RequireRole`, `RequireCaller`) is an error that also fails `Start` and `Run`. A header that is
+not a bearer token, or a token that is not a signed JWS (unreadable, `alg: none`, an empty signature, an encrypted
+token), is answered `UNAUTHENTICATED` with or without a JWKS.

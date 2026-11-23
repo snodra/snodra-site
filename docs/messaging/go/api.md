@@ -17,7 +17,8 @@ type `R` is any type; `snodra.Empty` answers `{}`, and so does a nil pointer.
 `*snodra.App`, a function and handler options. Handlers are registered before `App.Start` (or `Run`). A registration
 error is returned at once and kept: `Start` returns every one of them, joined, and does not start. The errors are: a
 registration after `Start` (`ErrRegistrationClosed`), a type registered twice (as a command and a query, say), an empty
-type name, a nil handler, a `RequireCaller` without a function, and a command with `Shared`.
+type name, a nil handler, a `RequireCaller` without a function, a command with `Shared`, and a guard
+(`RequireAuthenticated`, `RequireRole`, `RequireCaller`) without `snodra.JWKS`.
 
 - A handler runs with a context that is cancelled when the hub cancels the request (the caller gave up, or the request
   timed out). A handler that ignores its context keeps its permit and its concurrency slot until it returns.
@@ -34,7 +35,7 @@ A handler's error is answered `HANDLER_ERROR` unless it was made with `snodra.Un
 ### Guards
 
 ```go
-// The caller is checked before the payload is decoded.
+// An anonymous caller is refused before the payload is decoded; a guard needs snodra.JWKS.
 _ = snodra.HandleCommand(app, func(ctx context.Context, cmd ArchiveOrder) (snodra.Empty, error) {
 	caller, _ := snodra.CallerFrom(ctx)
 	fmt.Println("archived by", caller.Subject)
@@ -42,8 +43,10 @@ _ = snodra.HandleCommand(app, func(ctx context.Context, cmd ArchiveOrder) (snodr
 }, snodra.RequireRole("orders-admin"))
 ```
 
-`RequireAuthenticated`, `RequireRole` and `RequireCaller` answer `UNAUTHENTICATED` or `PERMISSION_DENIED`, decided
-before the payload is decoded. When a handler has several, every one must accept. `snodra.Shared()` registers a query
+`RequireAuthenticated`, `RequireRole` and `RequireCaller` answer an anonymous caller `UNAUTHENTICATED`, before the
+payload is decoded, and a caller they refuse `PERMISSION_DENIED`, once the payload is decoded. When a handler has
+several, every one must accept. Every guard needs `snodra.JWKS` (or `SNODRA_JWKS_URL` and `SNODRA_ISSUER`): registering a
+guarded handler without it is an error, and `Start` and `Run` fail. `snodra.Shared()` registers a query
 type (also a streaming or subscription query) as shared: many services may own it, and a `Gather` asks every instance
 of every owner. Every owner must register it shared.
 
@@ -85,6 +88,21 @@ The options of a call (`SendOption`):
 A request sent while a handler runs (with the handler's context, or one derived from it) carries that request's
 correlation id, its caller's token (see `ForwardJWT`) and its trace context. Outside a handler it carries a new
 correlation id.
+
+While no hub can take a request (none connected yet, a hub restarting), the call waits for one within its timeout (5 s
+without one), and only then fails with `ErrNeverSent`. One deadline bounds the call: a request moved to another hub
+sends its full timeout again, and no new hub is tried once that timeout has passed.
+
+### Requests answered in-process
+
+A command, or a query that is not shared, of a type this instance handles itself is answered in-process: its handler
+runs on the caller's goroutine with no hub, no permit and no handler slot, also before `Start` and after `Shutdown`.
+It sees a fresh request id, the caller's `Header`s and the correlation id, and acts for the caller the hub path would
+carry (the handled request's caller when `ForwardJWT` is on; anonymous outside a handler or with it off). The routing
+key, timeout, priority and retry do not apply (the caller's context bounds the call), nothing goes to the telemetry,
+and its errors are those a hub would have relayed. `snodra.AlwaysRouteThroughHub(true)`
+(`SNODRA_SERVER_ALWAYS_ROUTE_THROUGH_HUB=true`) sends every request through a hub, so a routing key keeps its instance
+affinity across the instances of the service. `Gather`, `Stream` and `Subscribe` always go through a hub.
 
 ### Retries
 
@@ -141,8 +159,9 @@ if err == nil {
 - **Subscribe.** Updates are hot: the hub relays them from the open on, up to the credit window.
 
 ```go
-// Serving a subscription: the initial result now, updates whenever you emit them.
-updates, _ := snodra.HandleSubscription(app, func(_ context.Context, q WatchOrder) (OrderStatus, error) {
+// Serving a subscription: the initial result now, updates whenever you emit them. The type
+// arguments are the query, its initial result and its updates, as Subscribe[I, U] reads them.
+updates, _ := snodra.HandleSubscription[WatchOrder, OrderStatus, OrderStatus](app, func(_ context.Context, q WatchOrder) (OrderStatus, error) {
 	return OrderStatus{Status: "placed"}, nil
 })
 updates.Emit(func(q WatchOrder) bool { return q.OrderID == "o-1" }, OrderStatus{Status: "shipped"})
@@ -162,8 +181,12 @@ for u, err := range sub.Updates() {
 }
 ```
 
-`Updates.Emit` reaches every open subscription whose match function accepts and returns how many it reached;
-`Complete` and `Fail` end them. A subscription takes no permit and no handler slot, and `MaxSubscriptions` bounds
+`HandleSubscription[Q, I, U]` returns `*Updates[Q, U]`, typed by the query and its update:
+`Emit(match func(Q) bool, update U) int` reaches every open subscription whose match function accepts and returns how
+many it reached; `Complete` and `Fail` end them. The type is declared to the hubs as a subscription type
+(`Register.subscription_query_types`) on every registration, so a hub serves it with `Subscribe` only: a `Query`,
+`Stream` or `Gather` of it, and a `Subscribe` of a type nobody serves with `HandleSubscription`, fail with
+`INVALID_REQUEST`. A subscription takes no permit and no handler slot, and `MaxSubscriptions` bounds
 them. The caller's context bounds the whole subscription: when it ends, the subscription is cancelled at the hub.
 `Updates()` can be ranged over once.
 
@@ -174,21 +197,25 @@ A failed `Send`, `Query`, `Gather`, `Stream` or `Subscribe` is one of:
 | Error | Test with | Meaning |
 |---|---|---|
 | `*snodra.Error` | `errors.As` | the hub's or the handler's answer, by `Code` (`CodeNoHandler`, `CodeTimeout`, `CodeHandlerDisconnected`, `CodeHandlerError`, `CodeUnauthenticated`, `CodeInvalidRequest`, `CodePermissionDenied`, `CodeResourceExhausted`, `CodeCancelled`), with `Message` and, for `CodeHandlerError`, `Details` |
-| `ErrNeverSent` | `errors.Is` | the request was written to no hub: sending it again is safe |
+| `ErrNeverSent` | `errors.Is` | the request was written to no hub within the call's timeout (5 s without one): sending it again is safe |
 | `ErrOutcomeUnknown` | `errors.Is` | the request was written and no answer arrived: the handler may or may not have run |
 | `ErrLostParts` | `errors.Is` | a stream or gather lost parts that were already announced |
 | `ErrReservedHeader` | `errors.Is` | a `Header` name the library sets itself; nothing was sent |
 | the context's error | `errors.Is` | the context ended first; once the request was written it comes with `ErrOutcomeUnknown`, else with `ErrNeverSent` |
 
-A context deadline is the caller's timeout; a cancelled context returns at once with `context.Canceled`. The library's
+A context deadline is the caller's timeout; a cancelled context returns at once with `context.Canceled`, together with
+`ErrOutcomeUnknown` once the request was written (or, for a request answered in-process, once its handler failed after
+the cancel). The library's
 own `TIMEOUT` is returned when no answer came within the hub's bound for the request plus 1 s.
 
 ## Identity
 
-`snodra.CallerFrom(ctx)` returns who sent the request being handled, read from its forwarded token: `Subject`, `Roles`
-and `Verified`. It returns false for an anonymous caller and outside a handler. `Verified` is true only when you
-configured `snodra.JWKS` and the token passed; otherwise the claims are read unverified and can be forged by whoever
-reaches the hub. `snodra.MessageFrom(ctx)` returns the request's id, type, correlation id and headers. `RolesClaim`
+`snodra.CallerFrom(ctx)` returns who sent the request being handled, read from its forwarded token once it is
+verified against `snodra.JWKS`: `Subject` and `Roles`. It returns false for an anonymous caller and outside a handler.
+Without a JWKS no token is an identity: every caller is anonymous, and the token only goes on with the requests the
+handler sends. A header that is not a bearer token (the `Bearer` scheme is read in any letter case), or a token that is
+not a signed JWS, is answered `UNAUTHENTICATED` with or without a JWKS, before the handler is looked up.
+`snodra.MessageFrom(ctx)` returns the request's id, type, correlation id and headers. `RolesClaim`
 says where roles are read in the token, and `ForwardJWT` whether outgoing requests carry the handled request's token.
 
 ## Lifecycle
@@ -199,8 +226,8 @@ says where roles are read in the token, and `ForwardJWT` whether outgoing reques
   handler can be registered after it.
 - `App.Ready(ctx)` waits until a hub has acknowledged the registration.
 - `App.Run(ctx)` starts, waits for `ctx` to end, then shuts down within 15 s.
-- `App.Shutdown(ctx)` leaves the hubs in order: an empty registration so requests route elsewhere at once, then the
-  handlers in flight (at most 10 s), then the subscriptions served here, then the stream half-close. It returns by
+- `App.Shutdown(ctx)` leaves the hubs in order: an empty registration so requests route elsewhere at once, then every
+  subscription served here ends, then the handlers in flight (at most 5 s), then the stream half-close. It returns by
   `ctx`'s deadline. A handler that ignores its context outlives `Shutdown`: the library cannot stop a goroutine, so it
   stops waiting for it.
 - `App.HubIDs`, `App.Rejection` and `App.SubscriptionsServed` report the state of the connections.
@@ -215,22 +242,23 @@ answer is drained and closed, a new one is connected.
 ## Telemetry
 
 The core only defines an interface (`snodra.Instrumentation`, installed with `snodra.Telemetry`) and costs nothing
-without one. The separate module `github.com/snodra/snodra-messaging-go/otel` implements it on the OpenTelemetry API
+without one. The separate module `github.com/snodra/snodra-messaging-go/observability` (package `observability`) implements it on
+the OpenTelemetry API
 (the application installs the SDK and its exporters):
 
 ```go
 app, err := snodra.New(
 	snodra.Service("orders-service"),
 	snodra.Hubs("snodra-server:7000"),
-	snodra.Telemetry(otel.New()), // uses the global OpenTelemetry providers
+	snodra.Telemetry(observability.New()), // uses the global OpenTelemetry providers
 )
 ```
 
 ```sh
-go get github.com/snodra/snodra-messaging-go/otel
+go get github.com/snodra/snodra-messaging-go/observability
 ```
 
-`otel.New` takes `WithMeterProvider`, `WithTracerProvider` and `WithPropagator` to use others than the global ones. One
+`observability.New` takes `WithMeterProvider`, `WithTracerProvider` and `WithPropagator` to use others than the global ones. One
 instrumentation serves one `App`. The metrics have the names and labels of the Kotlin and Rust libraries, so one
 dashboard serves every library.
 
@@ -244,7 +272,8 @@ dashboard serves every library.
 | `snodra.hub.client.credentials.refreshes.sent` | counter | |
 
 The request duration covers a `Send` or `Query` from the call to its result, retries included; a call its caller
-cancels records no metric. A request a handler serves gets a server span named after the message type, a child of the
+cancels, a call its options refuse and a call answered in-process record no metric. The instrumentation scope is the
+module's import path, `github.com/snodra/snodra-messaging-go/observability`. A request a handler serves gets a server span named after the message type, a child of the
 request's `traceparent`, and the requests the handler sends carry its trace context.
 
 ## Not in the Go library yet

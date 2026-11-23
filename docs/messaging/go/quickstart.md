@@ -11,7 +11,7 @@ go get github.com/snodra/snodra-messaging-go
 
 The package is named `snodra`; the examples import it as `snodra "github.com/snodra/snodra-messaging-go"`.
 The core module depends only on gRPC and protobuf. Telemetry is a separate module,
-`github.com/snodra/snodra-messaging-go/otel` (see [API](api.md#telemetry)).
+`github.com/snodra/snodra-messaging-go/observability` (see [API](api.md#telemetry)).
 
 ## A service
 

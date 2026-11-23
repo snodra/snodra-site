@@ -22,9 +22,11 @@ released yet and the API may still change before 1.0. It needs Go 1.26 or later.
 - The hub connection: registration, heartbeats, reconnect with backoff, flow control, timeouts, several hubs and an
   ordered shutdown.
 - Static token, OAuth2 JWT (client credentials) and mutual TLS credentials, with rotation.
-- Caller identity read from the forwarded token, with optional verification against the issuer's keys (`JWKS`).
-- Telemetry behind an interface, with an OpenTelemetry implementation in the separate `otel` module and the metric
-  names and labels of the Kotlin and Rust libraries.
+- Caller identity from the forwarded token, verified against the issuer's keys (`JWKS`); guards need a JWKS.
+- Commands and queries of the service's own types answered in-process, without the hub, unless
+  `AlwaysRouteThroughHub` is on.
+- Telemetry behind an interface, with an OpenTelemetry implementation in the separate `observability` module and the
+  metric names and labels of the Kotlin and Rust libraries.
 
 ## Level 1 only
 
@@ -40,6 +42,6 @@ library.
 - [API](api.md): handlers, sending, the four query modes, errors, identity, lifecycle and telemetry.
 - [Testing](testing.md): testing handlers, and running the conformance runner against the library's own service.
 
-The library's source, its `SPEC-GAPS.md` (the places where the specification is silent and the library follows the
-Rust library) and its releases are in the
+The library's source, its `SPEC-GAPS.md` (the places where the specification was silent: what the libraries do, and
+what is settled as the specification; the library follows the Kotlin library) and its releases are in the
 [repository](https://github.com/snodra/snodra-messaging-go).
