@@ -28,6 +28,11 @@ start, configuration, the API, testing and the modules and build.
 [snodra-messaging-rs](../messaging/rust/index.md) is the Rust crate. Its pages cover the quick start,
 configuration, the API, dead letters, sagas, testing and the modules and build.
 
+## The Go library
+
+[snodra-messaging-go](../messaging/go/index.md) is the Go library, pre-1.0 and at feature level 1 (commands and
+queries; no events, sagas or add-ons yet). Its pages cover the quick start, configuration, the API and testing.
+
 ## The stores
 
 The event store and message store are add-ons with their own reference pages:

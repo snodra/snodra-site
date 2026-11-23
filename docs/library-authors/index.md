@@ -29,10 +29,13 @@ every query mode, credentials, several hubs), **2 Events**, **3 Processors**, **
 |---|---|---|---|---|
 | [snodra-messaging](../messaging/kotlin/index.md) ([releases](https://github.com/snodra/snodra-messaging/releases)) | Kotlin (Spring Boot starter) | Apache-2.0 | 4, implemented; level 1 proved by the runner | level 1 passes every check of the runner through `examples/conformance-service`; the event-store and message-store kits pass |
 | [snodra-messaging-rs](../messaging/rust/index.md) ([releases](https://github.com/snodra/snodra-messaging-rs/releases)) | Rust | Apache-2.0 | 4, implemented; level 1 proved by the runner | level 1 passes every check of the runner through the runner's own reference service; the event-store and message-store kits pass |
+| [snodra-messaging-go](../messaging/go/index.md) ([releases](https://github.com/snodra/snodra-messaging-go/releases)) | Go | Apache-2.0 | 1, implemented; level 1 proved by the runner | level 1 passes every check of the runner through `examples/conformance-service` |
 
-Both are reference implementations of the same contract: a service on one is indistinguishable from a service on the
-other in front of the hub and the event store. The [conformance runner](conformance.md) ([releases](https://github.com/snodra/snodra-conformance/releases))
-proves level 1 for both; levels 2 to 4 are proved by the add-on kits.
+The Kotlin and Rust libraries are reference implementations of the same contract: a service on one is indistinguishable
+from a service on the other in front of the hub and the event store. The Go library is pre-1.0 and implements level 1
+only (commands and queries, in every query mode); it has no event store or message store add-ons yet. The
+[conformance runner](conformance.md) ([releases](https://github.com/snodra/snodra-conformance/releases)) proves level 1
+for all three; levels 2 to 4 are proved by the add-on kits.
 
 ### Interoperability
 
@@ -82,4 +85,4 @@ The suggested name is `snodra-messaging-<language>` (`snodra-messaging-go`, `sno
 | [message-store-add-ons.md](message-store-add-ons.md) | writing a message-store add-on, its conformance kit, the SQL layout |
 | [mongodb-layout.md](mongodb-layout.md) | the MongoDB layout of a message store: collections, document fields and BSON types, indexes, the atomic operations, and where the two official add-ons differ |
 | [conformance.md](conformance.md) | what proves each level, the conformance runner (level 1) and its report |
-| [Kotlin](../messaging/kotlin/index.md), [Rust](../messaging/rust/index.md) | the official libraries: install, configure, modules (in the reference section of this site) |
+| [Kotlin](../messaging/kotlin/index.md), [Rust](../messaging/rust/index.md), [Go](../messaging/go/index.md) | the official libraries: install, configure, modules (in the reference section of this site) |

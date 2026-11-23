@@ -87,6 +87,12 @@ nav:
           - Sagas: messaging/rust/sagas.md
           - Testing: messaging/rust/testing.md
           - Modules and build: messaging/rust/modules.md
+      - Go library:
+          - messaging/go/index.md
+          - Quick start: messaging/go/quickstart.md
+          - Configuration: messaging/go/configuration.md
+          - API: messaging/go/api.md
+          - Testing: messaging/go/testing.md
   - Add-ons:
       - add-ons/index.md
       - Kafka event store: add-ons/kafka-event-store.md
