@@ -22,22 +22,28 @@ Your library runs a small **conformance service** for the runner: it handles fix
 (echo, fail, sleep, a stream, a subscription, a relay through the hub, and `conformance.Send`, which makes your
 library send a request and report the outcome), written with your library's API as an application would write them.
 The contract, with the JSON Schema of every type and how each check uses them, is
-[the conformance contract](https://github.com/snodra/snodra-conformance/blob/main/docs/contract.md) (contract version 1). Two complete examples of about 800
-lines each: the Rust reference service in the snodra-conformance repository (`reference-service/`), and the Kotlin
-conformance service in the snodra-messaging repository (`examples/conformance-service`). Both pass every level-1 check,
-and the runner's own mutation matrix proves that each check fails when it should.
+[the conformance contract](https://github.com/snodra/snodra-conformance/blob/main/docs/contract.md) (contract version 1). Three complete examples of
+about 800 lines each: the Rust reference service in the snodra-conformance repository (`reference-service/`), the
+Kotlin conformance service in the snodra-messaging repository and the Go one in the snodra-messaging-go repository
+(both `examples/conformance-service`). All three pass every level-1 check, and the runner's own mutation matrix proves
+that each check fails when it should.
 
 The runner starts the service itself, once or more per check, with its configuration in `CONFORMANCE_*` environment
 variables (the hubs, the service name and instance id, the capacity, the retry policy, credentials), so the service
 is a program that reads them, maps them onto your library's configuration, registers its handlers and stops on
 SIGTERM within 5 s. A guarded handler needs a JWKS ([messages.md, Forwarded identity](messages.md#forwarded-identity)),
 and the runner gives one (`CONFORMANCE_JWKS_URL`) only to the checks that need it, so the service registers
-`conformance.Guarded` only when it is given one, as the Kotlin and Go conformance services do.
+`conformance.Guarded` only when it is given one, as the three example services do.
+
+A conformance service should turn on its library's "always route through the hub" setting
+([protocol.md, Requests a service answers itself](protocol.md#requests-a-service-answers-itself)), or let its
+environment turn it on, so that a `conformance.Send` to one of its own types goes through the hub. No level-1 check
+sends to the service's own types, but the runner's interoperability harness does.
 
 ## Running the runner
 
 The runner lives in the [snodra-conformance](https://github.com/snodra/snodra-conformance) repository. Each release
-publishes binaries for Linux and macOS on its [releases page](https://github.com/snodra/snodra-conformance/releases)
+publishes binaries for Linux and macOS (there is no Windows binary) on its [releases page](https://github.com/snodra/snodra-conformance/releases)
 and the container image `snodra/snodra-conformance`; you can also build it from source
 (`cargo build --release -p snodra-conformance`, the binary is `target/release/snodra-conformance`). Start one or two hubs from the hub's image
 ([Hub quick start](../server/quickstart.md); plain text, access control off), then:
@@ -98,9 +104,10 @@ parts of the level-1 rules cannot be observed from outside a library, and stay w
 - `L1-NEVER-SENT` and `L1-HUB-FAILOVER`: a request still in the library's own outbound buffer when its stream breaks
   (reported as never sent, and moved to another hub with the same id and its full timeout, at most 8 times and never
   after the call's deadline); nothing outside the library can hold a request there deterministically.
-- `L1-SUBSCRIBE`: that every `Register` declares the subscription types in `Register.subscription_query_types`.
+- `L1-SUBSCRIBE`: the runner checks that the first `Register` of a stream declares the subscription type in
+  `Register.subscription_query_types`; that every later `Register` declares it too stays with the library's tests.
 - `L1-IDENTITY`: that a guarded handler without a JWKS is a startup error, and that without a JWKS no token is an
-  identity.
+  identity (the runner checks that, without a JWKS, a malformed token is still refused and a signed one is carried on).
 - `L1-TOKEN`: never logging the token.
 - `L1-TOKEN`, `L1-JWT`, `L1-MTLS`, `L1-TLS`: they are proved on the frames and the TLS handshakes the runner's fake hubs
   see, not against snodra-server's access control in mode `enforce`.
@@ -119,7 +126,8 @@ against a fake hub and against snodra-server and require the same answers. What 
 - A fake hub routes nothing between instances: it is the only other party. It forwards what a check sends, including
   requests snodra-server would not route (a type the instance does not list, a unary request to a streaming handler, a
   request of a subscription type in another mode), and answers the library's own requests as the check scripts them,
-  including parts with a gap and ends with a wrong count. It does not read `Register.subscription_query_types`.
+  including parts with a gap and ends with a wrong count. It reads `Register.subscription_query_types` only to check
+  the declaration (`L1-SUBSCRIBE`), and refuses no request because of it.
 - It acknowledges late or never, and echoes heartbeats before the ack, only where a check asks for it
   (`L1-HANDSHAKE-ACK`, `L1-EARLY-REQUESTS`, `L1-NEVER-SENT`).
 - It evicts nobody and has no handshake deadline, no queue bounds, priorities or deadlines of its own, and no hub-side

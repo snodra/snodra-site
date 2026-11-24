@@ -130,7 +130,9 @@ startup) and is acked too, but the ack of a later `Register` is dropped, like a 
 outbound buffer is full: a library must not wait on it (`L1-HANDSHAKE-ACK`). `Register.credentials`, `Register.initial_permits`, `Register.load_factor`,
 `Register.tags` and `Register.client_version` are read from the first `Register` of a stream only. A `Register` with
 no types takes the instance out of the routing: an instance stopping gracefully, or leaving one hub, can send one, and
-the hub routes what it had queued for the instance to the other instances at once.
+the hub routes what it had queued for the instance to the other instances at once. A library follows every `Register`
+it writes with a `Heartbeat`, a later one too: a re-registration, and a `Register` with no types at shutdown, at a
+certificate rollover or when an address leaves the DNS answer ([Heartbeats](#heartbeats-and-the-dead-peer-timeout)).
 
 **A reused instance id.** A new stream that registers the same `Register.instance_id` replaces the previous session;
 requests forwarded to the old stream fail at once with `ErrorCode.HANDLER_DISCONNECTED`. With access control on, an
@@ -145,9 +147,10 @@ instance id held by a live session of another service is refused with `PERMISSIO
   when the stream closes; requests forwarded to an evicted instance fail with `ErrorCode.HANDLER_DISCONNECTED`.
 - A library must drop the stream of a silent hub and reconnect (`L1-SILENT-HUB`). It looks on each heartbeat tick from
   the `RegisterAck` on, before that tick's heartbeat is written: the hub is silent when more than three heartbeat
-  intervals have passed since its last echo (the `RegisterAck` counts as the first) and the three heartbeats written
-  since that echo are all unanswered. The drop then comes on the tick after the third unanswered heartbeat, between
-  three and four intervals after the last echo, never before three. There is no silence check before the
+  intervals have passed since its last echo (the `RegisterAck` counts as the first) and at least three heartbeats
+  written since that echo are unanswered. Every heartbeat written since the echo counts, the one that follows a
+  later `Register` included, so a later `Register` can add a fourth. The drop comes on the first tick at which both
+  hold: between three and four intervals after the last echo, never before three. There is no silence check before the
   `RegisterAck`: the handshake timeout (10 s) closes a stream that brings no ack.
 - The official libraries also send HTTP/2 keepalive pings every 10 s, answered within 5 s, also while idle, so a
   one-way partition is noticed by the transport too.
@@ -424,7 +427,7 @@ serves subscription types only ([Subscription types](#subscription-types)).
   the `Register` is refused with `INVALID_ARGUMENT`.
 - A library must fill the list from its subscription handlers (the application declares nothing more), send it on
   every `Register`, the first of each stream and every later one, and empty it with the other lists in a `Register`
-  with no types (`L1-SUBSCRIBE`; the runner's fake hubs do not check it yet: a library's own test). Without it, every
+  with no types (`L1-SUBSCRIBE`; the runner checks the first `Register` of a stream). Without it, every
   subscription of its types is refused.
 - Registrants must agree: a type declared a subscription type by one registrant and not by another is
   `ALREADY_EXISTS` for the later `Register`, also when the type's only instance registers it again with the other
@@ -731,21 +734,34 @@ It splits its permits (`L1-HUB-PERMITS`):
 It fails over (`L1-HUB-FAILOVER`): a request never handed to a stream's transport (the stream dropped before the client
 noticed, or the request still sat in the library's outbound buffer) goes to the next hub with the same id: it was never
 sent. A unary request a hub answers with `ErrorCode.NO_HANDLER` was never delivered, so the other live hubs get it in
-turn, each at most once, in the same order the request chose its first hub by (a keyed request: descending rendezvous
-score; an unkeyed one: round-robin order from its hub); if all decline, the last answer comes back at once. A
-scatter-gather, a stream or a subscription moves like a unary request while it is not written; once written, it is
-bound to the hub it was sent through.
+turn, each at most once: a keyed request in descending rendezvous score, an unkeyed one in round-robin order (see the
+note below). When every live hub declined, the last `ErrorCode.NO_HANDLER` is the answer, at once, also after the
+deadline. A scatter-gather, a stream or a subscription moves like a unary request while it is not written; once
+written, it is bound to the hub it was sent through. Every call kind (unary, scatter-gather, stream, subscription)
+follows the rules below.
 
 - **Every hop carries the full timeout.** A moved request is sent as it was built, with the caller's
   `Request.timeout_ms` unchanged, never what is left of it, and each hop is guarded by the full bound
   ([Timeouts](#timeouts)).
 - **One deadline per call.** The call's deadline is its timeout (the caller's, else the library's configured default),
   else 5 s, from the moment the call began. While no hub can take the request (none is live yet, a hub is
-  restarting), the call waits for one until that deadline. No new hop starts after the deadline: the call then fails
-  as never sent ("no hub took the request within ..."). So one call ends within its deadline plus one hop's guard.
+  restarting), the call waits for one until that deadline, then fails as never sent (hub unavailable: "no hub
+  connected within ..."). No new hop starts after the deadline, the walk after `ErrorCode.NO_HANDLER` included:
+  with a live hub still untried, the call then fails as never sent ("no hub took the request within ..."). So one
+  call ends within its deadline plus one hop's guard.
+- **A hub is tried once per call.** A hub that did not take the request (it declined with `ErrorCode.NO_HANDLER`, the
+  write to it failed, or the request was lost in its buffer) is not tried again in the same call. Only when no live
+  hub is left to try, none declined and the live hubs then change (a hub reconnected) does the call start over with
+  the live hubs, within its deadline.
 - **At most 8 moves.** Only a request lost while it sat in a stream's buffer counts as a move; a hub that was not live
   when chosen, a stream that closed before the request could be queued and an `ErrorCode.NO_HANDLER` answer do not.
   The ninth such loss fails the call as never sent (`'<type>' not written: 9 hub streams lost before it was`).
+
+**The order among the untried hubs is not fixed.** For a keyed request it is the rendezvous order. For an unkeyed
+request the protocol does not fix which untried hub comes next, and with three or more hubs the official libraries
+differ: the Kotlin library takes the untried live hubs as a list and picks `list[counter % size]` with its shared
+round-robin counter; the Go and Rust libraries take a new round-robin turn over all live hubs, rotate the hubs from
+that turn and pick the first one not tried. A caller must not rely on which hub comes next.
 
 **Addresses.** The official libraries take a list (`static://hub:7000,hub-2:7000`) or one `dns:///name:port`
 re-resolved every 30 s. A DNS answer is reduced to its IPv4 addresses when it has any, else its IPv6 ones, without
@@ -879,7 +895,7 @@ in [Server settings](../server/configuration/server.md)):
 |---|---|
 | Heartbeat interval | `RegisterAck.heartbeat_interval_ms` (3 s by default); 3 s before the ack |
 | Client handshake timeout | 10 s without a `RegisterAck`: close and reconnect |
-| Client gives up a silent hub | on the tick after 3 unanswered heartbeats, more than 3 intervals after the last echo (between 9 and 12 s at 3 s); never before the `RegisterAck` |
+| Client gives up a silent hub | on a tick more than 3 intervals after the last echo with at least 3 heartbeats unanswered (between 9 and 12 s at 3 s); never before the `RegisterAck` |
 | HTTP/2 keepalive, client side | ping every 10 s, timeout 5 s, also while idle |
 | Client-side request guard | the hub's bound for the request ([Timeouts](#timeouts): the caller's timeout, the type's override or the maximum) + 1 s |
 | Client-side stream guard | twice the hub's bound + 1 s for the first part, the bound + 1 s between parts (the stream is then cancelled); a subscription's guard covers its initial result only (the bound + 1 s) |

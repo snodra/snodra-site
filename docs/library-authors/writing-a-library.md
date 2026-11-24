@@ -60,8 +60,8 @@ stateDiagram-v2
     AwaitingAck --> Live: RegisterAck
     AwaitingAck --> Rejected: closed with ALREADY_EXISTS, INVALID_ARGUMENT, UNAUTHENTICATED or PERMISSION_DENIED
     AwaitingAck --> Backoff: no ack within the handshake timeout, or the stream failed
-    Live --> Live: Heartbeat every interval, later Register acked, credentials refreshed
-    Live --> Backoff: stream failed or closed, or the hub silent (three heartbeats unanswered, more than three intervals since the last echo)
+    Live --> Live: Heartbeat every interval, later Register (followed by a Heartbeat) acked, credentials refreshed
+    Live --> Backoff: stream failed or closed, or the hub silent (at least three heartbeats unanswered, more than three intervals since the last echo)
     Rejected --> Connecting: after the backoff cap, reason kept
     Backoff --> Connecting: after the wait (reset to the floor if the last attempt reached Live)
     Live --> Draining: shutdown (empty Register first, then handlers drained and subscriptions ended in either order, half-close)
@@ -174,10 +174,13 @@ Each is a rule, with the reason it exists and the check that proves it.
   because it carries what the client must apply (the heartbeat interval, the timeout rules, the hub id), and the hub
   writes it before the echo of the heartbeat that follows the `Register`. A client that went live on an echo would
   heartbeat and time out on guesses, and could not tell two targets of one hub apart.
-- **Drop a silent hub on the tick after its third unanswered heartbeat, and only after the ack** (`L1-SILENT-HUB`). A
-  rule on the time since the last echo alone drops a healthy stream when a tick fires a little late, exactly three
-  intervals after the echo; a check before the ack drops a slow handshake that the handshake timeout is there to wait
-  for.
+- **Drop a silent hub only when both more than three intervals passed and at least three heartbeats are unanswered,
+  and only after the ack** (`L1-SILENT-HUB`). A rule on the time since the last echo alone drops a healthy stream when
+  a tick fires a little late, exactly three intervals after the echo; a check before the ack drops a slow handshake
+  that the handshake timeout is there to wait for.
+- **Follow every `Register` with a `Heartbeat`, a later one too** (`L1-SILENT-HUB`): the hub answers the heartbeat
+  after the `Register` has been read, so its echo shows the hub is alive at that point, and the heartbeat counts toward
+  the silent-hub rule like any other.
 - **Serve requests that arrive before the ack** (`L1-EARLY-REQUESTS`): the hub routes to an instance as soon as its
   `Register` is processed, so dropping them fails a sender's request for nothing.
 - **A refused `Register` is not fatal** (`L1-REJECTION`): two services registering one type is a deployment error; a

@@ -209,7 +209,9 @@ SQL add-on that shares a database with them follows it.
   `snodra_saga_failures`.
 - **Versions are additive**: a later change is V2, V3 in the same history, and code at version n accepts a database at n
   or later. Applied at startup by default under a database lock; with that off, the startup refuses a database below
-  V1. Run with Flyway, the library's files keep a history table of their own (`snodra_schema_history`), apart from the
+  V1. The lock is the same in every library, so instances in different languages never apply the schema at once: on
+  PostgreSQL the session advisory lock `pg_try_advisory_lock(6002810473706375245)` (`0x534E44525343484D`, retried
+  until it is taken, at most 60 s), on MySQL the named lock `GET_LOCK('snodra_schema', 60)`. Run with Flyway, the library's files keep a history table of their own (`snodra_schema_history`), apart from the
   application's migrations.
 - **Hashes**: a value without a bound that must be unique or looked up (a processed-event marker id, an idempotency
   key, a saga failure id, a saga start key, an association, a dead letter's record key) goes through a `CHAR(64)`
@@ -233,7 +235,9 @@ SQL add-on that shares a database with them follows it.
   transaction of its own; every transaction the store runs on its own (claims, dead letters, processor control, the
   purge) runs at READ COMMITTED. Claims take `SELECT ... FOR UPDATE SKIP LOCKED` in `(created_at, seq)` order; two
   writers of one saga never wait for each other to end (`NOWAIT`, an advisory lock on PostgreSQL, a one-second lock
-  wait on MySQL): the second fails with the retryable conflict.
+  wait on MySQL): the second fails with the retryable conflict. The PostgreSQL lock of a saga start is the
+  transaction-scoped `pg_try_advisory_xact_lock(1397638226, hashtext(start_key_hash))` (`0x534E4452`, with the start
+  key's hash as the second key); on MySQL the insert waits at most 1 s on the unique index of the live start key.
 - **Retention and wake-up**: a purge task (every minute by default) removes what the retentions let go; on PostgreSQL
   an append's transaction sends `NOTIFY` on `snodra_outbox` and the relay listens on a connection of its own (it can be
   turned off); MySQL polls.
