@@ -1,0 +1,63 @@
+@import "@fontsource-variable/inter";
+
+/* Snodra brand: raven indigo, near-black surfaces, teal accents. */
+:root {
+  --sl-font: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sl-color-accent-low: #211c4a;
+  --sl-color-accent: #7c6cff;
+  --sl-color-accent-high: #c9c2ff;
+  --sl-color-white: #f7f7fb;
+}
+
+:root[data-theme="dark"] {
+  --sl-color-bg: #07060d;
+  --sl-color-bg-nav: #0b0914;
+  --sl-color-bg-sidebar: #0b0914;
+  --sl-color-bg-inline-code: #161327;
+  --sl-color-hairline: #211d34;
+  --sl-color-hairline-light: #2b2742;
+  --sl-color-hairline-shade: #171426;
+  --sl-color-text: #c5c1d8;
+  --sl-color-text-accent: #a99dff;
+  --sl-color-text-invert: #07060d;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #e9e6ff;
+  --sl-color-accent: #5b4bd6;
+  --sl-color-accent-high: #2b2270;
+}
+
+/* Starlight's content width is comfortable for prose; let wide tables scroll. */
+.sl-markdown-content table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.sl-markdown-content table code {
+  white-space: nowrap;
+}
+
+/* Brand the site title and the GitHub link without changing Starlight's layout. */
+.site-title {
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+/* Mermaid diagrams: a card-like surface, and readable edge labels in dark mode. */
+.sl-markdown-content .mermaid,
+.sl-markdown-content pre.mermaid {
+  margin-block: 1.5rem;
+}
+
+/* A subtle brand hairline under the top nav. */
+.sl-nav {
+  border-bottom: 1px solid var(--sl-color-hairline);
+}
+
+/* Keep the default focus ring visible on the dark background. */
+:focus-visible {
+  outline: 2px solid var(--sl-color-accent-high);
+  outline-offset: 3px;
+}

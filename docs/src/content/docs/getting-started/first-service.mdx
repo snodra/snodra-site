@@ -1,0 +1,110 @@
+---
+title: "Your first service"
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+This walkthrough connects one service to a running server and sends it a command. It links the
+existing quickstarts for the code instead of repeating them: the Kotlin, Rust and Go pages are the
+reference for handlers and buses. The Go library is at feature level 1: it covers commands and queries, not events or
+sagas.
+
+## Before you start
+
+- Docker, for the server.
+- A JVM with Gradle, a Rust toolchain, or Go 1.26 or later, depending on the service you write.
+- A Kafka broker or a RabbitMQ Streams cluster for events, and MongoDB or PostgreSQL/MySQL for the
+  message store. The quickstarts assume Kafka and MongoDB; substitute the stores you run. A service
+  that only answers commands and queries needs neither store.
+
+## 1. Start the server
+
+```sh
+docker run --rm -p 7000:7000 -p 7001:7001 \
+  snodra/snodra-server:0.6.0
+```
+
+Open [http://localhost:7001/ui/](http://localhost:7001/ui/). The topology is empty until a service registers. If the port is
+taken on macOS, see [the quick start](/docs/server/quickstart/) for the AirPlay note.
+
+## 2. Create the service
+
+<Tabs>
+<TabItem label="Kotlin">
+
+Follow [the Kotlin quick start](/docs/messaging/kotlin/quickstart/) through the dependency and
+the handler. The starter discovers `@CommandHandler`, `@QueryHandler` and `@EventHandler`
+methods and registers their types on connect.
+Set the service name and the server address in `application.yml`:
+```yaml
+snodra:
+  messaging:
+    service-name: orders
+    hub:
+      address: static://localhost:7000
+```
+
+
+</TabItem>
+<TabItem label="Rust">
+
+Follow [the Rust quick start](/docs/messaging/rust/quickstart/) through the builder and the
+handler. A closure passed to `.command(...)`, `.query(...)` or `.event(...)` is the handler; the
+builder opens the hub stream and registers the types.
+```sh
+export SNODRA_SERVICE_NAME=orders
+export SNODRA_SERVER_ADDRESS=static://localhost:7000
+```
+
+
+</TabItem>
+<TabItem label="Go">
+
+Follow [the Go quick start](/docs/messaging/go/quickstart/) through the message types and the handlers. A
+function passed to `snodra.HandleCommand` or `snodra.HandleQuery` is the handler; `app.Run` opens the hub stream and
+registers the types. The Go library has no events yet, so the service below answers commands and queries only.
+```sh
+export SNODRA_SERVICE_NAME=orders
+export SNODRA_SERVER_ADDRESS=static://localhost:7000
+```
+
+
+</TabItem>
+</Tabs>
+
+## 3. Declare one command and one event
+
+Both quickstarts show the message types. Keep the naming rules in mind: a wire type is
+`<service-prefix>.<ClassName>`, commands are imperative, events are past tense. The type name is the
+routing key — the server matches a request to a handler by it.
+
+See [the messaging model](/docs/messaging/) for naming, the Kafka/RabbitMQ layout and the
+outbox, and [Commands](/docs/concepts/commands/) for what a handler may assume.
+
+## 4. Send the command
+
+Start the service, wait for it to register, and send through the library's command bus, or from
+another service with the same client. The topology should now list the service, its instance and
+the command type. A request with no live handler fails immediately with `NO_HANDLER`; it is not
+queued.
+
+## 5. Watch what happened
+
+- **Topology** shows instances, handled types and queue depth.
+- **Processors** shows each event processor, its lag and its dead letters.
+- **Events** searches the event store for the event your handler published.
+
+See [Dashboard](/docs/server/dashboard/), [Event processors](/docs/server/event-processors/) and
+[Event browser](/docs/tools/event-browser/). If the event never appears, check the outbox and the event
+store's settings in [Add-ons](/docs/add-ons/).
+
+## 6. Where to go next
+
+| Goal | Page |
+|---|---|
+| Add authentication | [Authentication](/docs/server/configuration/) |
+| Choose the stores | [Add-ons](/docs/add-ons/) |
+| Add a saga | [Sagas](/docs/concepts/sagas/), then [Rust sagas](/docs/messaging/rust/sagas/) |
+| Test the service | [Testing](/docs/operations/testing/) |
+| Run it in a container | [Containers](/docs/integrations/containers/) |
+| Tune queues and deadlines | [Tuning](/docs/operations/tuning/) |

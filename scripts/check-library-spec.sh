@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Keeps the "Writing a library" pages (docs/library-authors/*.md) in step with hub.proto, the one source of truth.
+# Keeps the "Writing a library" pages (docs/src/content/docs/library-authors/*.md) in step with hub.proto, the one source of truth.
 #
 # Fails when a page names a protocol message, field, enum value or rpc that hub.proto does not have, when the check
 # would pass vacuously (hub.proto yields no names, or the pages name none), and when a frozen SQL schema file of
-# docs/library-authors/sql/v1 is missing or does not have its pinned SHA-256. Links are checked by
-# `mkdocs build --strict`, not here. The marking convention:
+# docs/public/library-authors/sql/v1 is missing or does not have its pinned SHA-256. Links are checked by
+# `npm run build --prefix docs`, not here. The marking convention:
 #
 #   - `Message.field`, `Message.field.field` (followed through the field's message type), `Enum.VALUE` and `Hub.Rpc`
 #     in an inline code span name the protocol, on every page. A oneof's name counts as a field of its message.
@@ -32,7 +32,7 @@ if [ "${1:-}" = "--list" ]; then
   list=true
   shift
 fi
-dir="$root/docs/library-authors"
+dir="$root/docs/src/content/docs/library-authors"
 proto="${SNODRA_PROTO_SOURCE:-$root/../snodra-server/proto/hub.proto}"
 
 if [ ! -f "$proto" ]; then
@@ -40,8 +40,8 @@ if [ ! -f "$proto" ]; then
   exit 1
 fi
 
-# The frozen V1 SQL schema files (docs/library-authors/sql/v1): their SHA-256 is the one
-# docs/library-authors/message-store-add-ons.md states and both libraries pin. A missing file is a failure.
+# The frozen V1 SQL schema files (docs/public/library-authors/sql/v1): their SHA-256 is the one
+# docs/src/content/docs/library-authors/message-store-add-ons.md states and both libraries pin. A missing file is a failure.
 if command -v sha256sum >/dev/null 2>&1; then
   sha256() { sha256sum "$1" | awk '{ print $1 }'; }
 elif command -v shasum >/dev/null 2>&1; then
@@ -55,7 +55,7 @@ for pinned in \
   "mysql ec77259da977f07ba83abe8ba9104dcf7a9e292760c87ae712639d786671557d"; do
   dialect="${pinned%% *}"
   want="${pinned#* }"
-  schema="$dir/sql/v1/$dialect/V1__snodra.sql"
+  schema="$root/docs/public/library-authors/sql/v1/$dialect/V1__snodra.sql"
   if [ ! -f "$schema" ]; then
     echo "library spec: frozen schema not found at $schema" >&2
     exit 1

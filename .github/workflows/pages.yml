@@ -25,24 +25,26 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: landing/package-lock.json
-      - run: npm ci --prefix landing
-      - run: npm run build --prefix landing
+          cache-dependency-path: |
+            landing/package-lock.json
+            docs/package-lock.json
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-          cache: pip
-          cache-dependency-path: docs/requirements.lock
-      - run: pip install -r docs/requirements.lock
-      - name: strict build
-        run: mkdocs build --strict
+      - name: install
+        run: |
+          npm ci --prefix landing
+          npm ci --prefix docs
+
+      - name: build the landing
+        run: npm run build --prefix landing
+
+      - name: build the Starlight documentation
+        run: npm run build --prefix docs
 
       - name: the landing at / and the docs under /docs/
         run: |
           mkdir -p _site
           cp -R landing/dist/. _site/
-          cp -R site _site/docs
+          cp -R docs/dist/. _site/docs/
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

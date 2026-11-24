@@ -1,7 +1,10 @@
-site/
-_site/
 .venv/
+.venv-docs/
 __pycache__/
+_site/
 landing/node_modules/
 landing/dist/
 landing/.astro/
+docs/node_modules/
+docs/dist/
+docs/.astro/

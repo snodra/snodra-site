@@ -1,16 +1,18 @@
-PY := .venv-docs/bin/python
-MKDOCS := .venv-docs/bin/mkdocs
 NPM := npm
 LANDING := landing
+DOCS := docs
 SITE := _site
 
-.PHONY: docs-serve docs-build landing-install landing-dev landing-build site
+.PHONY: docs-install docs-dev docs-build landing-install landing-dev landing-build site
 
-docs-serve:
-	$(MKDOCS) serve
+docs-install:
+	cd $(DOCS) && $(NPM) ci
+
+docs-dev:
+	cd $(DOCS) && $(NPM) run dev
 
 docs-build:
-	$(MKDOCS) build --strict
+	cd $(DOCS) && $(NPM) run build
 
 landing-install:
 	cd $(LANDING) && $(NPM) ci
@@ -21,9 +23,9 @@ landing-dev:
 landing-build:
 	cd $(LANDING) && $(NPM) run build
 
-# The published artifact: the landing at / and the documentation under /docs/.
+# The published artifact: the landing at / and the Starlight documentation under /docs/.
 site: landing-build docs-build
 	rm -rf $(SITE)
 	mkdir -p $(SITE)
 	cp -R $(LANDING)/dist/. $(SITE)/
-	cp -R site $(SITE)/docs
+	cp -R $(DOCS)/dist/. $(SITE)/docs/
