@@ -7,7 +7,7 @@ against the conformance contract. Snodra ships a kit for each.
 
 === "Kotlin"
 
-    Add `com.damoreira.snodra:snodra-messaging-test:0.5.0` as a test dependency. It provides
+    Add `com.damoreira.snodra:snodra-messaging-test:0.6.1` as a test dependency. It provides
     `InMemoryBuses` (a real `EventBus`, `CommandBus` and `QueryBus` without Docker),
     `InProcessHub` (a fake hub with permits, queues and all query modes), `SnodraContainers` and
     `SagaTestFixture`.

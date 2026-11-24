@@ -1344,7 +1344,8 @@ Reference: ``protocol/hub.proto``, hub internals in
 2. **Heartbeat.** The client heartbeats at the interval from the ack (3 s by default); the hub echoes it with
    `sent_at_ms` unchanged. Silence for the hub's heartbeat timeout (10 s) or a closed stream removes the instance and fails its in-flight requests with `HANDLER_DISCONNECTED`. A
    client drops the stream and reconnects when the hub is silent: on a heartbeat tick, more than three intervals since
-   the last echo and the three heartbeats sent since then all unanswered.
+   the last echo and at least three heartbeats sent since then unanswered (a heartbeat follows every `Register` and
+   counts too).
 3. **Send.** `CommandBus.send` builds `Request{id, kind, type, routing_key, payload, headers,
    timeout_ms}` and writes it to the stream, then awaits a `Reply` or `Error` with the same id.
    `timeout_ms` is 0 unless the caller chose a timeout, so the hub's default or per-type override

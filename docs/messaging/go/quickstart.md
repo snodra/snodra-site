@@ -1,12 +1,13 @@
 # Go quick start
 
-The Go library is pre-1.0 and at feature level 1: no version is released yet, and the API may still change.
-It needs Go 1.26 or later.
+The Go library is pre-1.0 and at feature level 1: the API may still change between minor versions. It needs Go 1.26
+or later.
 
 ## Dependency
 
 ```sh
-go get github.com/snodra/snodra-messaging-go
+go get github.com/snodra/snodra-messaging-go@latest
+go get github.com/snodra/snodra-messaging-go/observability@latest   # optional: OpenTelemetry
 ```
 
 The package is named `snodra`; the examples import it as `snodra "github.com/snodra/snodra-messaging-go"`.
@@ -116,8 +117,8 @@ the service:
 SNODRA_SERVER_ADDRESS=localhost:7000 go run ./examples/quickstart
 ```
 
-`snodra.FromEnv()` reads the `SNODRA_*` variables the other Snodra libraries read, so the same environment configures
-a service in any language; options given after it win. [Configuration](configuration.md) lists them all.
+`snodra.FromEnv()` reads the `SNODRA_*` variables the Rust library reads too (the Kotlin library is configured with
+Spring properties instead); options given after it win. [Configuration](configuration.md) lists them all.
 
 ## Next
 

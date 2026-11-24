@@ -8,10 +8,10 @@ so a Snodra service is an ordinary Boot application with a few annotations.
 
 ```kotlin
 dependencies {
-    implementation("com.damoreira.snodra:snodra-messaging:0.5.0")
-    implementation("com.damoreira.snodra:snodra-messaging-kafka:0.5.0")
-    implementation("com.damoreira.snodra:snodra-messaging-mongo:0.5.0")
-    testImplementation("com.damoreira.snodra:snodra-messaging-test:0.5.0")
+    implementation("com.damoreira.snodra:snodra-messaging:0.6.1")
+    implementation("com.damoreira.snodra:snodra-messaging-kafka:0.6.1")
+    implementation("com.damoreira.snodra:snodra-messaging-mongo:0.6.1")
+    testImplementation("com.damoreira.snodra:snodra-messaging-test:0.6.1")
 }
 ```
 

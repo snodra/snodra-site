@@ -5,12 +5,13 @@ streaming queries and subscription queries, and sends messages to other services
 keeps the hub streams, permits, retries and timeouts, and you write functions.
 
 ```sh
-go get github.com/snodra/snodra-messaging-go
+go get github.com/snodra/snodra-messaging-go@latest
 ```
 
 **Status: pre-1.0, feature level 1.** The library implements level 1 of the protocol and passes all 33 checks of the
-[conformance runner](../../tools/conformance-runner.md) through `examples/conformance-service`. No version has been
-released yet and the API may still change before 1.0. It needs Go 1.26 or later.
+[conformance runner](../../tools/conformance-runner.md) through `examples/conformance-service`. The versions are on
+the [releases page](https://github.com/snodra/snodra-messaging-go/releases); all are pre-1.0, so the API may still
+change between minor versions. It needs Go 1.26 or later.
 
 ## What it gives you
 

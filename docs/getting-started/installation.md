@@ -55,10 +55,10 @@ repositories {
 }
 
 dependencies {
-    implementation("com.damoreira.snodra:snodra-messaging:0.5.0")
-    implementation("com.damoreira.snodra:snodra-messaging-kafka:0.5.0")   // or snodra-messaging-rabbitmq
-    implementation("com.damoreira.snodra:snodra-messaging-mongo:0.5.0")   // or snodra-messaging-jdbc
-    testImplementation("com.damoreira.snodra:snodra-messaging-test:0.5.0")
+    implementation("com.damoreira.snodra:snodra-messaging:0.6.1")
+    implementation("com.damoreira.snodra:snodra-messaging-kafka:0.6.1")   // or snodra-messaging-rabbitmq
+    implementation("com.damoreira.snodra:snodra-messaging-mongo:0.6.1")   // or snodra-messaging-jdbc
+    testImplementation("com.damoreira.snodra:snodra-messaging-test:0.6.1")
 }
 ```
 
@@ -86,9 +86,9 @@ Next: [the Kotlin quick start](../messaging/kotlin/quickstart.md), then
 The crate and its add-ons come from crates.io:
 
 ```sh
-cargo add snodra-messaging-rs@0.6
-cargo add snodra-messaging-kafka@0.6        # or snodra-messaging-rabbitmq
-cargo add snodra-messaging-mongo@0.6        # or snodra-messaging-sqlx with a database feature
+cargo add snodra-messaging-rs@0.7
+cargo add snodra-messaging-kafka@0.7        # or snodra-messaging-rabbitmq
+cargo add snodra-messaging-mongo@0.7        # or snodra-messaging-sqlx with a database feature
 ```
 
 | Crate | Use |
@@ -102,14 +102,14 @@ cargo add snodra-messaging-mongo@0.6        # or snodra-messaging-sqlx with a da
 The SQL crate takes its database from its features:
 
 ```toml
-snodra-messaging-sqlx = { version = "0.6", default-features = false, features = ["postgres"] }
+snodra-messaging-sqlx = { version = "0.7", default-features = false, features = ["postgres"] }
 ```
 
 For tests, enable the library's `testing` feature in dev-dependencies:
 
 ```toml
 [dev-dependencies]
-snodra-messaging-rs = { version = "0.6", features = ["testing"] }
+snodra-messaging-rs = { version = "0.7", features = ["testing"] }
 ```
 
 Next: [the Rust quick start](../messaging/rust/quickstart.md), then
@@ -118,11 +118,11 @@ Next: [the Rust quick start](../messaging/rust/quickstart.md), then
 ## Go
 
 The Go library is pre-1.0 and at feature level 1: commands and queries, in every query mode, with no events, stores or
-sagas yet. No version is released, so take the module without one. It needs Go 1.26 or later:
+sagas yet. It needs Go 1.26 or later:
 
 ```sh
-go get github.com/snodra/snodra-messaging-go
-go get github.com/snodra/snodra-messaging-go/observability   # optional: OpenTelemetry metrics and traces
+go get github.com/snodra/snodra-messaging-go@latest
+go get github.com/snodra/snodra-messaging-go/observability@latest   # optional: OpenTelemetry metrics and traces
 ```
 
 The package is named `snodra`; import it as `snodra "github.com/snodra/snodra-messaging-go"`. The core module depends

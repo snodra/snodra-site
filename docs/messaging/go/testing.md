@@ -30,10 +30,11 @@ scripts/conformance.sh --only L1-RETRY       # one check
 SNODRA_HUB_PORT=17000 scripts/conformance.sh # when port 7000 is taken (the second hub is 100 above)
 ```
 
-The script builds the service, downloads the pinned runner release into `bin/` (or uses the runner that
-`SNODRA_CONFORMANCE_BIN` names), starts the hub (`SNODRA_SERVER_VERSION` picks the image tag) and removes it
-afterwards. On macOS the AirPlay Receiver holds port 7000, so set `SNODRA_HUB_PORT` there. CI runs the same script and
-fails when a check fails or is skipped.
+The script builds the service, downloads the pinned runner release into `bin/` and checks it against the sha256 pinned
+in `scripts/conformance-runner.sha256` (or uses the runner that `SNODRA_CONFORMANCE_BIN` names), starts the hub
+(`SNODRA_SERVER_VERSION` picks the image tag) and removes it afterwards. On macOS the AirPlay Receiver holds port 7000,
+so set `SNODRA_HUB_PORT` there. CI runs the same script with the same pinned runner, fails when a check fails or is
+skipped, and keeps the runner's report as a build artifact.
 
 The checks and what each asserts are listed in [Feature levels](../../library-authors/feature-levels.md) and in
 [Conformance](../../library-authors/conformance.md).

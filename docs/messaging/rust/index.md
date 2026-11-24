@@ -5,7 +5,7 @@ runs idempotent handlers, publishes through an outbox, and runs sagas with deadl
 
 ```toml
 [dependencies]
-snodra-messaging-rs = "0.6"
+snodra-messaging-rs = "0.7"
 ```
 
 ## What it gives you

@@ -1,7 +1,8 @@
 # Configuration
 
 Every setting is an option (`snodra.Service`, `snodra.Hubs`, `snodra.MaxConcurrent`, ...). `snodra.FromEnv()` reads the
-same `SNODRA_*` variables the other Snodra libraries read. Options apply in order, so one given after `FromEnv()`
+`SNODRA_*` variables, the same ones the Rust library reads; the Kotlin library is configured with Spring properties
+(`snodra.messaging.*`) instead. Options apply in order, so one given after `FromEnv()`
 overrides what the environment set. The same list is in the documentation of `FromEnv` (`go doc snodra.FromEnv`).
 
 A variable that is unset, or blank, changes nothing. Numbers are non-negative integers; flags are `true`, `1`, `yes`,

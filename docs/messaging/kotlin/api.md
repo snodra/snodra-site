@@ -67,8 +67,8 @@
   or per-type override). The client gives up locally only when the hub never answers: after the hub's deadline bound
   from the ack (`min(timeout, override or max)`, or `override or max` for 0) plus 1 s, with `MessageTimeoutException`.
 - **Dead connections.** A hub stream is closed and re-established when its hub is silent: on a heartbeat tick, more
-  than three heartbeat intervals since the last echo (the `RegisterAck` counts as the first) and the three heartbeats
-  written since then all unanswered, so between 9 and 12 s after the last echo with the hub's default of 3 s. Nothing
+  than three heartbeat intervals since the last echo (the `RegisterAck` counts as the first) and at least three
+  heartbeats written since then unanswered (every `Register` is followed by a heartbeat that counts too), so between 9 and 12 s after the last echo with the hub's default of 3 s. Nothing
   is checked before the `RegisterAck` (the 10 s handshake timeout covers that); HTTP/2 keepalive pings (every 10 s, 5 s timeout, also without calls) run on the
   channel.
 - **Lost connections.** A request the stream never accepted (including one still queued on the client when the stream
@@ -138,7 +138,14 @@ snodra.messaging.hub.address: static://hub-1:7000,static://hub-2:7000   # or: dn
   sent again carries its `timeout_ms` unchanged, each hop guarded by the full bound, so a call ends within its deadline
   plus one hop's guard. A request lost while still queued moves at most 8 times; the ninth loss fails it with
   `HubUnavailableException` (`'<type>' not written: 9 hub streams lost before it was`). A request already written fails with `HubConnectionLostException` (or the hub's `HandlerDisconnectedException`), and the retry policy
-  applies. With no live hub at all: `HubUnavailableException`, as with one hub.
+  applies. With no live hub at all, every call kind (send, gather, stream, subscribe) waits for one until its
+  deadline, then fails with `HubUnavailableException`, as with one hub.
+- **`NO_HANDLER` from one hub.** A unary request a hub answers `NO_HANDLER` goes to the other live hubs in turn, with
+  the same id and its full `timeout_ms`; a hub that declined, or did not take the request, is not tried again in the
+  same call. When every live hub declined, the last `NoHandlerException` is the answer at once; when the deadline
+  passes with a live hub still untried, the call fails with `HubUnavailableException`. Without a routing key the next
+  hub is `untried[counter % size]` of the untried live hubs (other libraries may pick another one: the order is not
+  part of the protocol).
 - **Permits.** A stream announces `ceil(hub.max-concurrent-handlers / N)` initial permits, where N = 1 (the hub being
   registered on) + the other hubs that are live or still on their first connect attempt (a hub down after a failed
   attempt is not counted). Whenever that count changes, every live stream is topped up to its current share:

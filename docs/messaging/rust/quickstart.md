@@ -4,10 +4,10 @@
 
 ```toml
 [dependencies]
-snodra-messaging-rs = "0.6"
+snodra-messaging-rs = "0.7"
 ```
 
-The crates live on crates.io: pin a minor version (`0.6`), or the exact release.
+The crates live on crates.io: pin a minor version (`0.7`), or the exact release.
 
 ## Usage
 

@@ -7,7 +7,8 @@ servers, and authenticate. It is how a new language binding is listed as support
 ## What it runs against
 
 The runner starts **your conformance service** — a program built with your library's API that handles
-the `conformance.*` types of the contract and reads its settings from `CONFORMANCE_*` variables. It
+the `conformance.*` types of the contract and reads its settings from `CONFORMANCE_*` variables. The service should
+turn on its library's "always route through the hub" setting, so its sends to its own types go through the hub. It
 drives that service against:
 
 - **fake servers inside the runner**, for the handshake, refusals, heartbeats, permits, credits,
@@ -36,7 +37,7 @@ snodra-conformance run \
 
 `snodra-conformance list` prints the checks and what each needs. The runner, its reference service
 and a deliberately broken service live in `snodra-conformance`; each release publishes
-binaries for Linux and macOS on its
+binaries for Linux and macOS (no Windows binary) on its
 [releases page](https://github.com/snodra/snodra-conformance/releases) and the container image
 `snodra/snodra-conformance`.
 

@@ -60,7 +60,7 @@ The hub echoes a client `Heartbeat` with `sent_at_ms` unchanged.
 | Heartbeat interval | 3 s | hub, `SNODRA_SERVER_HEARTBEAT_INTERVAL`, announced in `RegisterAck.heartbeat_interval_ms` |
 | Instance considered dead | 10 s without heartbeat, or stream closed | hub, `SNODRA_SERVER_HEARTBEAT_TIMEOUT`, announced in `RegisterAck.heartbeat_timeout_ms` |
 | Eviction check | every tenth of the timeout (10 ms to 1 s) | fixed |
-| Client gives up a silent hub | on a heartbeat tick, more than 3 intervals since the last echo and 3 heartbeats unanswered (9 to 12 s); not before the `RegisterAck` | clients |
+| Client gives up a silent hub | on a heartbeat tick, more than 3 intervals since the last echo and at least 3 heartbeats unanswered (9 to 12 s); not before the `RegisterAck` | clients |
 | Default request timeout | 5 s | hub, for `Request.timeout_ms == 0` without override, `SNODRA_SERVER_DEFAULT_TIMEOUT_MS` |
 | Maximum request timeout | 60 s | hub clamps larger client values on types without override, `SNODRA_SERVER_MAX_TIMEOUT_MS` |
 | Per-type request timeout | none | `SNODRA_SERVER_TIMEOUT_OVERRIDES=type=ms,...`; replaces both default and clamp for its type |

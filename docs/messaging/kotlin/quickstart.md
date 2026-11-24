@@ -9,12 +9,12 @@ repositories {
 }
 
 dependencies {
-    implementation("com.damoreira.snodra:snodra-messaging:0.5.0")
-    implementation("com.damoreira.snodra:snodra-messaging-kafka:0.5.0")   // or -rabbitmq
-    implementation("com.damoreira.snodra:snodra-messaging-mongo:0.5.0")   // or -jdbc
+    implementation("com.damoreira.snodra:snodra-messaging:0.6.1")
+    implementation("com.damoreira.snodra:snodra-messaging-kafka:0.6.1")   // or -rabbitmq
+    implementation("com.damoreira.snodra:snodra-messaging-mongo:0.6.1")   // or -jdbc
     // a service's *-api module depends on the api artifact only:
-    // api("com.damoreira.snodra:snodra-messaging-api:0.5.0")
-    testImplementation("com.damoreira.snodra:snodra-messaging-test:0.5.0")
+    // api("com.damoreira.snodra:snodra-messaging-api:0.6.1")
+    testImplementation("com.damoreira.snodra:snodra-messaging-test:0.6.1")
 }
 ```
 

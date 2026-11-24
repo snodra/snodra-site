@@ -155,7 +155,7 @@ if err == nil {
   stream at the hub, which tells the handler, so credit and goroutines are released. A stream is retried only until its
   first item; after that nothing is retried, and a lost hub stream ends the sequence with `ErrOutcomeUnknown`.
   `StreamWriter.Send` waits for credit at most `StreamCreditTimeout` (10 minutes), after which the stream ends with
-  `TIMEOUT`.
+  `TIMEOUT` and the handler's context is cancelled; its permit and slot return only when the handler returns.
 - **Subscribe.** Updates are hot: the hub relays them from the open on, up to the credit window.
 
 ```go
@@ -239,6 +239,13 @@ An instance opens one stream to every hub it is given, each with the identical r
 away. With one `dns:///name:port` target, every address is a hub, resolved again every 30 s: an address that leaves the
 answer is drained and closed, a new one is connected.
 
+A unary request a hub answers `NO_HANDLER` goes to the other live hubs in turn, with the same id and its full timeout;
+a hub that declined or did not take the request is not tried again in the same call. When every live hub declined, the
+last `NO_HANDLER` is the answer at once; when the call's deadline passes with a live hub still untried, it fails with
+`ErrNeverSent`. Without a routing key, the next hub is the first untried one in a new round-robin turn over all live
+hubs (the order is not part of the protocol). Every later registration is followed by a heartbeat, which counts toward
+the silent-hub rule.
+
 ## Telemetry
 
 The core only defines an interface (`snodra.Instrumentation`, installed with `snodra.Telemetry`) and costs nothing
@@ -255,7 +262,7 @@ app, err := snodra.New(
 ```
 
 ```sh
-go get github.com/snodra/snodra-messaging-go/observability
+go get github.com/snodra/snodra-messaging-go/observability@latest
 ```
 
 `observability.New` takes `WithMeterProvider`, `WithTracerProvider` and `WithPropagator` to use others than the global ones. One
@@ -274,7 +281,8 @@ dashboard serves every library.
 The request duration covers a `Send` or `Query` from the call to its result, retries included; a call its caller
 cancels, a call its options refuse and a call answered in-process record no metric. The instrumentation scope is the
 module's import path, `github.com/snodra/snodra-messaging-go/observability`. A request a handler serves gets a server span named after the message type, a child of the
-request's `traceparent`, and the requests the handler sends carry its trace context.
+request's `traceparent`, and the requests the handler sends carry its trace context. That span is the Go library's
+own: the Kotlin and Rust libraries create none for the requests they serve.
 
 ## Not in the Go library yet
 

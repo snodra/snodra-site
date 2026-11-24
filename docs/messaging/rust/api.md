@@ -12,18 +12,23 @@
   it like `Timeout`). An unknown code reads as `RemoteHandler`. A handler's
   `Err` becomes `HANDLER_ERROR` unless it is `Unauthenticated`/`AccessDenied`/`InvalidMessage`; a panic
   becomes `HANDLER_ERROR "handler panicked"`, never a dropped stream.
-- **Guards** run before the payload is decoded: anonymous → `UNAUTHENTICATED`, refused → `PERMISSION_DENIED`. A guard
+- **Guards**: an anonymous caller is refused with `UNAUTHENTICATED` before the payload is decoded; the guard's rule
+  runs once the payload is decoded, so a caller it refuses gets `PERMISSION_DENIED` and a payload that does not
+  decode is `INVALID_REQUEST` for any authenticated caller, also one with the wrong role. A guard
   needs a JWKS: `start()` fails, naming every guarded type, when a type has a guard (`requires`) and
   `Config::jwks_url` is unset.
 - **Local dispatch.** A command, or a unary query of a type not registered as shared, that this instance handles
-  itself is answered in-process by its own handler once the app has started, without the hub: the routing key and
+  itself is answered in-process by its own handler from its registration on (also through the builder's sender
+  before `start()`), without the hub: the routing key and
   priority are ignored, no timeout or retry applies, no handler permit is taken and no request metric is recorded.
   The handler sees the caller the hub path would carry (the token in `SendOptions.authorization`, or the current
   handler's when `forward_jwt` is on, verified by the same resolver), the correlation id and the trace context; its
   failure is mapped as through the hub. Scatter-gathers, streams, subscriptions and shared queries always go through
   the hub. `SNODRA_SERVER_ALWAYS_ROUTE_THROUGH_HUB=true` (`Config::hub_always_route_through_hub`, or the builder's
   `always_route_through_hub(true)`) sends every request through the hub, the saga relay's commands included, so a
-  routing key keeps its instance affinity; it has no effect while the hub is turned off.
+  routing key keeps its instance affinity; it has no effect while the hub is turned off. One limit: an idempotent
+  command (`idempotent_command`) answered in-process before `start()` fails with a handler error
+  (`RemoteHandler`), because its call records are bound at start.
 - **Unit replies** travel as `{}`; an `Option::None` reply stays `null`.
 - **Consumer** (one per [event processor](#event-processors)): one record at a time; marker
   inserted first (a duplicate id never reaches the handler), handlers run, commit, then the offset.
@@ -49,8 +54,8 @@
   every hub stream (at most 2 s each for the hub to finish its side), fails this instance's outgoing requests still
   in flight with `HubConnectionLost`, stops the publisher and the consumer.
 - **Start** does not wait for the hub. `await_hub(timeout)` tells you when the registration was
-  confirmed by at least one hub (requests can then be sent; before that they fail with
-  `HubUnavailable`, except those answered in-process); `await_all_hubs(timeout)` waits until every hub confirmed it (with
+  confirmed by at least one hub (requests can then be sent; before that a request waits for a hub
+  until its deadline and then fails with `HubUnavailable`, except those answered in-process); `await_all_hubs(timeout)` waits until every hub confirmed it (with
   `dns:///`: every address of the latest resolution; a second target of a hub already reached does
   not count). `app.hub_ids()` lists the hubs registered on now. snodra-messaging (Kotlin) differs
   here: its `HubConnections.awaitRegistered` waits for every hub, like `await_all_hubs`.
@@ -87,9 +92,9 @@
   least `max(initial_backoff, 250 ms)` of the budget is left; otherwise the last error is returned
   at once, without waiting. Each attempt sends what is left of the budget as `timeout_ms`, never
   less than 1 ms (a remainder never turns into "unset", which would let the hub apply its default).
-- **Liveness**: a stream is dropped and reconnected when its hub is silent: on a heartbeat tick, more than three
-  intervals since the last echo (the ack counts as the first) and the three heartbeats sent since then all
-  unanswered, so between three and four intervals after the last echo. Nothing is checked before the ack (the 10 s
+- **Liveness**: every `Register` is followed by a heartbeat, a later one too. A stream is dropped and reconnected
+  when its hub is silent: on a heartbeat tick, more than three intervals since the last echo (the ack counts as the
+  first) and at least three heartbeats sent since then unanswered (those after a `Register` included), so between three and four intervals after the last echo. Nothing is checked before the ack (the 10 s
   handshake timeout covers that). The channel also sends HTTP/2 keepalive pings every 10 s (5 s to answer, also while
   idle).
 - **Replies** go back on the stream the request arrived on; when that stream is gone the reply is
@@ -142,7 +147,8 @@ every instance registers on every hub, and the client picks a hub per request.
   before the client noticed) goes to the next hub in the same order with the same request id: it
   was never sent. So does one still waiting in the stream's outbound buffer (up to 256 messages)
   when the stream drops: the transport never took it, so it was never written (as in
-  snodra-messaging). `HubUnavailable` means no hub took it. A request the transport had already
+  snodra-messaging). With no live hub, a call (of any kind) waits for one until its deadline;
+  `HubUnavailable` means no hub took it. A request the transport had already
   taken fails with `HubConnectionLost` when its stream drops (outcome unknown: it may be on the
   wire); the retry policy then decides (queries are retried, commands are not). Replies go on the stream the request arrived on.
   A moved request sends the caller's chosen timeout again as `timeout_ms`, never what is left of it; it
@@ -152,7 +158,10 @@ every instance registers on every hub, and the client picks a hub per request.
 - **`NO_HANDLER` failover.** A unary send (a command or a point query; not a scatter-gather,
   stream or subscription) that a hub answers with `NO_HANDLER` was never delivered, so the other
   live, acknowledged hubs get it in turn, each at most once and each with the caller's full
-  timeout; if all decline, the last `NO_HANDLER` comes back at once, with no extra delay. A keyed
+  timeout; if all decline, the last `NO_HANDLER` comes back at once, with no extra delay. No hub is tried
+  after the caller's deadline: with a hub still untried, the call then fails with `HubUnavailable`.
+  A hub that refused the write is tried again only on a new stream. Without a routing key, the next hub
+  after a decline is the first untried one in a new round-robin turn over all live hubs. A keyed
   command moves too (its preferred hub has no handler, so affinity cannot be kept anyway), in
   rendezvous order. This is what keeps a single owner instance reachable while it is deregistered on
   one hub, e.g. during a [client certificate rotation](configuration.md#authenticating-with-a-client-certificate-mtls)
