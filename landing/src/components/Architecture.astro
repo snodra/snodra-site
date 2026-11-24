@@ -1,0 +1,108 @@
+---
+import Icon from "./Icon.astro";
+
+const steps = [
+  {
+    n: "01",
+    title: "Send",
+    copy: "A service sends a command or query to the type it targets. No topic to pick, no routing table to maintain.",
+  },
+  {
+    n: "02",
+    title: "Route",
+    copy: "The stateless server matches the type to a live instance and relays the reply. No live handler means NO_HANDLER, immediately.",
+  },
+  {
+    n: "03",
+    title: "Commit",
+    copy: "Inside the handler, state and the event's outbox row are written in one database transaction. There is no second write.",
+  },
+  {
+    n: "04",
+    title: "Relay",
+    copy: "The relay publishes events to Kafka or RabbitMQ Streams. Processors consume them exactly once by construction, with dead letters when they should stop.",
+  },
+];
+
+const glossary = [
+  ["Command", "Asks exactly one service to change something and returns a result. Imperative by convention."],
+  ["Query", "Asks for data. One handler, a scatter-gather across many, a stream, or a live subscription."],
+  ["Event", "States that something happened. Delivered to every interested processor through the event store."],
+  ["Saga", "A long-running process that reacts to events, sends commands and handles deadlines — state in your message store."],
+  ["Outbox", "The table holding events in the same transaction as your state. The relay publishes them afterwards."],
+  ["Processor", "A named event consumer with its own group, position, status and dead letters. Idempotent by construction."],
+  ["Event store", "Kafka or RabbitMQ Streams. Events live here, partitioned and ordered; Snodra Server never stores them."],
+  ["Message store", "MongoDB, PostgreSQL or MySQL. Holds the outbox, processed markers, dead letters and saga state."],
+];
+---
+
+<section id="architecture" class="relative scroll-mt-24 border-y border-line bg-ink-soft/50 py-20 sm:py-28">
+  <div class="wrap">
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.25fr] lg:items-end">
+      <div data-reveal>
+        <p class="eyebrow">How it works</p>
+        <h2 class="mt-4 text-balance text-3xl font-semibold leading-[1.08] tracking-[-0.03em] text-white sm:text-[2.9rem]">
+          A small surface area.<br />
+          <span class="text-muted">A complete model.</span>
+        </h2>
+      </div>
+      <p class="max-w-xl text-pretty text-[0.96rem] leading-relaxed text-muted lg:justify-self-end" data-reveal>
+        Four moves cover the whole system. The server holds no state and the events never pass
+        through it, so the request path stays short and the failure modes stay small.
+      </p>
+    </div>
+
+    <ol class="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        steps.map((step, index) => (
+          <li
+            class="group relative rounded-xl border border-line bg-white/[0.025] p-5 transition-colors hover:border-primary/35"
+            data-reveal
+            style={`--reveal-delay: ${index * 60}ms`}
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-[0.66rem] text-primary-soft">{step.n}</span>
+              {index < steps.length - 1 && (
+                <Icon name="arrow-right" size={14} class="hidden text-dim lg:block" />
+              )}
+            </div>
+            <h3 class="mt-4 text-lg font-semibold tracking-tight text-white">{step.title}</h3>
+            <p class="mt-2 text-[0.84rem] leading-relaxed text-muted">{step.copy}</p>
+          </li>
+        ))
+      }
+    </ol>
+
+    <div class="mt-16 grid gap-10 lg:grid-cols-[0.9fr_1.3fr]">
+      <div data-reveal>
+        <p class="eyebrow">Plain-English glossary</p>
+        <h3 class="mt-4 text-2xl font-semibold tracking-[-0.02em] text-white">
+          The words architects actually use.
+        </h3>
+        <p class="mt-4 max-w-md text-[0.92rem] leading-relaxed text-muted">
+          CQRS gets a reputation for ceremony. These are the only eight concepts you need to read the
+          rest of the documentation, each in one sentence.
+        </p>
+        <a href="/docs/concepts/" class="mt-6 inline-flex items-center gap-2 text-sm font-medium text-primary-soft transition-colors hover:text-white">
+          Read the concepts
+          <Icon name="arrow-right" size={15} />
+        </a>
+      </div>
+
+      <dl class="grid gap-2 sm:grid-cols-2">
+        {
+          glossary.map(([term, definition], index) => (
+            <div
+              class="rounded-xl border border-line bg-white/[0.025] p-4"
+              data-reveal
+              style={`--reveal-delay: ${(index % 4) * 40}ms`}
+            >
+              <dt class="font-mono text-[0.7rem] uppercase tracking-[0.12em] text-primary-soft">{term}</dt>
+              <dd class="mt-2 text-[0.82rem] leading-relaxed text-muted">{definition}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </div>
+</section>

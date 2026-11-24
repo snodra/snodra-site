@@ -1,0 +1,54 @@
+---
+import Base from "../layouts/Base.astro";
+import Icon from "../components/Icon.astro";
+---
+
+<Base title="Page not found — Snodra" description="That page does not exist. The documentation moved under /docs/.">
+  <section class="relative overflow-hidden pb-24 pt-40 sm:pt-48">
+    <div class="pointer-events-none absolute inset-0 -z-10 bg-grid" aria-hidden="true"></div>
+    <div class="wrap text-center">
+      <p class="font-mono text-[0.7rem] uppercase tracking-[0.2em] text-primary-soft">404 / no handler</p>
+      <h1 class="mx-auto mt-5 max-w-2xl text-balance text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.04em] text-white sm:text-[3.6rem]">
+        This page has no live handler.
+      </h1>
+      <p class="mx-auto mt-5 max-w-lg text-pretty text-[0.96rem] leading-relaxed text-muted">
+        The documentation now lives under <code class="rounded bg-white/5 px-1.5 py-0.5 text-white">/docs/</code>.
+        If you followed an old link, the section will redirect you automatically.
+      </p>
+      <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <a href="/" class="btn btn-primary w-full sm:w-auto">
+          Back to the landing page
+          <Icon name="arrow-right" size={15} />
+        </a>
+        <a href="/docs/" class="btn btn-ghost w-full sm:w-auto">
+          <Icon name="book" size={15} />
+          Documentation
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <script is:inline>
+    (() => {
+      const docs = [
+        "getting-started",
+        "concepts",
+        "server",
+        "messaging",
+        "add-ons",
+        "operations",
+        "examples",
+        "integrations",
+        "migration",
+        "reference",
+        "tools",
+        "library-authors",
+      ];
+      const path = window.location.pathname;
+      const first = path.split("/")[1] || "";
+      if (docs.includes(first)) {
+        window.location.replace(`/docs${path}`);
+      }
+    })();
+  </script>
+</Base>

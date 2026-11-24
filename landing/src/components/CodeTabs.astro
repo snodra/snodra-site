@@ -1,0 +1,126 @@
+---
+import Icon from "./Icon.astro";
+
+const serverCode = `# run the router and the dashboard
+docker run --rm -p 7000:7000 -p 7001:7001 \\
+  snodra/snodra-server:0.6.0
+
+# gRPC :7000 · dashboard http://localhost:7001/ui/
+curl -s localhost:7001/api/v1/version`;
+
+const kotlinCode = `// build.gradle.kts
+dependencies {
+    implementation("com.damoreira.snodra:snodra-messaging:0.6.1")
+    implementation("com.damoreira.snodra:snodra-messaging-kafka:0.6.1")
+    implementation("com.damoreira.snodra:snodra-messaging-mongo:0.6.1")
+}
+
+@CommandHandler
+class PlaceOrder(private val orders: Orders, private val events: EventBus) {
+    @Handle
+    @Transactional
+    fun handle(cmd: PlaceOrderCommand, ctx: MessageContext): OrderId {
+        val order = orders.place(cmd, ownerId = ctx.userId)
+        events.publishBlocking(OrderPlaced(order.id), key = order.id)
+        return order.id
+    }
+}`;
+
+const rustCode = `use snodra_messaging::{Command, Config, SnodraMessaging, message_type};
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct Shout { text: String }
+message_type!(Shout, "examples.Shout");
+impl Command for Shout { type Reply = Shouted; }
+
+#[tokio::main]
+async fn main() -> Result<(), MessagingError> {
+    let builder = SnodraMessaging::builder(Config::from_env()?).await?;
+    let events = builder.events();
+
+    let app = builder
+        .command::<Shout, _, _>(move |cmd, _ctx| {
+            let events = events.clone();
+            async move {
+                events.publish(&TextShouted::from(&cmd), Some(&cmd.text)).await?;
+                Ok(Shouted { text: cmd.text.to_uppercase() })
+            }
+        })
+        .start()
+        .await?;
+
+    app.await_hub(Duration::from_secs(30)).await;
+    tokio::signal::ctrl_c().await.ok();
+    Ok(())
+}`;
+---
+
+<section id="quickstart" class="relative scroll-mt-24 py-20 sm:py-28">
+  <div class="wrap grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+    <div data-reveal>
+      <p class="eyebrow">From zero to a registered handler</p>
+      <h2 class="mt-4 text-balance text-3xl font-semibold leading-[1.08] tracking-[-0.03em] text-white sm:text-[2.7rem]">
+        The first command is<br />
+        <span class="text-muted">a five-minute problem.</span>
+      </h2>
+      <p class="mt-5 text-pretty text-[0.96rem] leading-relaxed text-muted">
+        Start the server, add one dependency and write a handler. The library opens the stream,
+        registers the types and starts the processors it owns. No YAML tree, no code generator, no
+        agent.
+      </p>
+      <ul class="mt-6 space-y-3">
+        {
+          [
+            ["No schema registry to run", "Wire types are explicit strings in the message type."],
+            ["No service discovery", "Instances register their types on connect."],
+            ["No broker for commands", "Only events touch Kafka or RabbitMQ Streams."],
+          ].map(([title, detail]) => (
+            <li class="flex items-start gap-3">
+              <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border border-teal/25 bg-teal/10">
+                <Icon name="check" size={12} class="text-teal" />
+              </span>
+              <div>
+                <p class="text-[0.86rem] font-medium text-white">{title}</p>
+                <p class="text-[0.78rem] text-dim">{detail}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+      <a href="/docs/getting-started/installation/" class="mt-7 inline-flex items-center gap-2 text-sm font-medium text-primary-soft transition-colors hover:text-white">
+        Full installation guide
+        <Icon name="arrow-right" size={15} />
+      </a>
+    </div>
+
+    <div class="code-block panel overflow-hidden !rounded-2xl" data-tabs data-reveal>
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-black/25 px-3 py-2.5">
+        <div class="flex flex-wrap items-center gap-1">
+          <button class="tab" type="button" data-tab="server" aria-selected="true">server</button>
+          <button class="tab" type="button" data-tab="kotlin" aria-selected="false">kotlin</button>
+          <button class="tab" type="button" data-tab="rust" aria-selected="false">rust</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="font-mono text-[0.6rem] text-dim">copy</span>
+          <button
+            type="button"
+            class="grid h-7 w-7 place-items-center rounded-md border border-line bg-white/[0.03] text-dim transition-colors hover:text-white"
+            data-copy="code-server"
+            aria-label="Copy the server snippet"
+          >
+            <Icon name="copy" size={13} />
+          </button>
+        </div>
+      </div>
+      <div class="max-h-[460px] overflow-y-auto">
+        <pre data-panel="server"><code id="code-server">{serverCode}</code></pre>
+        <pre data-panel="kotlin" class="hidden"><code id="code-kotlin">{kotlinCode}</code></pre>
+        <pre data-panel="rust" class="hidden"><code id="code-rust">{rustCode}</code></pre>
+      </div>
+      <div class="flex items-center justify-between gap-3 border-t border-line bg-black/25 px-4 py-2.5 font-mono text-[0.62rem] text-dim">
+        <span>snodra · quick start</span>
+        <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-teal"></span>Apache-2.0</span>
+      </div>
+    </div>
+  </div>
+</section>

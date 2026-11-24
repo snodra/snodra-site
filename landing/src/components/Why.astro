@@ -1,0 +1,124 @@
+---
+import Icon from "./Icon.astro";
+
+const stopRunning = [
+  ["A service registry", "Instances register the types they handle; the server keeps the live map."],
+  ["A workflow engine", "Sagas live in the library and your message store, with deadlines and retries."],
+  ["A broker in the request path", "Commands and queries go to a live handler; only events touch Kafka or RabbitMQ Streams."],
+  ["A proprietary event store", "Your events stay in the store you already operate and can query."],
+  ["Retry code in every client", "Deadlines, retries, priority and flow control are router concerns."],
+  ["A per-node licence", "The server, libraries and add-ons are Apache-2.0."],
+];
+
+const keepRunning = [
+  ["Kafka or RabbitMQ Streams", "The event store you already run, with the same topics and retention."],
+  ["MongoDB, PostgreSQL or MySQL", "The message store holding the outbox, markers, dead letters and sagas."],
+  ["gRPC and your network", "One long-lived stream per service; no inbound ports and no sidecar."],
+  ["Your cloud and your VPC", "Self-hosted containers or binaries; no control plane leaves your network."],
+  ["Your languages", "Kotlin and Rust today; any language that passes conformance next."],
+  ["OpenTelemetry", "OTLP metrics and the dashboard, or your existing Prometheus and Grafana."],
+];
+---
+
+<section id="why" class="relative scroll-mt-24 py-20 sm:py-28">
+  <div class="wrap">
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.15fr] lg:items-end">
+      <div data-reveal>
+        <p class="eyebrow">For the person who owns the pager</p>
+        <h2 class="mt-4 text-balance text-3xl font-semibold leading-[1.08] tracking-[-0.03em] text-white sm:text-[2.9rem]">
+          Remove the glue.<br />
+          <span class="text-muted">Keep the architecture.</span>
+        </h2>
+      </div>
+      <p class="max-w-xl text-pretty text-[0.96rem] leading-relaxed text-muted lg:justify-self-end" data-reveal>
+        Snodra does not ask you to replace Kafka, MongoDB or your deployment. It removes the
+        cross-cutting code every service was about to grow — and keeps the pieces you already trust.
+      </p>
+    </div>
+
+    <div class="mt-12 grid gap-4 lg:grid-cols-2">
+      <div class="panel p-6 sm:p-7" data-reveal>
+        <div class="flex items-center gap-3">
+          <span class="icon-box !border-red-400/20 !bg-red-400/5 !text-red-300"><Icon name="close" size={17} /></span>
+          <div>
+            <p class="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-dim">Stop running</p>
+            <h3 class="text-lg font-semibold tracking-tight text-white">The accidental platform</h3>
+          </div>
+        </div>
+        <ul class="mt-6 space-y-4">
+          {
+            stopRunning.map(([title, detail]) => (
+              <li class="flex items-start gap-3">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400/70" />
+                <div>
+                  <p class="text-[0.88rem] font-medium text-white">{title}</p>
+                  <p class="mt-0.5 text-[0.78rem] leading-relaxed text-dim">{detail}</p>
+                </div>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <div class="panel relative overflow-hidden p-6 sm:p-7" data-reveal style="--reveal-delay: 80ms">
+        <div class="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-teal/10 blur-3xl"></div>
+        <div class="relative flex items-center gap-3">
+          <span class="icon-box !border-teal/25 !bg-teal/10 !text-teal"><Icon name="check" size={17} /></span>
+          <div>
+            <p class="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-dim">Keep running</p>
+            <h3 class="text-lg font-semibold tracking-tight text-white">The stack you already own</h3>
+          </div>
+        </div>
+        <ul class="relative mt-6 space-y-4">
+          {
+            keepRunning.map(([title, detail]) => (
+              <li class="flex items-start gap-3">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-teal/80" />
+                <div>
+                  <p class="text-[0.88rem] font-medium text-white">{title}</p>
+                  <p class="mt-0.5 text-[0.78rem] leading-relaxed text-dim">{detail}</p>
+                </div>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+
+    <div class="panel mt-4 overflow-hidden" data-reveal>
+      <div class="border-b border-line px-6 py-4 sm:px-7">
+        <p class="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-dim">A fair comparison</p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[720px] border-collapse text-left text-[0.82rem]">
+          <thead>
+            <tr class="border-b border-line text-dim">
+              <th class="px-6 py-3 font-medium sm:px-7">Concern</th>
+              <th class="px-4 py-3 font-medium text-white">Snodra</th>
+              <th class="px-4 py-3 font-medium">A commercial messaging platform</th>
+              <th class="px-6 py-3 font-medium sm:px-7">Building it yourself</th>
+            </tr>
+          </thead>
+          <tbody class="text-muted">
+            {
+              [
+                ["Request path", "Direct to a live handler", "Platform server or broker", "Your routing code"],
+                ["Event storage", "Your Kafka / RabbitMQ", "Vendor event store", "Your Kafka"],
+                ["Sagas", "Built in, with deadlines", "Built in", "A workflow engine you run"],
+                ["New language", "Pass the conformance suite", "Vendor-supported clients", "Write and trust it"],
+                ["Licence", "Apache-2.0", "Commercial", "Your maintenance forever"],
+              ].map(([concern, snodra, commercial, diy]) => (
+                <tr class="border-b border-line/70 last:border-0">
+                  <td class="px-6 py-3.5 font-medium text-white/80 sm:px-7">{concern}</td>
+                  <td class="px-4 py-3.5 text-white">{snodra}</td>
+                  <td class="px-4 py-3.5">{commercial}</td>
+                  <td class="px-6 py-3.5 sm:px-7">{diy}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>

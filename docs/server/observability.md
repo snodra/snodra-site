@@ -131,5 +131,5 @@ healthcheck and by Kubernetes probes. The distroless image has no shell, so the 
 `--health-check` mode: it calls `grpc.health.v1.Health/Check` on its own listen port and exits 0
 when the status is `SERVING`. Compose and the Dockerfile `HEALTHCHECK` use
 `["CMD", "/app/snodra-server", "--health-check"]`. With TLS configured in the container's environment
-the probe speaks TLS too and pins the hub's own certificate ([TLS](https://snodra.damoreira.com/server/configuration/mtls/)); no change to the
+the probe speaks TLS too and pins the hub's own certificate ([TLS](https://snodra.damoreira.com/docs/server/configuration/mtls/)); no change to the
 `HEALTHCHECK` is needed.

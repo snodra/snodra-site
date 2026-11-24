@@ -1,0 +1,119 @@
+---
+import Base from "../layouts/Base.astro";
+import Icon from "../components/Icon.astro";
+import { releases, accentClasses } from "../data/releases";
+---
+
+<Base
+  title="Changelog — Snodra"
+  description="Every Snodra release: the server, the Kotlin and Rust libraries, the event browser and the conformance suite."
+  ogType="website"
+>
+  <section class="relative overflow-hidden pb-10 pt-32 sm:pt-40">
+    <div class="pointer-events-none absolute inset-0 -z-10 bg-grid" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-radial-primary" aria-hidden="true"></div>
+
+    <div class="wrap">
+      <a
+        href="/"
+        class="inline-flex items-center gap-1.5 font-mono text-[0.7rem] text-dim transition-colors hover:text-white"
+      >
+        <Icon name="arrow-right" size={12} class="rotate-180" />
+        Back to Snodra
+      </a>
+      <div class="mt-8 grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-end">
+        <div>
+          <p class="eyebrow">Changelog</p>
+          <h1 class="mt-4 text-balance text-[2.7rem] font-semibold leading-[1.02] tracking-[-0.04em] text-white sm:text-[4rem]">
+            Every release,<br />
+            <span class="gradient-text">in the open.</span>
+          </h1>
+        </div>
+        <p class="max-w-md text-pretty text-[0.96rem] leading-relaxed text-muted lg:justify-self-end">
+          The server, the Kotlin and Rust libraries, the event browser and the conformance suite
+          release together. Every tag is built by CI and attached to a GitHub release.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="pb-20 pt-8 sm:pb-28">
+    <div class="wrap">
+      <div class="relative border-l border-line pl-6 sm:pl-8">
+        {
+          releases.map((release, index) => {
+            const accent = accentClasses[release.accent];
+            return (
+              <article
+                class="relative pb-10 last:pb-0"
+                data-reveal
+                style={`--reveal-delay: ${index * 50}ms`}
+              >
+                <span class={`absolute -left-[1.93rem] top-1.5 h-3 w-3 rounded-full border-2 border-ink sm:-left-[2.43rem] ${accent.dot}`} />
+                <div class="flex flex-wrap items-center gap-3">
+                  <h2 class="text-lg font-semibold tracking-tight text-white">{release.project}</h2>
+                  <span class={`rounded-full border px-2 py-0.5 font-mono text-[0.62rem] ${accent.ring} ${accent.text}`}>
+                    v{release.version}
+                  </span>
+                  <time datetime={release.iso} class="font-mono text-[0.66rem] text-dim">{release.date}</time>
+                </div>
+                <p class="mt-3 max-w-2xl text-[0.9rem] leading-relaxed text-muted">{release.summary}</p>
+                <a
+                  href={release.href}
+                  class="mt-3 inline-flex items-center gap-1.5 text-[0.78rem] font-medium text-primary-soft transition-colors hover:text-white"
+                  rel="noopener"
+                >
+                  Release notes
+                  <Icon name="arrow-up-right" size={12} />
+                </a>
+              </article>
+            );
+          })
+        }
+      </div>
+
+      <div class="mt-10 grid gap-4 sm:grid-cols-3">
+        <a
+          href="https://github.com/snodra/snodra-server/releases"
+          class="group rounded-xl border border-line bg-white/[0.025] p-5 transition-colors hover:border-primary/35"
+          rel="noopener"
+        >
+          <p class="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-dim">Server</p>
+          <p class="mt-2 text-sm font-medium text-white">Images and binaries</p>
+          <p class="mt-1 text-[0.76rem] text-muted">Linux, macOS and Windows archives on every release.</p>
+          <span class="mt-3 inline-flex items-center gap-1 text-[0.74rem] text-white/80 group-hover:text-white">
+            GitHub releases <Icon name="arrow-up-right" size={11} />
+          </span>
+        </a>
+        <a
+          href="https://central.sonatype.com/artifact/com.damoreira.snodra/snodra-messaging"
+          class="group rounded-xl border border-line bg-white/[0.025] p-5 transition-colors hover:border-primary/35"
+          rel="noopener"
+        >
+          <p class="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-dim">Kotlin</p>
+          <p class="mt-2 text-sm font-medium text-white">Maven Central</p>
+          <p class="mt-1 text-[0.76rem] text-muted">Every module and its sources and javadoc.</p>
+          <span class="mt-3 inline-flex items-center gap-1 text-[0.74rem] text-white/80 group-hover:text-white">
+            Central Portal <Icon name="arrow-up-right" size={11} />
+          </span>
+        </a>
+        <a
+          href="https://crates.io/crates/snodra-messaging-rs"
+          class="group rounded-xl border border-line bg-white/[0.025] p-5 transition-colors hover:border-primary/35"
+          rel="noopener"
+        >
+          <p class="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-dim">Rust</p>
+          <p class="mt-2 text-sm font-medium text-white">crates.io</p>
+          <p class="mt-1 text-[0.76rem] text-muted">The crate and its Kafka, RabbitMQ, MongoDB and SQL add-ons.</p>
+          <span class="mt-3 inline-flex items-center gap-1 text-[0.74rem] text-white/80 group-hover:text-white">
+            crates.io <Icon name="arrow-up-right" size={11} />
+          </span>
+        </a>
+      </div>
+
+      <p class="mt-8 font-mono text-[0.66rem] text-dim">
+        The GitHub release notes are the source of truth; this page highlights the latest tags.
+      </p>
+    </div>
+  </section>
+</Base>

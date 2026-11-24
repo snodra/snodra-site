@@ -1,0 +1,134 @@
+---
+import Icon from "./Icon.astro";
+
+const products = [
+  {
+    name: "Snodra Server",
+    tagline: "The router and the control plane",
+    icon: "/brand/snodra-server.svg",
+    tint: "from-emerald-400/20",
+    accent: "text-emerald-300",
+    copy: "A stateless gRPC process that matches commands and queries to a live handler. Dashboard, topology, processor control and health probes are in the same binary.",
+    points: ["Deadlines, retries, priority", "Multi-server, no server-to-server traffic", "Token, OIDC/JWT or mTLS with ACLs"],
+    links: [
+      { label: "Repository", href: "https://github.com/snodra/snodra-server" },
+      { label: "Server docs", href: "/docs/server/" },
+    ],
+    get: "docker run snodra/snodra-server:0.6.0",
+  },
+  {
+    name: "Snodra Messaging",
+    tagline: "Kotlin and Rust, one wire protocol",
+    icon: "/brand/snodra-messaging.svg",
+    tint: "from-pink-400/20",
+    accent: "text-pink-300",
+    copy: "Spring Boot starter and Rust builder for the buses, handlers, outbox, sagas and processors. Python and Go clients are in progress against the same protocol.",
+    points: ["Outbox built into the store", "Sagas with deadlines", "Testing kits and in-memory stores"],
+    links: [
+      { label: "Kotlin", href: "https://github.com/snodra/snodra-messaging" },
+      { label: "Rust", href: "https://github.com/snodra/snodra-messaging-rs" },
+    ],
+    get: "com.damoreira.snodra:snodra-messaging:0.6.1",
+  },
+  {
+    name: "Snodra Conformance",
+    tagline: "Proof that a client is a first-class citizen",
+    icon: "/brand/snodra-conformance.svg",
+    tint: "from-lime-400/20",
+    accent: "text-lime-300",
+    copy: "A protocol runner that checks any client library against a real server and fake hubs, check by check, and reports feature level 1 with PASS, FAIL, SKIPPED or NOT IMPLEMENTED.",
+    points: ["Fixed, versioned check ids", "A real server and fake hubs", "Reference service and violator included"],
+    links: [
+      { label: "Repository", href: "https://github.com/snodra/snodra-conformance" },
+      { label: "Docs", href: "/docs/tools/conformance-runner/" },
+    ],
+    get: "cargo run -p snodra-conformance",
+  },
+  {
+    name: "Snodra Event Browser",
+    tagline: "A read-only window into the event store",
+    icon: "/brand/snodra-event-browser.svg",
+    tint: "from-slate-400/20",
+    accent: "text-slate-300",
+    copy: "Search records, browse sources, watch lag and follow live tails from the same dashboard — without giving the dashboard a writer on your Kafka topics.",
+    points: ["Search and record views", "Sources, lag and live tails", "Read-only by design"],
+    links: [
+      { label: "Repository", href: "https://github.com/snodra/snodra-event-browser" },
+      { label: "Docs", href: "/docs/tools/event-browser/" },
+    ],
+    get: "docker run snodra/snodra-event-browser:0.3.0",
+  },
+];
+---
+
+<section id="products" class="relative scroll-mt-24 py-20 sm:py-28">
+  <div class="wrap">
+    <div class="max-w-3xl" data-reveal>
+      <p class="eyebrow">The suite</p>
+      <h2 class="mt-4 text-balance text-3xl font-semibold leading-[1.08] tracking-[-0.03em] text-white sm:text-[2.9rem]">
+        Four products.<br />
+        <span class="text-muted">One system, no seam.</span>
+      </h2>
+      <p class="mt-5 max-w-2xl text-pretty text-[0.98rem] leading-relaxed text-muted">
+        Run the server, add the client you write in, prove it conforms, and see what happened. Every
+        piece is Apache-2.0 and every piece is replaceable at the edges.
+      </p>
+    </div>
+
+    <div class="mt-12 grid gap-4 lg:grid-cols-2">
+      {
+        products.map((product, index) => (
+          <article
+            class="panel card-hover group relative overflow-hidden p-6 sm:p-7"
+            data-reveal
+            style={`--reveal-delay: ${index * 60}ms`}
+          >
+            <div class={`pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b ${product.tint} to-transparent opacity-60`} />
+            <div class="relative flex items-start justify-between gap-4">
+              <div class="flex items-center gap-4">
+                <div class="grid h-14 w-14 place-items-center rounded-2xl border border-line bg-black/25">
+                  <img src={product.icon} alt="" width="40" height="40" class="h-10 w-10" />
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold tracking-tight text-white">{product.name}</h3>
+                  <p class={`mt-1 font-mono text-[0.64rem] uppercase tracking-[0.12em] ${product.accent}`}>{product.tagline}</p>
+                </div>
+              </div>
+              <span class="rounded-full border border-line bg-white/[0.03] px-2.5 py-1 font-mono text-[0.58rem] uppercase tracking-[0.12em] text-dim">
+                Apache-2.0
+              </span>
+            </div>
+
+            <p class="relative mt-5 text-[0.9rem] leading-relaxed text-muted">{product.copy}</p>
+
+            <ul class="relative mt-5 space-y-2">
+              {product.points.map((point) => (
+                <li class="flex items-start gap-2 text-[0.82rem] text-muted">
+                  <Icon name="check" size={14} class={`mt-0.5 shrink-0 ${product.accent}`} />
+                  {point}
+                </li>
+              ))}
+            </ul>
+
+            <div class="relative mt-6 flex flex-wrap items-center gap-2">
+              {product.links.map((link) => (
+                <a
+                  href={link.href}
+                  class="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white/[0.03] px-3 py-1.5 text-[0.76rem] font-medium text-white transition-colors hover:border-primary/40 hover:bg-white/[0.06]"
+                >
+                  {link.label}
+                  <Icon name="arrow-up-right" size={12} class="text-dim" />
+                </a>
+              ))}
+            </div>
+
+            <div class="relative mt-5 flex items-center gap-2 overflow-x-auto rounded-lg border border-line bg-black/30 px-3 py-2 font-mono text-[0.66rem] text-dim">
+              <span class="text-primary-soft">$</span>
+              <span class="whitespace-nowrap text-white/75">{product.get}</span>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>

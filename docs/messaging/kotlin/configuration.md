@@ -174,7 +174,7 @@ fails startup with a hint.
 ## Hub security: token, ACL and TLS
 
 The hub can authenticate services and restrict what they register and send, and serve its gRPC port over TLS
-(operator how-to: `https://snodra.damoreira.com/concepts/security/`). All of it is opt-in
+(operator how-to: `https://snodra.damoreira.com/docs/concepts/security/`). All of it is opt-in
 on the hub (`SNODRA_SERVER_AUTH_MODE=off|permissive|enforce`, default `off`); this section is the client's side. It is
 unrelated to [Security](#security) above, which is about the **user's** forwarded JWT.
 
@@ -305,7 +305,7 @@ its name is refused by the JDK's URI parser (the host would be null), so it fail
 
 ## Authenticating with a client certificate (mTLS)
 
-The hub can take a **client certificate** as the service's credential (issuing certificates and the hub's settings: `https://snodra.damoreira.com/concepts/security/`, "mTLS mode"). The TLS handshake
+The hub can take a **client certificate** as the service's credential (issuing certificates and the hub's settings: `https://snodra.damoreira.com/docs/concepts/security/`, "mTLS mode"). The TLS handshake
 proves the service holds the key, the certificate names the service, and the rights are the hub's `[[service]]` table of that name, the
 same table a JWT uses. No secret crosses the wire and no identity provider is involved.
 
@@ -334,7 +334,7 @@ Environment names (relaxed binding): `SNODRA_MESSAGING_HUB_TLS_CLIENT_CERT_FILE`
   starter says so at startup instead. Also checked at startup: both files exist, are not empty and parse, the key belongs to the
   certificate, and the certificate has not ended. The key must be **PKCS#8 PEM** (`-----BEGIN PRIVATE KEY-----`); RSA (`BEGIN RSA PRIVATE KEY`), SEC1 (`BEGIN EC PRIVATE KEY`)
   and encrypted keys are refused with the conversion hint (`openssl pkcs8 -topk8 -nocrypt`). The JDK reads RSA, EC and Ed25519 keys.
-- **How to issue one.** Follow `https://snodra.damoreira.com/concepts/security/`, "mTLS mode" (`openssl`, or cert-manager with `uris:
+- **How to issue one.** Follow `https://snodra.damoreira.com/docs/concepts/security/`, "mTLS mode" (`openssl`, or cert-manager with `uris:
   [snodra://service/billing-service]` and `usages: [client auth]`). Issue short-lived certificates (hours to days): there is no
   revocation list, so the lifetime is the revocation story.
 - **Failures at the handshake are transport errors.** With `SNODRA_SERVER_TLS_CLIENT_AUTH=required`, no certificate or one the hub does not

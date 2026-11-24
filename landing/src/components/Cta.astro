@@ -1,0 +1,56 @@
+---
+import Icon from "./Icon.astro";
+---
+
+<section class="relative py-20 sm:py-28">
+  <div class="wrap">
+    <div
+      class="relative overflow-hidden rounded-[1.75rem] border border-primary/25 bg-gradient-to-br from-primary/20 via-panel to-ink p-8 sm:p-12 lg:p-16"
+      data-reveal
+    >
+      <div class="pointer-events-none absolute inset-0 bg-grid opacity-60" aria-hidden="true"></div>
+      <div class="pointer-events-none absolute -right-16 -top-20 h-80 w-80 rounded-full bg-primary/25 blur-3xl" aria-hidden="true"></div>
+      <img
+        src="/brand/snodra.svg"
+        alt=""
+        width="300"
+        height="300"
+        class="pointer-events-none absolute -bottom-16 right-0 hidden w-[280px] opacity-20 lg:block"
+        loading="lazy"
+      />
+
+      <div class="relative max-w-2xl">
+        <p class="eyebrow">Ready when your architecture is</p>
+        <h2 class="mt-4 text-balance text-3xl font-semibold leading-[1.05] tracking-[-0.035em] text-white sm:text-[3.1rem]">
+          Ship the system.<br />
+          <span class="gradient-text">Not the plumbing.</span>
+        </h2>
+        <p class="mt-5 max-w-xl text-pretty text-[0.98rem] leading-relaxed text-muted">
+          Start with one server and one service. Add events, sagas and a second language when the
+          system needs them — not before. Apache-2.0, self-hosted, and yours to shape.
+        </p>
+        <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+          <a href="/#download" class="btn btn-primary w-full sm:w-auto">
+            <Icon name="download" size={16} />
+            Download Snodra
+          </a>
+          <a href="/docs/getting-started/" class="btn btn-ghost w-full sm:w-auto">
+            Read the quick start
+            <Icon name="arrow-right" size={15} />
+          </a>
+          <a
+            href="https://github.com/snodra"
+            class="btn btn-ghost w-full sm:w-auto"
+            rel="noopener"
+          >
+            <Icon name="github" size={16} />
+            GitHub
+          </a>
+        </div>
+        <p class="mt-6 font-mono text-[0.66rem] text-dim">
+          No account · No licence fee · No data leaves your infrastructure
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

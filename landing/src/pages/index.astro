@@ -1,0 +1,44 @@
+---
+import Base from "../layouts/Base.astro";
+import Hero from "../components/Hero.astro";
+import TechMarquee from "../components/TechMarquee.astro";
+import Features from "../components/Features.astro";
+import Architecture from "../components/Architecture.astro";
+import Products from "../components/Products.astro";
+import CodeTabs from "../components/CodeTabs.astro";
+import Why from "../components/Why.astro";
+import ChangelogTeaser from "../components/ChangelogTeaser.astro";
+import Download from "../components/Download.astro";
+import Faq from "../components/Faq.astro";
+import Cta from "../components/Cta.astro";
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Snodra",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "Linux, macOS, Windows",
+  description:
+    "Commands, queries, events and sagas for services that speak gRPC and Kafka. A stateless router, a transactional outbox, Kotlin and Rust clients, and a conformance suite.",
+  url: "https://snodra.damoreira.com",
+  license: "https://github.com/snodra/snodra-server/blob/main/LICENSE",
+  codeRepository: "https://github.com/snodra",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  programmingLanguage: ["Kotlin", "Rust", "Python", "Go"],
+};
+---
+
+<Base>
+  <script type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
+  <Hero />
+  <TechMarquee />
+  <Features />
+  <Architecture />
+  <Products />
+  <CodeTabs />
+  <Why />
+  <ChangelogTeaser />
+  <Download />
+  <Faq />
+  <Cta />
+</Base>

@@ -46,9 +46,9 @@ fun handle(command: PlaceOrder) { /* ... */ }
 
 The starter opens `Hub.Connect`, sends `Register` with every handled type, and reconnects on its
 own. The Rust crate does the same through one builder, and the Go library through its `App`. See
-[the Kotlin quick start](https://snodra.damoreira.com/messaging/kotlin/quickstart/),
-[the Rust quick start](https://snodra.damoreira.com/messaging/rust/quickstart/) and
-[the Go quick start](https://snodra.damoreira.com/messaging/go/quickstart/).
+[the Kotlin quick start](https://snodra.damoreira.com/docs/messaging/kotlin/quickstart/),
+[the Rust quick start](https://snodra.damoreira.com/docs/messaging/rust/quickstart/) and
+[the Go quick start](https://snodra.damoreira.com/docs/messaging/go/quickstart/).
 
 ## 5. Send a first request
 
@@ -67,4 +67,4 @@ The hub forwards it to a live `orders` instance, enforces the deadline, and retu
 
 - [The four authentication modes](configuration/index.md) — start `permissive`, move to `enforce`.
 - [Server settings](configuration/server.md) — timeouts, queues, dashboard, event browser.
-- [The protocol](https://snodra.damoreira.com/server/protocol/) — the whole message contract.
+- [The protocol](https://snodra.damoreira.com/docs/server/protocol/) — the whole message contract.

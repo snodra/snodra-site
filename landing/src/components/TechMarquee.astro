@@ -1,0 +1,40 @@
+---
+const stack = [
+  "Kafka",
+  "RabbitMQ Streams",
+  "MongoDB",
+  "PostgreSQL",
+  "MySQL",
+  "Spring Boot",
+  "Kotlin",
+  "Rust",
+  "Python",
+  "Go",
+  "gRPC",
+  "Docker",
+  "Kubernetes",
+  "OpenTelemetry",
+  "Prometheus",
+  "Grafana",
+];
+---
+
+<section class="border-y border-line bg-white/[0.015] py-6" aria-label="Built for the stack you already run">
+  <div class="wrap">
+    <p class="text-center font-mono text-[0.66rem] uppercase tracking-[0.18em] text-dim">
+      Designed for the stack you already operate
+    </p>
+  </div>
+  <div class="marquee relative mt-5 overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_12%,black_88%,transparent)]">
+    <div class="marquee-track flex w-max items-center gap-3">
+      {
+        [...stack, ...stack].map((item) => (
+          <span class="inline-flex items-center gap-2 rounded-full border border-line bg-white/[0.03] px-3.5 py-1.5 font-mono text-[0.72rem] text-muted">
+            <span class="h-1 w-1 rounded-full bg-primary-soft/70" />
+            {item}
+          </span>
+        ))
+      }
+    </div>
+  </div>
+</section>

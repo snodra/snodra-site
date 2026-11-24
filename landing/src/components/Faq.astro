@@ -1,0 +1,80 @@
+---
+import Icon from "./Icon.astro";
+
+const questions = [
+  {
+    q: "Do I need Kafka to use Snodra?",
+    a: "No. Commands and queries need only Snodra Server. Kafka or RabbitMQ Streams is where events live, and a message store (MongoDB, PostgreSQL or MySQL) is needed when a service publishes through the outbox, runs sagas or keeps processed markers. A service that only answers commands and queries needs neither.",
+  },
+  {
+    q: "How is this different from a message broker?",
+    a: "A broker moves bytes between topics. Snodra routes a command or query to a live handler that owns the type and returns its reply, with deadlines, retries and flow control. Events still go through Kafka or RabbitMQ Streams — the broker stays, it just stops being the request path.",
+  },
+  {
+    q: "Is it production-ready?",
+    a: "The server and both client libraries are shipping releases and are exercised end to end by the conformance suite. The project is pre-1.0, so the public API can still move between minor versions. The protocol and the conformance checks are the stable contract; pin versions and read the upgrade notes.",
+  },
+  {
+    q: "Can we adopt it one service at a time?",
+    a: "Yes. Start with commands and queries between two services, then add an event store and the outbox when the first event is needed. A service can answer commands without participating in events, and the server does not need a migration window: it holds no state.",
+  },
+  {
+    q: "What happens when no handler is live?",
+    a: "The request fails immediately with NO_HANDLER. It is not queued and it does not wait for a future instance. That is deliberate: a command that cannot be handled now is an error your caller can see, not a message that surfaces minutes later.",
+  },
+  {
+    q: "What does it cost?",
+    a: "Nothing in licence fees. The server, both libraries, the add-ons and the conformance suite are Apache-2.0. You pay for the infrastructure you already run — your Kafka, your database, your cluster.",
+  },
+  {
+    q: "Which languages can join?",
+    a: "Kotlin and Rust are production clients today. Python and Go are in progress against the same protocol. The conformance runner is the gate: a client that passes feature level 1 is a first-class member of the suite, whatever language it is written in.",
+  },
+];
+---
+
+<section id="faq" class="relative scroll-mt-24 py-20 sm:py-28">
+  <div class="wrap grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+    <div data-reveal>
+      <p class="eyebrow">Questions</p>
+      <h2 class="mt-4 text-balance text-3xl font-semibold leading-[1.08] tracking-[-0.03em] text-white sm:text-[2.7rem]">
+        The things an<br />
+        <span class="text-muted">architect asks first.</span>
+      </h2>
+      <p class="mt-5 max-w-sm text-[0.92rem] leading-relaxed text-muted">
+        Still deciding? The concepts section explains the model without the marketing, and the
+        conformance suite shows what “interoperable” actually means.
+      </p>
+      <div class="mt-6 flex flex-wrap gap-2">
+        <a href="/docs/concepts/" class="btn btn-ghost !min-h-9 !px-3.5 !py-2 !text-[0.8rem]">
+          Core concepts
+          <Icon name="arrow-right" size={14} />
+        </a>
+        <a href="https://github.com/snodra" class="btn btn-ghost !min-h-9 !px-3.5 !py-2 !text-[0.8rem]" rel="noopener">
+          <Icon name="github" size={14} />
+          GitHub
+        </a>
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      {
+        questions.map((item, index) => (
+          <details
+            class="group rounded-xl border border-line bg-white/[0.025] px-5 py-4 open:border-primary/30 open:bg-white/[0.04]"
+            data-reveal
+            style={`--reveal-delay: ${index * 35}ms`}
+          >
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-[0.9rem] font-medium text-white [&::-webkit-details-marker]:hidden">
+              {item.q}
+              <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-line text-dim transition-transform group-open:rotate-45">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+              </span>
+            </summary>
+            <p class="mt-3 max-w-2xl text-[0.84rem] leading-relaxed text-muted">{item.a}</p>
+          </details>
+        ))
+      }
+    </div>
+  </div>
+</section>

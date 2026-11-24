@@ -1,0 +1,138 @@
+---
+import Icon from "./Icon.astro";
+
+const downloads = [
+  {
+    label: "Server",
+    title: "Run the router",
+    detail: "The gRPC listener, dashboard, HTTP API and event browser in one distroless image.",
+    command: "docker run --rm -p 7000:7000 -p 7001:7001 snodra/snodra-server:0.6.0",
+    meta: "Linux (musl + gnu), macOS and Windows binaries on the release page.",
+    href: "https://github.com/snodra/snodra-server/releases",
+    cta: "Server releases",
+    icon: "server" as const,
+    accent: "text-emerald-300",
+  },
+  {
+    label: "Kotlin",
+    title: "Add the starter",
+    detail: "Spring Boot 4 starter with buses, handlers, outbox, sagas and test kits.",
+    command: "implementation(\"com.damoreira.snodra:snodra-messaging:0.6.1\")",
+    meta: "Maven Central · snodra-messaging, -api, -kafka, -rabbitmq, -mongo, -jdbc, -test",
+    href: "https://central.sonatype.com/artifact/com.damoreira.snodra/snodra-messaging",
+    cta: "Maven Central",
+    icon: "package" as const,
+    accent: "text-pink-300",
+  },
+  {
+    label: "Rust",
+    title: "Add the crate",
+    detail: "One builder for the hub client, event store, outbox, processors and sagas.",
+    command: "cargo add snodra-messaging-rs@0.7",
+    meta: "crates.io · snodra-messaging-rs, -kafka, -rabbitmq, -mongo, -sqlx",
+    href: "https://crates.io/crates/snodra-messaging-rs",
+    cta: "crates.io",
+    icon: "box" as const,
+    accent: "text-teal",
+  },
+];
+---
+
+<section id="download" class="relative scroll-mt-24 border-y border-line bg-ink-soft/50 py-20 sm:py-28">
+  <div class="wrap">
+    <div class="grid gap-8 lg:grid-cols-[1fr_1.2fr] lg:items-end">
+      <div data-reveal>
+        <p class="eyebrow">Download</p>
+        <h2 class="mt-4 text-balance text-3xl font-semibold leading-[1.08] tracking-[-0.03em] text-white sm:text-[2.9rem]">
+          Pick your entry point.<br />
+          <span class="text-muted">Run it in a minute.</span>
+        </h2>
+      </div>
+      <p class="max-w-xl text-pretty text-[0.96rem] leading-relaxed text-muted lg:justify-self-end" data-reveal>
+        The server is the only thing you must run. Add a client only when a service needs it. Pin
+        versions in production; every release is tagged and tested.
+      </p>
+    </div>
+
+    <div class="mt-12 grid gap-4 lg:grid-cols-3">
+      {
+        downloads.map((item, index) => (
+          <article
+            class="panel card-hover flex flex-col p-6"
+            data-reveal
+            style={`--reveal-delay: ${index * 60}ms`}
+          >
+            <div class="flex items-center justify-between gap-3">
+              <span class="inline-flex items-center gap-2 rounded-full border border-line bg-white/[0.03] px-2.5 py-1 font-mono text-[0.6rem] uppercase tracking-[0.12em] text-dim">
+                <Icon name={item.icon} size={12} class={item.accent} />
+                {item.label}
+              </span>
+              <span class="font-mono text-[0.6rem] text-dim">Apache-2.0</span>
+            </div>
+            <h3 class="mt-5 text-lg font-semibold tracking-tight text-white">{item.title}</h3>
+            <p class="mt-2 flex-1 text-[0.84rem] leading-relaxed text-muted">{item.detail}</p>
+            <div class="mt-5 overflow-x-auto rounded-lg border border-line bg-black/30 px-3 py-2.5 font-mono text-[0.66rem] text-white/80">
+              <span class="text-primary-soft">$ </span><span class="whitespace-pre-wrap break-words">{item.command}</span>
+            </div>
+            <p class="mt-3 text-[0.72rem] leading-relaxed text-dim">{item.meta}</p>
+            <a
+              href={item.href}
+              class="mt-5 inline-flex items-center gap-1.5 text-[0.8rem] font-medium text-white transition-colors hover:text-primary-soft"
+              rel="noopener"
+            >
+              {item.cta}
+              <Icon name="arrow-up-right" size={13} />
+            </a>
+          </article>
+        ))
+      }
+    </div>
+
+    <div class="mt-4 grid gap-4 md:grid-cols-3">
+      <a
+        href="https://github.com/snodra/snodra-messaging-python"
+        class="group rounded-xl border border-line bg-white/[0.02] p-5 transition-colors hover:border-primary/35"
+        data-reveal
+      >
+        <div class="flex items-center justify-between">
+          <span class="font-mono text-[0.62rem] uppercase tracking-[0.12em] text-amber">Python</span>
+          <span class="rounded-full border border-amber/20 bg-amber/10 px-2 py-0.5 font-mono text-[0.56rem] text-amber">in progress</span>
+        </div>
+        <p class="mt-3 text-[0.84rem] text-muted">The Python client is being built against the same protocol and conformance suite.</p>
+        <span class="mt-3 inline-flex items-center gap-1 text-[0.74rem] text-white/80 group-hover:text-white">
+          Follow the repository <Icon name="arrow-up-right" size={11} />
+        </span>
+      </a>
+      <a
+        href="https://github.com/snodra/snodra-messaging-go"
+        class="group rounded-xl border border-line bg-white/[0.02] p-5 transition-colors hover:border-primary/35"
+        data-reveal
+        style="--reveal-delay: 50ms"
+      >
+        <div class="flex items-center justify-between">
+          <span class="font-mono text-[0.62rem] uppercase tracking-[0.12em] text-sky-300">Go</span>
+          <span class="rounded-full border border-sky-400/20 bg-sky-400/10 px-2 py-0.5 font-mono text-[0.56rem] text-sky-300">in progress</span>
+        </div>
+        <p class="mt-3 text-[0.84rem] text-muted">The Go client follows the same wire contract; the conformance runner will be the gate.</p>
+        <span class="mt-3 inline-flex items-center gap-1 text-[0.74rem] text-white/80 group-hover:text-white">
+          Follow the repository <Icon name="arrow-up-right" size={11} />
+        </span>
+      </a>
+      <a
+        href="https://github.com/snodra/snodra-event-browser"
+        class="group rounded-xl border border-line bg-white/[0.02] p-5 transition-colors hover:border-primary/35"
+        data-reveal
+        style="--reveal-delay: 100ms"
+      >
+        <div class="flex items-center justify-between">
+          <span class="font-mono text-[0.62rem] uppercase tracking-[0.12em] text-slate-300">Event Browser</span>
+          <span class="rounded-full border border-line bg-white/[0.03] px-2 py-0.5 font-mono text-[0.56rem] text-dim">0.3.0</span>
+        </div>
+        <p class="mt-3 text-[0.84rem] text-muted">Read-only search, sources, lag and live tails for the dashboard.</p>
+        <span class="mt-3 inline-flex items-center gap-1 text-[0.74rem] text-white/80 group-hover:text-white">
+          Open the repository <Icon name="arrow-up-right" size={11} />
+        </span>
+      </a>
+    </div>
+  </div>
+</section>

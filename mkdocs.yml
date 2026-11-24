@@ -1,6 +1,6 @@
 site_name: Snodra
 site_description: One messaging stack for services that speak Kafka and gRPC, without a commercial messaging platform.
-site_url: https://snodra.damoreira.com/
+site_url: https://snodra.damoreira.com/docs/
 docs_dir: docs
 site_dir: site
 

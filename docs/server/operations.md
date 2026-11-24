@@ -16,7 +16,7 @@ route any request while at least one is up.
   every 5 s on each stream. The hub keeps the latest report per session (replaced by each,
   dropped with the session; at most 64 hub ids of at most 128 bytes, empty, over-long and
   duplicate ids ignored) and shows it as `connectedHubIds` and `statusAgeMs` in the
-  [topology](https://snodra.damoreira.com/server/topology/).
+  [topology](https://snodra.damoreira.com/docs/server/topology/).
 - `SNODRA_SERVER_PEERS` lists the hubs' dashboards; the page reads every peer's
   `/api/v1/topology` in the browser and, under "All hubs", merges them and flags where the
   reachable hubs disagree: an instance missing on a hub, an instance with different types on

@@ -47,7 +47,7 @@ sends a first request; [server settings](configuration/server.md) lists every en
 4. The handler answers `Reply` (or parts, for streaming); the hub relays them to the sender and
    enforces the deadline.
 
-The full contract is in [the protocol page](https://snodra.damoreira.com/server/protocol/).
+The full contract is in [the protocol page](https://snodra.damoreira.com/docs/server/protocol/).
 
 ## Licence
 
