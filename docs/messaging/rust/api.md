@@ -26,9 +26,10 @@
   failure is mapped as through the hub. Scatter-gathers, streams, subscriptions and shared queries always go through
   the hub. `SNODRA_SERVER_ALWAYS_ROUTE_THROUGH_HUB=true` (`Config::hub_always_route_through_hub`, or the builder's
   `always_route_through_hub(true)`) sends every request through the hub, the saga relay's commands included, so a
-  routing key keeps its instance affinity; it has no effect while the hub is turned off. One limit: an idempotent
-  command (`idempotent_command`) answered in-process before `start()` fails with a handler error
-  (`RemoteHandler`), because its call records are bound at start.
+  routing key keeps its instance affinity; it has no effect while the hub is turned off. One limit: before `start()`, an
+  idempotent command type of this service (`idempotent_command`) is not answered in-process. It goes through the hub
+  like another service's command, because its call records are bound by `start()`; with no hub yet it fails as never
+  sent with `HubUnavailable` at its deadline, and its handler does not run.
 - **Unit replies** travel as `{}`; an `Option::None` reply stays `null`.
 - **Consumer** (one per [event processor](#event-processors)): one record at a time; marker
   inserted first (a duplicate id never reaches the handler), handlers run, commit, then the offset.
