@@ -5,7 +5,7 @@ export type Release = {
   iso: string;
   summary: string;
   href: string;
-  accent: "emerald" | "pink" | "teal" | "slate" | "lime";
+  accent: "emerald" | "pink" | "teal" | "slate" | "lime" | "sky";
 };
 
 export const releases: Release[] = [
@@ -31,22 +31,22 @@ export const releases: Release[] = [
   },
   {
     project: "Snodra Messaging for Rust",
-    version: "0.7.1",
+    version: "0.8.0",
     date: "24 Nov 2026",
     iso: "2026-11-24",
     summary:
-      "The Rust crate and its Kafka, RabbitMQ, MongoDB and SQL add-ons at 0.7.1: configurable roles claim, the snodra.events topic and refreshed docs.",
-    href: "https://github.com/snodra/snodra-messaging-rs/releases/tag/v0.7.1",
+      "The Rust crate is now snodra-messaging at 0.8, with its Kafka, RabbitMQ, MongoDB and SQL add-ons on the same wire contract.",
+    href: "https://github.com/snodra/snodra-messaging-rs/releases/tag/v0.8.0",
     accent: "teal",
   },
   {
     project: "Snodra Event Browser",
-    version: "0.3.0",
+    version: "0.3.2",
     date: "24 Nov 2026",
     iso: "2026-11-24",
     summary:
-      "The read-only event browser add-on at 0.3.0, aligned with the 0.6 server and shipped as an image and per-platform binaries.",
-    href: "https://github.com/snodra/snodra-event-browser/releases/tag/v0.3.0",
+      "The read-only event browser add-on at 0.3.2, aligned with the 0.6 server and shipped as an image and per-platform binaries.",
+    href: "https://github.com/snodra/snodra-event-browser/releases/tag/v0.3.2",
     accent: "slate",
   },
   {
@@ -59,6 +59,16 @@ export const releases: Release[] = [
     href: "https://github.com/snodra/snodra-conformance/releases/tag/v0.3.0",
     accent: "lime",
   },
+  {
+    project: "Snodra Messaging for Go",
+    version: "0.1.1",
+    date: "24 Nov 2026",
+    iso: "2026-11-24",
+    summary:
+      "The Go client at 0.1.1: commands and queries at feature level 1, over the same protocol as Kotlin and Rust.",
+    href: "https://github.com/snodra/snodra-messaging-go/releases/tag/v0.1.1",
+    accent: "sky",
+  },
 ];
 
 export const accentClasses: Record<Release["accent"], { text: string; dot: string; ring: string }> = {
@@ -67,4 +77,5 @@ export const accentClasses: Record<Release["accent"], { text: string; dot: strin
   teal: { text: "text-teal", dot: "bg-teal", ring: "border-teal/25 bg-teal/10" },
   slate: { text: "text-slate-300", dot: "bg-slate-400", ring: "border-slate-400/25 bg-slate-400/10" },
   lime: { text: "text-lime-300", dot: "bg-lime-400", ring: "border-lime-400/25 bg-lime-400/10" },
+  sky: { text: "text-sky-300", dot: "bg-sky-400", ring: "border-sky-400/25 bg-sky-400/10" },
 };
