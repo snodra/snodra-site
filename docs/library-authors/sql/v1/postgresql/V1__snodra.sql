@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS snodra_schema (
     applied_at TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- The outbox (ADR 0005): events appended in the service's transaction, relayed to the event store afterwards.
+-- The outbox: events appended in the service's transaction, relayed to the event store afterwards.
 CREATE TABLE IF NOT EXISTS snodra_outbox (
     id          VARCHAR(255) COLLATE "C" NOT NULL PRIMARY KEY,
     type        VARCHAR(255) COLLATE "C" NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS snodra_processed_events (
 CREATE INDEX IF NOT EXISTS snodra_processed_events_range ON snodra_processed_events (processor, source, segment, position_num) WHERE processor IS NOT NULL;
 CREATE INDEX IF NOT EXISTS snodra_processed_events_processed_at ON snodra_processed_events (processed_at);
 
--- Dead letters (ADR 0022), sequenced per (processor, key). id = <processor>:<source>:<segment>:<position> (at most 578).
+-- Dead letters, sequenced per (processor, key). id = <processor>:<source>:<segment>:<position> (at most 578).
 CREATE TABLE IF NOT EXISTS snodra_dead_letters (
     id              VARCHAR(578) COLLATE "C" NOT NULL PRIMARY KEY,
     processor       VARCHAR(64)  COLLATE "C" NOT NULL,
@@ -77,7 +77,7 @@ CREATE INDEX IF NOT EXISTS snodra_dead_letters_key ON snodra_dead_letters (proce
 CREATE INDEX IF NOT EXISTS snodra_dead_letters_parked ON snodra_dead_letters (processor, parked_at);
 CREATE INDEX IF NOT EXISTS snodra_dead_letters_expire ON snodra_dead_letters (expire_at);
 
--- One row per event processor (P6b, ADR 0023): its pause, the reset operation holding its lock, its open replay ranges
+-- One row per event processor: its pause, the reset operation holding its lock, its open replay ranges
 -- (a JSON array of {"source","segment","from","until"} strings, in order).
 CREATE TABLE IF NOT EXISTS snodra_processor_control (
     processor      VARCHAR(64) COLLATE "C" NOT NULL PRIMARY KEY,
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS snodra_external_calls (
 );
 CREATE INDEX IF NOT EXISTS snodra_external_calls_updated ON snodra_external_calls (updated_at);
 
--- Saga instances (ADR 0021). state is the saga as JSON text, kept as written. live_start_key_hash is the start key's hash
+-- Saga instances. state is the saga as JSON text, kept as written. live_start_key_hash is the start key's hash
 -- while the saga is live: its unique index lets one live saga hold a start key.
 CREATE TABLE IF NOT EXISTS snodra_sagas (
     id                  VARCHAR(255) COLLATE "C" NOT NULL PRIMARY KEY,

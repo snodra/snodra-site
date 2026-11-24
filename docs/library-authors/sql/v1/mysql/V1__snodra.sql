@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS snodra_schema (
     applied_at DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_bin;
 
--- The outbox (ADR 0005): events appended in the service's transaction, relayed to the event store afterwards.
+-- The outbox: events appended in the service's transaction, relayed to the event store afterwards.
 CREATE TABLE IF NOT EXISTS snodra_outbox (
     id          VARCHAR(255) NOT NULL PRIMARY KEY,
     type        VARCHAR(255) NOT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS snodra_processed_events (
     INDEX snodra_processed_events_processed_at (processed_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_bin;
 
--- Dead letters (ADR 0022), sequenced per (processor, key). id = <processor>:<source>:<segment>:<position> (at most 578).
+-- Dead letters, sequenced per (processor, key). id = <processor>:<source>:<segment>:<position> (at most 578).
 CREATE TABLE IF NOT EXISTS snodra_dead_letters (
     id              VARCHAR(578) NOT NULL PRIMARY KEY,
     processor       VARCHAR(64)  NOT NULL,
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS snodra_dead_letters (
     INDEX snodra_dead_letters_expire (expire_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_bin;
 
--- One row per event processor (P6b, ADR 0023): its pause, the reset operation holding its lock, its open replay ranges
+-- One row per event processor: its pause, the reset operation holding its lock, its open replay ranges
 -- (a JSON array of {"source","segment","from","until"} strings, in order).
 CREATE TABLE IF NOT EXISTS snodra_processor_control (
     processor      VARCHAR(64) NOT NULL PRIMARY KEY,
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS snodra_external_calls (
     INDEX snodra_external_calls_updated (updated_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_bin;
 
--- Saga instances (ADR 0021). state is the saga as JSON text, kept as written. live_start_key_hash is the start key's hash
+-- Saga instances. state is the saga as JSON text, kept as written. live_start_key_hash is the start key's hash
 -- while the saga is live: its unique index lets one live saga hold a start key.
 CREATE TABLE IF NOT EXISTS snodra_sagas (
     id                  VARCHAR(255) NOT NULL PRIMARY KEY,
