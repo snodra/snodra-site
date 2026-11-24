@@ -20,7 +20,7 @@ const steps = [
   {
     n: "04",
     title: "Relay",
-    copy: "The relay publishes events to Kafka or RabbitMQ Streams. Processors consume them exactly once by construction, with dead letters when they should stop.",
+    copy: "The relay publishes events to Kafka or RabbitMQ Streams. Processors are idempotent by construction, with dead letters when they should stop.",
   },
 ];
 

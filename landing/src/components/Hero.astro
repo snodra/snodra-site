@@ -215,7 +215,7 @@ const services = [
           ["1", "protocol"],
         ].map(([value, label]) => (
           <div class="rounded-xl border border-line bg-white/[0.025] px-4 py-3 text-center">
-            <p class="text-2xl font-semibold tracking-tight text-white">{value}</p>
+            <p class="text-2xl font-semibold tracking-tight text-white" data-count={value}>{value}</p>
             <p class="mt-0.5 text-[0.72rem] leading-snug text-dim">{label}</p>
           </div>
         ))
