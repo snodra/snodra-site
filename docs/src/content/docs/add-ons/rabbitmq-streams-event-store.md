@@ -10,7 +10,7 @@ the broker you operate and you want events in partitioned streams without adding
 | Library | Coordinate |
 |---|---|
 | Kotlin | `com.damoreira.snodra:snodra-messaging-rabbitmq:0.6.1` |
-| Rust | `snodra-messaging-rabbitmq = "0.7"` |
+| Rust | `snodra-messaging-rabbitmq = "0.8"` |
 
 The Kotlin module pins the RabbitMQ Stream Java client version; a Spring Boot service that manages
 that dependency must set `rabbit-stream-client.version` to the version the add-on needs, or the

@@ -88,14 +88,14 @@ Next: [the Kotlin quick start](/docs/messaging/kotlin/quickstart/), then
 The crate and its add-ons come from crates.io:
 
 ```sh
-cargo add snodra-messaging-rs@0.7
-cargo add snodra-messaging-kafka@0.7        # or snodra-messaging-rabbitmq
-cargo add snodra-messaging-mongo@0.7        # or snodra-messaging-sqlx with a database feature
+cargo add snodra-messaging@0.8
+cargo add snodra-messaging-kafka@0.8        # or snodra-messaging-rabbitmq
+cargo add snodra-messaging-mongo@0.8        # or snodra-messaging-sqlx with a database feature
 ```
 
 | Crate | Use |
 |---|---|
-| `snodra-messaging-rs` | The hub client, events, processors, sagas and identity |
+| `snodra-messaging` | The hub client, events, processors, sagas and identity |
 | `snodra-messaging-kafka` | Kafka event store, and partner topics as external sources |
 | `snodra-messaging-rabbitmq` | RabbitMQ Streams event store |
 | `snodra-messaging-mongo` | MongoDB message store |
@@ -111,7 +111,7 @@ For tests, enable the library's `testing` feature in dev-dependencies:
 
 ```toml
 [dev-dependencies]
-snodra-messaging-rs = { version = "0.7", features = ["testing"] }
+snodra-messaging = { version = "0.8", features = ["testing"] }
 ```
 
 Next: [the Rust quick start](/docs/messaging/rust/quickstart/), then

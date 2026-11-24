@@ -11,7 +11,7 @@ already owns a relational database and wants the outbox in the same transaction 
 | Library | Coordinate |
 |---|---|
 | Kotlin | `com.damoreira.snodra:snodra-messaging-jdbc:0.6.1` |
-| Rust | `snodra-messaging-sqlx = "0.7"`, with feature `postgres` or `mysql` |
+| Rust | `snodra-messaging-sqlx = "0.8"`, with feature `postgres` or `mysql` |
 
 The Kotlin module runs on the application's `DataSource` through Spring's `JdbcClient`; it needs at
 least two connections in the pool. The Rust crate runs on `sqlx` and takes your pool.

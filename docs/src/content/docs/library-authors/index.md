@@ -30,7 +30,7 @@ every query mode, credentials, several hubs), **2 Events**, **3 Processors**, **
 | Library | Language | Licence | Feature level | Conformance |
 |---|---|---|---|---|
 | [snodra-messaging](/docs/messaging/kotlin/) ([releases](https://github.com/snodra/snodra-messaging/releases)) | Kotlin (Spring Boot starter) | Apache-2.0 | 4, implemented; level 1 proved by the runner | level 1 passes every check of the runner through `examples/conformance-service`; the event-store and message-store kits pass |
-| [snodra-messaging-rs](/docs/messaging/rust/) ([releases](https://github.com/snodra/snodra-messaging-rs/releases)) | Rust | Apache-2.0 | 4, implemented; level 1 proved by the runner | level 1 passes every check of the runner through the runner's own reference service; the event-store and message-store kits pass |
+| [snodra-messaging](/docs/messaging/rust/) ([releases](https://github.com/snodra/snodra-messaging-rs/releases)) | Rust | Apache-2.0 | 4, implemented; level 1 proved by the runner | level 1 passes every check of the runner through the runner's own reference service; the event-store and message-store kits pass |
 | [snodra-messaging-go](/docs/messaging/go/) ([releases](https://github.com/snodra/snodra-messaging-go/releases)) | Go | Apache-2.0 | 1, implemented; level 1 proved by the runner | level 1 passes every check of the runner through `examples/conformance-service` |
 
 The Kotlin and Rust libraries are reference implementations of the same contract: a service on one is indistinguishable

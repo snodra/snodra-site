@@ -11,7 +11,7 @@ and Rust libraries share.
 | Library | Coordinate |
 |---|---|
 | Kotlin | `com.damoreira.snodra:snodra-messaging-kafka:0.6.1` |
-| Rust | `snodra-messaging-kafka = "0.7"` |
+| Rust | `snodra-messaging-kafka = "0.8"` |
 
 The Kotlin module depends on the core starter; the Rust crate is passed to the builder with
 `.event_store(...)`.

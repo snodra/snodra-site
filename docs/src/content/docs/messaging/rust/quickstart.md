@@ -6,7 +6,7 @@ title: "Rust quick start"
 
 ```toml
 [dependencies]
-snodra-messaging-rs = "0.7"
+snodra-messaging = "0.8"
 ```
 
 The crates live on crates.io: pin a minor version (`0.7`), or the exact release.

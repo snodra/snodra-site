@@ -2,7 +2,7 @@
 title: "Licence"
 ---
 
-Snodra, `snodra-server`, `snodra-messaging`, `snodra-messaging-rs`, `snodra-event-browser` and
+Snodra, `snodra-server`, `snodra-messaging` (every language), `snodra-event-browser` and
 `snodra-conformance` are released under the **Apache License 2.0**, © 2026 Guilherme D'Amoreira. The full
 text ships in each repository as `LICENSE`.
 

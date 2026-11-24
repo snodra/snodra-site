@@ -12,7 +12,7 @@ The server and both client libraries ship as one release train. The server repor
 for diagnostics only. Every component in a deployment should be on the same release.
 
 Version numbers identify the public artifacts (`snodra-server`, `snodra-messaging`,
-`snodra-messaging-rs`, the add-ons and the event browser). A patch release fixes defects and changes
+`snodra-messaging`, the add-ons and the event browser). A patch release fixes defects and changes
 no contract. A minor release may add protocol fields, settings, metrics or handlers, and keeps the
 protocol package unchanged. A release that changes the protocol package is a coordinated move for the
 server and every client.

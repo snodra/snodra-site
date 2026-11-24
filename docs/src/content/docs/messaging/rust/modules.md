@@ -50,5 +50,5 @@ flowchart LR
 | `ci` | `test` | every push and pull request | the workspace suite, container-backed tests included |
 | `release` | `publish` | only on tags `vX.Y.Z` | the core and the four add-ons on crates.io, then a GitHub release |
 
-Services take the crates from crates.io (`cargo add snodra-messaging-rs@0.7`). The sandbox compose builds
+Services take the crates from crates.io (`cargo add snodra-messaging@0.8`). The sandbox compose builds
 `examples/service-c` from source.

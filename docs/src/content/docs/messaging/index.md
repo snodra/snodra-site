@@ -3,7 +3,7 @@ title: "The messaging model"
 ---
 
 This document specifies the messaging layer in Snodra: the Kotlin starter
-`snodra-messaging`, the Rust crate `snodra-messaging-rs`, the wire format, the Kafka layout, the
+`snodra-messaging`, the Rust crate `snodra-messaging`, the wire format, the Kafka layout, the
 outbox, and the hub protocol. The Go library, [snodra-messaging-go](/docs/messaging/go/), is at feature level 1 (commands and
 queries): this model's events, processors and sagas are not in it yet.
 
@@ -1137,7 +1137,7 @@ processorControl.pause("orders")
 processorControl.resume("orders")
 ```
 
-Rust (`snodra-messaging-rs`; the crate README's "Processor control" section is the user guide):
+Rust (`snodra-messaging`; the crate README's "Processor control" section is the user guide):
 
 ```rust
 use snodra_messaging::processors::{EventOptions, ResetContext, ResetTarget};
@@ -1415,7 +1415,7 @@ handler can detect duplicates.
   handler that throws leaves nothing behind, and the dispatch expectations cover what was sent since the last `given…` step.
 
 The Rust crate has its saga fixture in the crate itself, behind the cargo feature `testing`
-(`snodra-messaging-rs = { path = "..", features = ["testing"] }` under `[dev-dependencies]`):
+(`snodra-messaging = { path = "..", features = ["testing"] }` under `[dev-dependencies]`):
 `snodra_messaging::saga::testing::SagaTestFixture::new(name, define)` takes the closure given to `builder.saga` and has the same
 steps and expectations in snake case (`given_events(&[&e1, &e2])`, `when_event`, `when_event_with_headers`,
 `when_command_failed`, `when_time_elapses`, `expect_*`), over the crate's runtime and the in-memory ports `InMemorySagaStore`.

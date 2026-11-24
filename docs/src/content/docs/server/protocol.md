@@ -189,7 +189,7 @@ Every rule from the client's side is in
   `snodra_server_stream_parts_total{service,type}`.
 - `tests/streaming.rs` drives it over gRPC with raw clients. The client APIs are in the
   libraries' READMEs: [snodra-messaging, Streaming queries](https://snodra.damoreira.com/docs/messaging/kotlin/api/#streaming-queries)
-  (Kotlin), [snodra-messaging-rs, Streaming queries](https://snodra.damoreira.com/docs/messaging/rust/api/#streaming-queries)
+  (Kotlin), [snodra-messaging, Streaming queries](https://snodra.damoreira.com/docs/messaging/rust/api/#streaming-queries)
   (Rust) and [snodra-messaging-go, The four query modes](https://snodra.damoreira.com/docs/messaging/go/api/#the-four-query-modes)
   (Go).
 - **Subscription.** A sender sends a query with
@@ -261,7 +261,7 @@ Every rule from the client's side is in
 - `tests/subscription.rs` drives it over gRPC with raw clients. The client libraries implement
   the sender and handler sides; their READMEs:
   [snodra-messaging, Subscription queries](https://snodra.damoreira.com/docs/messaging/kotlin/api/#subscription-queries)
-  (Kotlin), [snodra-messaging-rs, Subscription queries](https://snodra.damoreira.com/docs/messaging/rust/api/#subscription-queries)
+  (Kotlin), [snodra-messaging, Subscription queries](https://snodra.damoreira.com/docs/messaging/rust/api/#subscription-queries)
   (Rust) and [snodra-messaging-go, The four query modes](https://snodra.damoreira.com/docs/messaging/go/api/#the-four-query-modes)
   (Go).
 

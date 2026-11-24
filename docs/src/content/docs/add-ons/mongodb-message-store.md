@@ -11,7 +11,7 @@ change and the event commit together.
 | Library | Coordinate |
 |---|---|
 | Kotlin | `com.damoreira.snodra:snodra-messaging-mongo:0.6.1` |
-| Rust | `snodra-messaging-mongo = "0.7"` |
+| Rust | `snodra-messaging-mongo = "0.8"` |
 
 The Kotlin module brings Spring Data MongoDB; a service needs a `MongoTemplate`. The Rust crate takes
 a `mongodb::Client` and a database from your code; it reads no connection setting of its own.

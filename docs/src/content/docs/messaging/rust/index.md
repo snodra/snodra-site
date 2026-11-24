@@ -1,5 +1,5 @@
 ---
-title: "snodra-messaging-rs"
+title: "snodra-messaging (Rust)"
 ---
 
 The Rust counterpart of `snodra-messaging`: one builder that opens the hub stream, consumes Kafka,
@@ -7,7 +7,7 @@ runs idempotent handlers, publishes through an outbox, and runs sagas with deadl
 
 ```toml
 [dependencies]
-snodra-messaging-rs = "0.7"
+snodra-messaging = "0.8"
 ```
 
 ## What it gives you

@@ -9,7 +9,7 @@ crate's own runtime (no Kafka, MongoDB or hub):
 
 ```toml
 [dev-dependencies]
-snodra-messaging-rs = { path = "../snodra-messaging-rs", features = ["testing"] }
+snodra-messaging = { path = "../snodra-messaging-rs", features = ["testing"] }
 ```
 
 ```rust

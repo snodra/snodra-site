@@ -27,7 +27,7 @@ start, configuration, the API, testing and the modules and build.
 
 ## The Rust library
 
-[snodra-messaging-rs](/docs/messaging/rust/) is the Rust crate. Its pages cover the quick start,
+[snodra-messaging](/docs/messaging/rust/) is the Rust crate. Its pages cover the quick start,
 configuration, the API, dead letters, sagas, testing and the modules and build.
 
 ## The Go library
