@@ -2,7 +2,7 @@
 title: "Reference"
 ---
 
-The complete contract behind the concepts: the server, the messaging model and the two client
+The complete contract behind the concepts: the server, the messaging model and the client
 libraries. Use these pages when you need an exact setting, method or wire rule.
 
 ## The server
@@ -33,6 +33,11 @@ configuration, the API, dead letters, sagas, testing and the modules and build.
 ## The Go library
 
 [snodra-messaging-go](/docs/messaging/go/) is the Go library, pre-1.0 and at feature level 1 (commands and
+queries; no events, sagas or add-ons yet). Its pages cover the quick start, configuration, the API and testing.
+
+## The Python library
+
+[snodra-messaging-python](/docs/messaging/python/) is the Python library, pre-1.0 and at feature level 1 (commands and
 queries; no events, sagas or add-ons yet). Its pages cover the quick start, configuration, the API and testing.
 
 ## The stores

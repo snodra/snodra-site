@@ -19,8 +19,8 @@ straight to Kafka.
   discard dead letters, from the dashboard or the HTTP API.
 - **You can see what is happening.** Topology, per-instance queue depth, processor status, consumer
   lag and an event browser are part of the binary.
-- **One protocol, three clients.** One `.proto`, a Kotlin Spring Boot starter, a Rust crate and a Go
-  module (commands and queries only); anything that speaks gRPC can talk to it.
+- **One protocol, four clients.** One `.proto`, a Kotlin Spring Boot starter, a Rust crate, a Go
+  module and a Python package (commands and queries only); anything that speaks gRPC can talk to it.
 
 ## What it is not
 

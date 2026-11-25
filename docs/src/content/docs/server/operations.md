@@ -29,7 +29,7 @@ route any request while at least one is up.
   `hub-2` (gRPC `localhost:7012`, dashboard `http://localhost:7011/`), each listing both
   dashboards as peers ([Hub quick start](/docs/server/quickstart/)).
 
-**Client side** (every official library: Kotlin, Rust and Go): one connection per hub (deduplicated by
+**Client side** (every official library: Kotlin, Rust, Go and Python): one connection per hub (deduplicated by
 `hub_id`), identical registration on each, unkeyed requests round-robin over acknowledged hubs,
 keyed commands rendezvous-hashed over `(routing key, hub_id)` to one hub, replies on the arrival
 stream, permits split `ceil(max-concurrent-handlers / N)`, unsent requests retried on another hub,
@@ -47,7 +47,7 @@ queries and subscriptions, once written, are bound to one hub. Rules shared by e
   client certificate, which stays counted in N. Nothing is ever revoked; each instance's local handler bound
   stays `max-concurrent-handlers`.
 - **Hub id.** `RegisterAck.hub_id`; for an empty `hub_id`, the target id: the bare
-  `host:port` (`static://`, and in Rust and Go `http(s)://`, stripped; a resolved IPv6 address as
+  `host:port` (`static://`, and in Rust, Go and Python `http(s)://`, stripped; a resolved IPv6 address as
   `[ip]:port` without zone).
 - **One address family.** A `dns:///` answer is reduced to its IPv4 addresses when it has any,
   else its IPv6 ones, without repeats: a dual-stack name lists every hub under both families,
@@ -71,12 +71,12 @@ queries and subscriptions, once written, are bound to one hub. Rules shared by e
 
 **Client configuration.** The existing address setting takes the list; there is no separate key:
 
-| | Kotlin starter | Rust crate | Go library |
-|---|---|---|---|
-| Hubs | `snodra.messaging.hub.address` (`SNODRA_SERVER_ADDRESS` in the services' yaml) | `SNODRA_SERVER_ADDRESS` (`Config.hub_address`) | `SNODRA_SERVER_ADDRESS` (`Hubs`) |
-| Forms | `host:port` (`static://` optional), a comma-separated list `static://hub:7000,hub-2:7000` (`static://` optional per entry), or one `dns:///name:port` (port required, alone) re-resolved every 30 s | the same (`http(s)://` also accepted per entry) | the same (`http(s)://` also accepted per entry) |
-| Status period | `snodra.messaging.hub.status-interval`, default `5s`; also sent on every change of the live hubs | `SNODRA_SERVER_STATUS_INTERVAL_MS`, default `5000`; also sent on every change of the live hubs | `SNODRA_SERVER_STATUS_INTERVAL_MS` (`StatusInterval`), default `5000`; also sent on every change of the live hubs |
-| Default | `static://snodra-server:7000` (one hub) | `static://snodra-server:7000` (one hub) | `static://snodra-server:7000` (one hub) |
+| | Kotlin starter | Rust crate | Go library | Python library |
+|---|---|---|---|---|
+| Hubs | `snodra.messaging.hub.address` (`SNODRA_SERVER_ADDRESS` in the services' yaml) | `SNODRA_SERVER_ADDRESS` (`Config.hub_address`) | `SNODRA_SERVER_ADDRESS` (`Hubs`) | `SNODRA_SERVER_ADDRESS` (`Settings.hubs`) |
+| Forms | `host:port` (`static://` optional), a comma-separated list `static://hub:7000,hub-2:7000` (`static://` optional per entry), or one `dns:///name:port` (port required, alone) re-resolved every 30 s | the same (`http(s)://` also accepted per entry) | the same (`http(s)://` also accepted per entry) | the same (`http(s)://` also accepted per entry) |
+| Status period | `snodra.messaging.hub.status-interval`, default `5s`; also sent on every change of the live hubs | `SNODRA_SERVER_STATUS_INTERVAL_MS`, default `5000`; also sent on every change of the live hubs | `SNODRA_SERVER_STATUS_INTERVAL_MS` (`StatusInterval`), default `5000`; also sent on every change of the live hubs | `SNODRA_SERVER_STATUS_INTERVAL_MS` (`status_interval`), default `5000`; also sent on every change of the live hubs |
+| Default | `static://snodra-server:7000` (one hub) | `static://snodra-server:7000` (one hub) | `static://snodra-server:7000` (one hub) | `static://snodra-server:7000` (one hub) |
 
 One target is the single-hub setup. The keyed-request hash, the permit split and top-up, and the
 address-family rule are identical in every official library ([The messaging model](/docs/messaging/)). In the sandbox

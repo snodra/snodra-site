@@ -2,13 +2,13 @@
 title: "Writing a Snodra library"
 ---
 
-This page is for anyone writing a Snodra library for a new language (Go, TypeScript, Python, C#, ...). After reading
+This page is for anyone writing a Snodra library for a new language (TypeScript, C#, ...). After reading
 it you know in which order to build one so that each step can be tried against a real hub, the states a connection, a
 request, a stream and a subscription go through, and the mistakes the official libraries made on the way, each as a
 rule with its reason. The protocol itself is in [protocol.md](/docs/library-authors/protocol/), the messages in [messages.md](/docs/library-authors/messages/),
 the levels and their checks in [feature-levels.md](/docs/library-authors/feature-levels/). The official libraries are reference
 implementations ([Kotlin](/docs/messaging/kotlin/), [Rust](/docs/messaging/rust/),
-[Go](/docs/messaging/go/)), never the specification. The Kotlin library is the reference: where these pages are
+[Go](/docs/messaging/go/), [Python](/docs/messaging/python/)), never the specification. The Kotlin library is the reference: where these pages are
 silent, its behaviour decides.
 
 ## Before you start

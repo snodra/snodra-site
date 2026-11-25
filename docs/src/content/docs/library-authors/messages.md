@@ -27,7 +27,7 @@ Every message has a type name, the one thing the hub routes on and an event cons
 | A response class is named `<CommandOrQuery>Result` (it has no type name of its own on the wire) | GetOrderResult |
 
 - **Names are explicit and stable.** The official libraries let a message declare its wire name (Kotlin
-  `@MessageType`, Rust `message_type!`, Go a `MessageType()` method), so that a class can be renamed without changing the contract. Senders and
+  `@MessageType`, Rust `message_type!`, Go a `MessageType()` method, Python a `@snodra.message_type` decorator), so that a class can be renamed without changing the contract. Senders and
   handlers in any language agree on the text, nothing else.
 - **A type has one kind while it is owned.** A type registered as a command cannot be registered as a query by another
   instance (`ALREADY_EXISTS`). A streaming query is a query type to the hub (the mode is the sender's choice). A
@@ -138,6 +138,10 @@ above that floor:
 - the Kotlin library, with Micrometer Tracing on the classpath and configured, writes the current trace context through
   its propagator (`traceparent`, and `tracestate` when the propagator emits it); without it, it forwards the valid
   `traceparent` of the message being handled, unchanged;
+- the Go library forwards the valid `traceparent` of the message being handled, unchanged, and with the `observability`
+  module installed creates a server span named after the message type;
+- the Python library forwards the valid `traceparent` of the message being handled, unchanged, and with
+  `snodra-messaging-observability` installed creates a server span named after the message type;
 - the Rust library forwards the valid `traceparent` of the message being handled, unchanged, and creates no span of its
   own.
 

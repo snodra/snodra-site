@@ -60,6 +60,22 @@ It also creates a server span for every request a handler serves, a child of the
 Kotlin and Rust libraries do not; its instrumentation scope is the module's import path
 ([Go API, Telemetry](/docs/messaging/go/api/#telemetry)).
 
+The Python library's core also defines an interface (`snodra.Telemetry`). Its OpenTelemetry implementation is the
+separate package `snodra-messaging-observability` (`snodra_observability.Observability`), on the OpenTelemetry API
+only: install the SDK and its exporters as for Rust, then pass it to the app:
+
+```python
+from snodra_observability import Observability
+
+app = snodra.App(
+    settings,
+    telemetry=Observability(),  # the global providers; or meter_provider, tracer_provider, propagator
+)
+```
+
+Like the Go library, it creates a server span for every request a handler serves, a child of the request's `traceparent`;
+its instrumentation scope is `snodra` ([Python API, Telemetry](/docs/messaging/python/api/#telemetry)).
+
 The official libraries export the same instrument names, so one dashboard works for every one.
 
 ## Signal names

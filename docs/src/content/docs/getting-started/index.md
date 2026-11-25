@@ -2,7 +2,7 @@
 title: "Getting started"
 ---
 
-Four entry points, one stack. Pick the one that matches what you are building.
+Five entry points, one stack. Pick the one that matches what you are building.
 
 | Entry point | What you get | Start here |
 |---|---|---|
@@ -10,6 +10,7 @@ Four entry points, one stack. Pick the one that matches what you are building.
 | **Kotlin library** | A Spring Boot starter: buses, handlers, outbox, sagas, testing kits | [Installation: Kotlin](/docs/getting-started/installation/#kotlin) |
 | **Rust library** | A crate: one builder for the hub client, event store, outbox and handlers | [Installation: Rust](/docs/getting-started/installation/#rust) |
 | **Go library** | A module at feature level 1: handlers and sending for commands and queries, in every query mode; no events or sagas yet | [Installation: Go](/docs/getting-started/installation/#go) |
+| **Python library** | A package at feature level 1: handlers and sending for commands and queries, in every query mode; no events or sagas yet | [Installation: Python](/docs/getting-started/installation/#python) |
 
 A first system needs two things: a server, and at least one service that registers a handler. The
 walkthrough in [Your first service](/docs/getting-started/first-service/) links the existing quickstarts instead of
@@ -18,7 +19,7 @@ repeating them.
 ## The shape of a first setup
 
 ```text
-your service (Kotlin, Rust or Go)
+your service (Kotlin, Rust, Go or Python)
         │  commands and queries over gRPC :7000
         ▼
   Snodra Server  ── dashboard and API :7001
@@ -34,6 +35,6 @@ picture, and [Add-ons](/docs/add-ons/) for the store choices.
 
 ## Next
 
-- [Installation](/docs/getting-started/installation/) — the server image, the Kotlin artifact, the Rust crate and the Go module.
+- [Installation](/docs/getting-started/installation/) — the server image, the Kotlin artifact, the Rust crate, the Go module and the Python package.
 - [Your first service](/docs/getting-started/first-service/) — from an empty directory to a registered handler.
 - [Core concepts](/docs/concepts/) — if CQRS is new to you, read this before the reference.

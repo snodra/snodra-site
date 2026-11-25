@@ -24,18 +24,18 @@ Your library runs a small **conformance service** for the runner: it handles fix
 (echo, fail, sleep, a stream, a subscription, a relay through the hub, and `conformance.Send`, which makes your
 library send a request and report the outcome), written with your library's API as an application would write them.
 The contract, with the JSON Schema of every type and how each check uses them, is
-[the conformance contract](https://github.com/snodra/snodra-conformance/blob/main/docs/contract.md) (contract version 1). Three complete examples of
+[the conformance contract](https://github.com/snodra/snodra-conformance/blob/main/docs/contract.md) (contract version 1). Four complete examples of
 about 800 lines each: the Rust reference service in the snodra-conformance repository (`reference-service/`), the
-Kotlin conformance service in the snodra-messaging repository and the Go one in the snodra-messaging-go repository
-(both `examples/conformance-service`). All three pass every level-1 check, and the runner's own mutation matrix proves
-that each check fails when it should.
+Kotlin conformance service in the snodra-messaging repository, the Go one in the snodra-messaging-go repository
+and the Python one in the snodra-messaging-python repository (all three `examples/conformance-service`). All four
+pass every level-1 check, and the runner's own mutation matrix proves that each check fails when it should.
 
 The runner starts the service itself, once or more per check, with its configuration in `CONFORMANCE_*` environment
 variables (the hubs, the service name and instance id, the capacity, the retry policy, credentials), so the service
 is a program that reads them, maps them onto your library's configuration, registers its handlers and stops on
 SIGTERM within 5 s. A guarded handler needs a JWKS ([messages.md, Forwarded identity](/docs/library-authors/messages/#forwarded-identity)),
 and the runner gives one (`CONFORMANCE_JWKS_URL`) only to the checks that need it, so the service registers
-`conformance.Guarded` only when it is given one, as the three example services do.
+`conformance.Guarded` only when it is given one, as the four example services do.
 
 A conformance service should turn on its library's "always route through the hub" setting
 ([protocol.md, Requests a service answers itself](/docs/library-authors/protocol/#requests-a-service-answers-itself)), or let its

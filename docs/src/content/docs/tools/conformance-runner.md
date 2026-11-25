@@ -72,4 +72,4 @@ listed.
 - The test kits you already have: [Testing](/docs/operations/testing/).
 - The wire contract the checks exercise: [Protocol](/docs/library-authors/protocol/).
 - The library test pages: [Kotlin testing](/docs/messaging/kotlin/testing/),
-  [Rust testing](/docs/messaging/rust/testing/) and [Go testing](/docs/messaging/go/testing/).
+  [Rust testing](/docs/messaging/rust/testing/), [Go testing](/docs/messaging/go/testing/) and [Python testing](/docs/messaging/python/testing/).

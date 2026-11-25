@@ -54,7 +54,7 @@ queue and replies to another is never legitimate.
 ## What a service sees when it is refused
 
 The client libraries expose the hub's last rejection instead of hiding it: Kotlin's
-`HubConnection.lastRejection`, Rust's `last_rejection()` and Go's `App.Rejection`. A refusal is not an outage; the
+`HubConnection.lastRejection`, Rust's `last_rejection()`, Go's `App.Rejection` and Python's `app.rejection`. A refusal is not an outage; the
 connection keeps retrying, so fixing the token or the ACL is enough and no restart is needed.
 
 | Refusal | Meaning |

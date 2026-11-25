@@ -47,10 +47,11 @@ fun handle(command: PlaceOrder) { /* ... */ }
 ```
 
 The starter opens `Hub.Connect`, sends `Register` with every handled type, and reconnects on its
-own. The Rust crate does the same through one builder, and the Go library through its `App`. See
+own. The Rust crate does the same through one builder, and the Go and Python libraries through their `App`. See
 [the Kotlin quick start](https://snodra.damoreira.com/docs/messaging/kotlin/quickstart/),
-[the Rust quick start](https://snodra.damoreira.com/docs/messaging/rust/quickstart/) and
-[the Go quick start](https://snodra.damoreira.com/docs/messaging/go/quickstart/).
+[the Rust quick start](https://snodra.damoreira.com/docs/messaging/rust/quickstart/),
+[the Go quick start](https://snodra.damoreira.com/docs/messaging/go/quickstart/) and
+[the Python quick start](https://snodra.damoreira.com/docs/messaging/python/quickstart/).
 
 ## 5. Send a first request
 

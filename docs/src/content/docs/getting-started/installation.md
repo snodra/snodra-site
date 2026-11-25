@@ -133,6 +133,21 @@ only on gRPC and protobuf.
 Next: [the Go quick start](/docs/messaging/go/quickstart/), then
 [configuration](/docs/messaging/go/configuration/).
 
+## Python
+
+The Python library is pre-1.0 and at feature level 1: commands and queries, in every query mode, with no events, stores or
+sagas yet. It needs Python 3.12 or later:
+
+```sh
+pip install snodra-messaging
+pip install snodra-messaging-observability   # optional: OpenTelemetry metrics and traces
+```
+
+The package is named `snodra`. The core package depends only on `grpcio`, `protobuf` and `cryptography`.
+
+Next: [the Python quick start](/docs/messaging/python/quickstart/), then
+[configuration](/docs/messaging/python/configuration/).
+
 ## After installation
 
 [Your first service](/docs/getting-started/first-service/) walks through the shortest path from a running server to a

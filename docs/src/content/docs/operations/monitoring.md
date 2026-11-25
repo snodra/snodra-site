@@ -29,8 +29,10 @@ An empty endpoint disables export. The Rust library records through the OpenTele
 application installs the meter provider before the builder runs. The Kotlin starter uses Micrometer,
 so the service's normal Actuator/OTLP setup applies. The Go library records through its optional
 `observability` module (`github.com/snodra/snodra-messaging-go/observability`), on the OpenTelemetry API only: the
-application installs the SDK and passes `snodra.Telemetry(observability.New())`. Set `OTEL_METRIC_EXPORT_INTERVAL` (milliseconds)
-to change the 60-second default.
+application installs the SDK and passes `snodra.Telemetry(observability.New())`. The Python library records through
+its optional `snodra-messaging-observability` package (`snodra_observability.Observability`), on the OpenTelemetry
+API only: the application installs the SDK and passes `telemetry=Observability()`. Set `OTEL_METRIC_EXPORT_INTERVAL`
+(milliseconds) to change the 60-second default.
 
 ## The four signals to alert on
 

@@ -4,8 +4,9 @@ title: "The messaging model"
 
 This document specifies the messaging layer in Snodra: the Kotlin starter
 `snodra-messaging`, the Rust crate `snodra-messaging`, the wire format, the Kafka layout, the
-outbox, and the hub protocol. The Go library, [snodra-messaging-go](/docs/messaging/go/), is at feature level 1 (commands and
-queries): this model's events, processors and sagas are not in it yet.
+outbox, and the hub protocol. The Go library, [snodra-messaging-go](/docs/messaging/go/), and the Python
+library, [snodra-messaging-python](/docs/messaging/python/), are at feature level 1 (commands and
+queries): this model's events, processors and sagas are not in them yet.
 
 ## The model in one paragraph
 

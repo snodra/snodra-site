@@ -70,11 +70,23 @@ export SNODRA_SERVER_ADDRESS=static://localhost:7000
 
 
 </TabItem>
+<TabItem label="Python">
+
+Follow [the Python quick start](/docs/messaging/python/quickstart/) through the message types and the handlers. A
+function decorated with `@app.command_handler` or `@app.query_handler` is the handler; `app.run()` opens the hub stream and
+registers the types. The Python library has no events yet, so the service below answers commands and queries only.
+```sh
+export SNODRA_SERVICE_NAME=orders
+export SNODRA_SERVER_ADDRESS=static://localhost:7000
+```
+
+
+</TabItem>
 </Tabs>
 
 ## 3. Declare one command and one event
 
-Both quickstarts show the message types. Keep the naming rules in mind: a wire type is
+The quickstarts show the message types. Keep the naming rules in mind: a wire type is
 `<service-prefix>.<ClassName>`, commands are imperative, events are past tense. The type name is the
 routing key — the server matches a request to a handler by it.
 

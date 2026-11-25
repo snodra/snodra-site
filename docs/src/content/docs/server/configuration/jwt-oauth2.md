@@ -86,6 +86,11 @@ SNODRA_SERVER_OAUTH2_CLIENT_SECRET_FILE=/run/secrets/billing-client-secret
 The same variables, read by `snodra.FromEnv()`, or the option `JWT(NewClientCredentials(...))`
 ([Go configuration](/docs/messaging/go/configuration/#authenticating-with-a-jwt)).
 
+## Python client
+
+The same variables, read by `snodra.Settings.from_env()`, or `credentials=ClientCredentials(...)`
+([Python configuration](/docs/messaging/python/configuration/#authenticating-with-a-jwt)).
+
 ## Roles
 
 A forwarded token's roles become `ROLE_<role>` in the service. Which claim they come from is

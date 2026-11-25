@@ -10,7 +10,7 @@ open source and stays that way. The paid side is support and the enterprise add-
 Free, for everyone:
 
 - **Snodra Server**: commands, queries, every query mode, several servers, the dashboard, processor control.
-- **Go library** (feature level 1): commands and queries in every query mode.
+- **Go and Python libraries** (feature level 1): commands and queries in every query mode.
 - **Kotlin and Rust libraries**: the same model, the same wire, the Kafka, RabbitMQ Streams, MongoDB, SQL and in-memory
   stores as add-ons.
 - **Snodra Event Browser**: the dashboard's events, records, tails and lag.

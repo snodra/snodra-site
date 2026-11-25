@@ -256,6 +256,31 @@ export const sidebar = [
             "slug": "messaging/go/testing"
           }
         ]
+      },
+      {
+        "label": "Python library",
+        "items": [
+          {
+            "label": "Overview",
+            "slug": "messaging/python"
+          },
+          {
+            "label": "Quick start",
+            "slug": "messaging/python/quickstart"
+          },
+          {
+            "label": "Configuration",
+            "slug": "messaging/python/configuration"
+          },
+          {
+            "label": "API",
+            "slug": "messaging/python/api"
+          },
+          {
+            "label": "Testing",
+            "slug": "messaging/python/testing"
+          }
+        ]
       }
     ]
   },

@@ -71,6 +71,12 @@ The same variables, read by `snodra.FromEnv()` (or the options `Token` and `Toke
 (an unreadable or empty file fails `New`), before every connection and on every heartbeat of a registered stream: a
 changed token goes to the hub as a credentials refresh ([Go configuration](/docs/messaging/go/configuration/#token)).
 
+## Python client
+
+The same variables, read by `snodra.Settings.from_env()` (or `credentials=Token(...)` / `TokenFile(...)`). The file is
+read at startup (an unreadable or empty file fails `App` construction), before every connection and on every heartbeat of a
+registered stream: a changed token goes to the hub as a credentials refresh ([Python configuration](/docs/messaging/python/configuration/#token)).
+
 ## What a refusal looks like
 
 | Situation | Stream | Requests |

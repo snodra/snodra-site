@@ -84,6 +84,12 @@ The same variables, read by `snodra.FromEnv()` (or the options `ClientCertificat
 turns TLS on and cannot be combined with a token or a JWT
 ([Go configuration](/docs/messaging/go/configuration/#authenticating-with-a-client-certificate-mtls)).
 
+## Python client
+
+The same variables, read by `snodra.Settings.from_env()` (or `client_certificate=ClientCertificate(...)` and `tls=TLSConfig(...)`);
+a client certificate turns TLS on and cannot be combined with a token or a JWT
+([Python configuration](/docs/messaging/python/configuration/#authenticating-with-a-client-certificate-mtls)).
+
 ## Rotation and expiry
 
 Every official library re-reads the files every few seconds. A valid new pair triggers a rollover one hub at

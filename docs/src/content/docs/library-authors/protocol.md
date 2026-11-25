@@ -378,7 +378,7 @@ A library must offer one setting that turns this off, "always route through the 
 test). With it on, every command and query, the saga relay's commands included, goes through the hub like a request
 of another service: a routing key keeps its instance affinity across the instances of the service, and the request
 gets the hub's flow control, priorities, deadline and metrics. The Kotlin library names it
-`snodra.messaging.hub.always-route-through-hub`; the Rust and Go libraries read `SNODRA_SERVER_ALWAYS_ROUTE_THROUGH_HUB`.
+`snodra.messaging.hub.always-route-through-hub`; the Rust, Go and Python libraries read `SNODRA_SERVER_ALWAYS_ROUTE_THROUGH_HUB`.
 
 ## Flow control
 
@@ -691,7 +691,7 @@ A library connected to several hubs must (`L1-HUBS`):
 - open **one stream per hub**, each with its own handshake, heartbeat and reconnect backoff, all with the identical
   `Register`;
 - know each hub by `RegisterAck.hub_id`; for an empty `hub_id` (a real hub always names itself), by its target as
-  `host:port`, with a `static://` prefix (and in the Rust and Go libraries `http://` or `https://`) stripped and a resolved IPv6
+  `host:port`, with a `static://` prefix (and in the Rust, Go and Python libraries `http://` or `https://`) stripped and a resolved IPv6
   address written `[ip]:port` without a zone. The first target to
   acknowledge a `hub_id` owns it while it is kept, live or reconnecting; a later target answering the same id is closed
   and parked (its `Register` has already replaced the owner's session, so the owner reconnects once): no stream, out of
@@ -761,8 +761,8 @@ follows the rules below.
 
 **The order among the untried hubs is not fixed.** For a keyed request it is the rendezvous order. For an unkeyed
 request the protocol does not fix which untried hub comes next, and with three or more hubs the official libraries
-differ: the Kotlin library takes the untried live hubs as a list and picks `list[counter % size]` with its shared
-round-robin counter; the Go and Rust libraries take a new round-robin turn over all live hubs, rotate the hubs from
+differ: the Kotlin and Python libraries take the untried live hubs as a list and pick `list[counter % size]` with their
+shared round-robin counter; the Go and Rust libraries take a new round-robin turn over all live hubs, rotate the hubs from
 that turn and pick the first one not tried. A caller must not rely on which hub comes next.
 
 **Addresses.** The official libraries take a list (`static://hub:7000,hub-2:7000`) or one `dns:///name:port`

@@ -32,12 +32,13 @@ every query mode, credentials, several hubs), **2 Events**, **3 Processors**, **
 | [snodra-messaging](/docs/messaging/kotlin/) ([releases](https://github.com/snodra/snodra-messaging/releases)) | Kotlin (Spring Boot starter) | Apache-2.0 | 4, implemented; level 1 proved by the runner | level 1 passes every check of the runner through `examples/conformance-service`; the event-store and message-store kits pass |
 | [snodra-messaging](/docs/messaging/rust/) ([releases](https://github.com/snodra/snodra-messaging-rs/releases)) | Rust | Apache-2.0 | 4, implemented; level 1 proved by the runner | level 1 passes every check of the runner through the runner's own reference service; the event-store and message-store kits pass |
 | [snodra-messaging-go](/docs/messaging/go/) ([releases](https://github.com/snodra/snodra-messaging-go/releases)) | Go | Apache-2.0 | 1, implemented; level 1 proved by the runner | level 1 passes every check of the runner through `examples/conformance-service` |
+| [snodra-messaging-python](/docs/messaging/python/) ([PyPI](https://pypi.org/project/snodra-messaging/)) | Python | Apache-2.0 | 1, implemented; level 1 proved by the runner | level 1 passes every check of the runner through `examples/conformance-service` |
 
 The Kotlin and Rust libraries are reference implementations of the same contract: a service on one is indistinguishable
-from a service on the other in front of the hub and the event store. The Go library is pre-1.0 and implements level 1
-only (commands and queries, in every query mode); it has no event store or message store add-ons yet. The
+from a service on the other in front of the hub and the event store. The Go and Python libraries are pre-1.0 and implement level 1
+only (commands and queries, in every query mode); they have no event store or message store add-ons yet. The
 [conformance runner](/docs/library-authors/conformance/) ([releases](https://github.com/snodra/snodra-conformance/releases)) proves level 1
-for all three; levels 2 to 4 are proved by the add-on kits.
+for all four; levels 2 to 4 are proved by the add-on kits.
 
 ### Interoperability
 
@@ -87,4 +88,4 @@ The suggested name is `snodra-messaging-<language>` (`snodra-messaging-go`, `sno
 | [message-store-add-ons.md](/docs/library-authors/message-store-add-ons/) | writing a message-store add-on, its conformance kit, the SQL layout |
 | [mongodb-layout.md](/docs/library-authors/mongodb-layout/) | the MongoDB layout of a message store: collections, document fields and BSON types, indexes, the atomic operations, and where the two official add-ons differ |
 | [conformance.md](/docs/library-authors/conformance/) | what proves each level, the conformance runner (level 1) and its report |
-| [Kotlin](/docs/messaging/kotlin/), [Rust](/docs/messaging/rust/), [Go](/docs/messaging/go/) | the official libraries: install, configure, modules (in the reference section of this site) |
+| [Kotlin](/docs/messaging/kotlin/), [Rust](/docs/messaging/rust/), [Go](/docs/messaging/go/), [Python](/docs/messaging/python/) | the official libraries: install, configure, modules (in the reference section of this site) |
