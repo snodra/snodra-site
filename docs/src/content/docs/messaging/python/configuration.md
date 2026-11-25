@@ -17,7 +17,7 @@ while the environment variables use milliseconds (`_MS`). A value that does not 
 |---|---|---|---|
 | `SNODRA_SERVICE_NAME` | `service` | required | the hub `service_name`: the logical name of the service, for example `orders-service` |
 | `SNODRA_INSTANCE_ID` | `instance` | a random UUID | the instance id, unique per process (a pod name, for instance); a `Register` whose id is held by another service is refused |
-| `SNODRA_SERVER_ADDRESS` | `hubs` | `("static://snodra-server:7000",)` | the hubs: a tuple of `host:port` (a `static://`, `http://` or `https://` prefix is accepted), or one `dns:///name:port` whose every address is a hub, resolved again every 30 s; see [Several hubs](/docs/messaging/python/api/#several-hubs) |
+| `SNODRA_SERVER_ADDRESS` | `hubs` | `("static://snodra-server:7000",)` | the hubs: a tuple of `host:port` (a `static://` prefix is accepted, an `http(s)://` one is refused), or one `dns:///name:port` whose every address is a hub, resolved again every 30 s; see [Several hubs](/docs/messaging/python/api/#several-hubs) |
 | `SNODRA_SERVER_STATUS_INTERVAL_MS` | `status_interval` | 5.0 (5000 ms) | how often every acknowledged hub gets an `InstanceStatus`, which also goes out at once whenever the acknowledged hubs change; at least 1 ms |
 | `SNODRA_MAX_CONCURRENT_HANDLERS` | `max_concurrent` | 256 | handlers run at once, at least 1; also the permits offered to the hubs, which queue further requests for this instance |
 | `SNODRA_RECONNECT_BACKOFF_MIN_MS`, `SNODRA_RECONNECT_BACKOFF_MAX_MS` | `reconnect_backoff` | `(0.5, 5.0)` (500 ms, 5000 ms) | the wait between two attempts to reach a hub: the minimum, doubling up to the maximum, each wait jittered by +/-20 % and never above the maximum; back to the minimum once an attempt reached the `RegisterAck`; a refused `Register` waits 80 to 100 % of the maximum |
@@ -40,8 +40,8 @@ while the environment variables use milliseconds (`_MS`). A value that does not 
 | `SNODRA_SERVER_OAUTH2_CLIENT_ID` | `ClientCredentials.client_id` | the service name | the OAuth2 client id; it must be the service name (the hub checks the token's `azp` against it) |
 | `SNODRA_SERVER_OAUTH2_CLIENT_SECRET`, `SNODRA_SERVER_OAUTH2_CLIENT_SECRET_FILE` | `ClientCredentials.client_secret`, `.client_secret_file` | none | the client secret, or a file holding it, **which wins** and is read at every token fetch; one of them is required with the token URI |
 | `SNODRA_SERVER_OAUTH2_SCOPE`, `SNODRA_SERVER_OAUTH2_CA` | `ClientCredentials.scope`, `.ca_file` | none | the `scope` sent with the grant (space-separated); a PEM file of extra root certificates for the token endpoint, beside the system's |
-| `SNODRA_SERVER_TLS` | `tls` (`TLSConfig`) | none | `true` makes every hub connection TLS (1.2 or later); needed when the hub serves TLS. An `https://` hub address implies TLS |
-| `SNODRA_SERVER_TLS_CA` | `TLSConfig.ca_file` | bundled roots | PEM file with the CA that signs the hubs' certificates, read again at every connection; needs `SNODRA_SERVER_TLS=true` |
+| `SNODRA_SERVER_TLS` | `tls` (`TLSConfig`) | none | `true` makes every hub connection TLS (1.2 or later); needed when the hub serves TLS |
+| `SNODRA_SERVER_TLS_CA` | `TLSConfig.ca_file` | bundled roots | PEM file with the CA that signs the hubs' certificates, read again at every connection; needs TLS (`SNODRA_SERVER_TLS=true`, or a client certificate) |
 | `SNODRA_SERVER_TLS_SERVER_NAME` | `TLSConfig.server_name` | the host of each hub address | the name the hubs' certificates must carry, also sent as SNI; needs `SNODRA_SERVER_TLS=true` |
 | `SNODRA_SERVER_TLS_CLIENT_CERT`, `SNODRA_SERVER_TLS_CLIENT_KEY` | `client_certificate` (`ClientCertificate`) | none | the client certificate chain (leaf first) and its private key, PEM, for mutual TLS; both or neither; **they turn TLS on**; see [Authenticating with a client certificate](#authenticating-with-a-client-certificate-mtls) |
 
@@ -75,9 +75,11 @@ redirect):
 ```python
 settings = snodra.Settings(
     service="orders-service",
-    hubs=("https://hub.example.test:7000",),  # https:// implies TLS
+    hubs=("hub.example.test:7000",),
+    tls=snodra.TLSConfig(),
     credentials=snodra.ClientCredentials(
         token_url="https://idp.example.test/oauth2/token",
+        client_id="orders-service",
         client_secret_file="/run/secrets/orders-service-secret",
     ),
 )

@@ -25,10 +25,10 @@ Your library runs a small **conformance service** for the runner: it handles fix
 library send a request and report the outcome), written with your library's API as an application would write them.
 The contract, with the JSON Schema of every type and how each check uses them, is
 [the conformance contract](https://github.com/snodra/snodra-conformance/blob/main/docs/contract.md) (contract version 1). Four complete examples of
-about 800 lines each: the Rust reference service in the snodra-conformance repository (`reference-service/`), the
-Kotlin conformance service in the snodra-messaging repository, the Go one in the snodra-messaging-go repository
-and the Python one in the snodra-messaging-python repository (all three `examples/conformance-service`). All four
-pass every level-1 check, and the runner's own mutation matrix proves that each check fails when it should.
+about 800 lines each: the Rust reference service in the snodra-conformance repository (`reference-service/`), and the
+Kotlin, Go and Python ones in `examples/conformance-service` of the snodra-messaging, snodra-messaging-go and
+snodra-messaging-python repositories. All four pass every level-1 check, and the runner's own mutation matrix proves
+that each check fails when it should.
 
 The runner starts the service itself, once or more per check, with its configuration in `CONFORMANCE_*` environment
 variables (the hubs, the service name and instance id, the capacity, the retry policy, credentials), so the service

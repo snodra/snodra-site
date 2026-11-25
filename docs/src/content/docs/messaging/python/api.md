@@ -88,10 +88,12 @@ its full timeout again, and no new hub is tried once that deadline has passed.
 ### Requests answered in-process
 
 A command, or a query that is not shared, of a type this instance handles itself is answered in-process: its handler
-runs on the caller's task with no hub, no permit and no handler slot, also before `start` and after `shutdown`. It sees
-a fresh request id, the caller's `headers` and the correlation id, and acts for the caller the hub path would carry
+runs on the caller's task with no hub, no permit and no handler slot, also before `start`; once `shutdown` has drained the
+handlers, such a call fails as `NeverSent` instead. It sees a fresh request id, the caller's `headers` and the
+correlation id, and acts for the caller the hub path would carry
 (the handled request's caller when `forward_jwt` is on; anonymous outside a handler or with it off). The routing key,
-timeout, priority and retry do not apply, nothing goes to telemetry, and its errors are those a hub would have relayed.
+timeout, priority and retry do not apply, no request metric is recorded (the handler's span still is), and its errors
+are those a hub would have relayed.
 Setting `always_route_through_hub=True` (`SNODRA_SERVER_ALWAYS_ROUTE_THROUGH_HUB=true`) sends every request through a
 hub, so a routing key keeps its instance affinity across the instances of the service. `gather`, `stream` and
 `subscribe` always go through a hub.
@@ -126,7 +128,7 @@ async with app.stream(ListOrders(), OrderReceipt) as items:
         print(r.order_id, r.total)
 
 # Asking every instance of every owner of a shared query type.
-gathered = await app.gather(GetOrder("o-1"), OrderReceipt, timeout=2.0)
+gathered = await app.gather(GetOrder("o-1"), Order, timeout=2.0)
 print(len(gathered.parts), "answers from", gathered.targets, "targets")
 ```
 
@@ -142,12 +144,14 @@ print(len(gathered.parts), "answers from", gathered.targets, "targets")
 
 ```python
 # Serving a subscription: initial result now, updates pushed via the returned Updates object.
-updates = app.subscription_handler(update=OrderStatus)(
-    async def watch_order(q: WatchOrder) -> OrderStatus:
-        return OrderStatus(status="placed")
-)
+serve = app.subscription_handler(update=OrderStatus)
+
+@serve
+async def watch_order(q: WatchOrder) -> OrderStatus:
+    return OrderStatus(status="placed")
+
 # emit, complete and fail run on the app's event loop
-updates.emit(lambda q: q.order_id == "o-1", OrderStatus(status="shipped"))
+serve.emit(lambda q: q.order_id == "o-1", OrderStatus(status="shipped"))
 
 # Following one:
 async with app.subscribe(WatchOrder("o-1"), OrderStatus, OrderStatus) as sub:
@@ -167,7 +171,7 @@ A failed call raises one of:
 
 | Error | Meaning |
 |---|---|
-| `HubError` | the hub's or the handler's answer, with `error_code` (`NO_HANDLER`, `TIMEOUT`, `HANDLER_DISCONNECTED`, `HANDLER_ERROR`, `UNAUTHENTICATED`, `INVALID_REQUEST`, `PERMISSION_DENIED`, `RESOURCE_EXHAUSTED`, `CANCELLED`), `message` and optional `details` |
+| `HubError` | the hub's or the handler's answer, with `code` (`NO_HANDLER`, `TIMEOUT`, `HANDLER_DISCONNECTED`, `HANDLER_ERROR`, `UNAUTHENTICATED`, `INVALID_REQUEST`, `PERMISSION_DENIED`, `RESOURCE_EXHAUSTED`, `CANCELLED`), `message` and optional `details` (the handler's JSON, as bytes) |
 | `NeverSent` | the request was written to no hub within the call's timeout (5 s without one): sending it again is safe |
 | `OutcomeUnknown` | the request was written and no answer arrived: the handler may or may not have run |
 | `LostParts` | a stream or gather lost parts that were already announced |
@@ -213,8 +217,8 @@ answer is drained and closed, a new one is connected.
 A unary request a hub answers `NO_HANDLER` goes to the other live hubs in turn, with the same id and its full timeout;
 a hub that declined or did not take the request is not tried again in the same call. When every live hub declined, the
 last `NO_HANDLER` is the answer at once; when the call's deadline passes with a live hub still untried, it fails with
-`NeverSent`. Without a routing key, the next untried hub is picked using Kotlin's list order `list[counter % size]`
-with a shared round-robin counter.
+`NeverSent`. Without a routing key, the next untried hub is picked as `untried[shared_counter % len(untried)]`, one
+counter shared by every call.
 
 ## Telemetry
 

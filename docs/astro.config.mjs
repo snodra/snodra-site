@@ -13,7 +13,7 @@ export default defineConfig({
     starlight({
       title: "Snodra",
       description:
-        "The Snodra documentation: concepts, installation, the server, the Kotlin, Rust and Go libraries, add-ons, operations and integrations.",
+        "The Snodra documentation: concepts, installation, the server, the Kotlin, Rust, Go and Python libraries, add-ons, operations and integrations.",
       logo: {
         src: "./src/assets/snodra-icon.svg",
         alt: "Snodra",

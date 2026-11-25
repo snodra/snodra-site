@@ -101,9 +101,9 @@ if __name__ == "__main__":
     asyncio.run(run())
 ```
 
-A message is a dataclass (or Pydantic model) decorated with `@snodra.message_type("...")`, which returns the protocol's
-wire type name; its payload is JSON by default. Handlers are registered before `start` (or `run`); a registration error
-is raised when registered or checked during startup.
+A message is a dataclass (or Pydantic model) decorated with `@snodra.message_type("...")`, which declares the
+protocol's wire type name; its payload is JSON by default. Handlers are registered before `start` (or `run`); a
+registration error is raised when registered or checked during startup.
 
 ## Run it against a hub
 
@@ -111,7 +111,7 @@ The hub is the `snodra/snodra-server` image (see the [Hub quick start](/docs/ser
 the service:
 
 ```sh
-SNODRA_SERVER_ADDRESS=localhost:7000 python -m orders_quickstart
+SNODRA_SERVER_ADDRESS=localhost:7000 python -m orders_quickstart.service
 ```
 
 `snodra.Settings.from_env()` reads the `SNODRA_*` variables the Rust and Go libraries read too (the Kotlin library is
