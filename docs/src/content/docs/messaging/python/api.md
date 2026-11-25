@@ -143,15 +143,13 @@ print(len(gathered.parts), "answers from", gathered.targets, "targets")
 - **Subscribe.** Updates are hot: the hub relays them from the open on, up to the credit window.
 
 ```python
-# Serving a subscription: initial result now, updates pushed via the returned Updates object.
-serve = app.subscription_handler(update=OrderStatus)
-
-@serve
+# Serving a subscription: the decorated name is the Updates that pushes to the open subscriptions.
+@app.subscription_handler(update=OrderStatus)
 async def watch_order(q: WatchOrder) -> OrderStatus:
     return OrderStatus(status="placed")
 
 # emit, complete and fail run on the app's event loop
-serve.emit(lambda q: q.order_id == "o-1", OrderStatus(status="shipped"))
+watch_order.emit(lambda q: q.order_id == "o-1", OrderStatus(status="shipped"))
 
 # Following one:
 async with app.subscribe(WatchOrder("o-1"), OrderStatus, OrderStatus) as sub:
@@ -160,8 +158,9 @@ async with app.subscribe(WatchOrder("o-1"), OrderStatus, OrderStatus) as sub:
         print("update:", u.status)
 ```
 
-`app.subscription_handler` returns `Updates[Q, U]`: `emit(match, update)` reaches every open subscription whose match
-function returns `True` and returns how many it reached; `complete(match)` and `fail(match, error)` end them. `emit`
+`app.subscription_handler(...)` is a decorator whose result is the `Updates[Q, U]` bound to the handler's name:
+`emit(match, update)` reaches every open subscription whose match function returns `True` and returns how many it
+reached; `complete(match)` and `fail(match, error)` end them. `emit`
 runs on the app's event loop. A subscription takes no permit and no handler slot, bounded by `max_subscriptions`. The
 `async with` block bounds the whole subscription: when it exits, the subscription is cancelled at the hub.
 

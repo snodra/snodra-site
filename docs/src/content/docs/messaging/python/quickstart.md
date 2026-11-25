@@ -111,8 +111,14 @@ The hub is the `snodra/snodra-server` image (see the [Hub quick start](/docs/ser
 the service:
 
 ```sh
-SNODRA_SERVER_ADDRESS=localhost:7000 python -m orders_quickstart.service
+SNODRA_SERVER_ADDRESS=localhost:7000 \
+SNODRA_JWKS_URL=http://localhost:8080/realms/orders/protocol/openid-connect/certs \
+SNODRA_ISSUER=http://localhost:8080/realms/orders \
+python -m orders_quickstart.service
 ```
+
+`get_order` is guarded, so the service needs the issuer's keys; see
+[Configuration](/docs/messaging/python/configuration/). Drop the `guard=` to try it without an identity provider.
 
 `snodra.Settings.from_env()` reads the `SNODRA_*` variables the Rust and Go libraries read too (the Kotlin library is
 configured with Spring properties instead); keyword arguments passed to `from_env()` win over the environment.

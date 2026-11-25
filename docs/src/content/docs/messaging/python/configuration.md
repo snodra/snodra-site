@@ -42,7 +42,7 @@ while the environment variables use milliseconds (`_MS`). A value that does not 
 | `SNODRA_SERVER_OAUTH2_SCOPE`, `SNODRA_SERVER_OAUTH2_CA` | `ClientCredentials.scope`, `.ca_file` | none | the `scope` sent with the grant (space-separated); a PEM file of extra root certificates for the token endpoint, beside the system's |
 | `SNODRA_SERVER_TLS` | `tls` (`TLSConfig`) | none | `true` makes every hub connection TLS (1.2 or later); needed when the hub serves TLS |
 | `SNODRA_SERVER_TLS_CA` | `TLSConfig.ca_file` | bundled roots | PEM file with the CA that signs the hubs' certificates, read again at every connection; needs TLS (`SNODRA_SERVER_TLS=true`, or a client certificate) |
-| `SNODRA_SERVER_TLS_SERVER_NAME` | `TLSConfig.server_name` | the host of each hub address | the name the hubs' certificates must carry, also sent as SNI; needs `SNODRA_SERVER_TLS=true` |
+| `SNODRA_SERVER_TLS_SERVER_NAME` | `TLSConfig.server_name` | the host of each hub address | the name the hubs' certificates must carry, also sent as SNI; needs TLS (`SNODRA_SERVER_TLS=true`, or a client certificate) |
 | `SNODRA_SERVER_TLS_CLIENT_CERT`, `SNODRA_SERVER_TLS_CLIENT_KEY` | `client_certificate` (`ClientCertificate`) | none | the client certificate chain (leaf first) and its private key, PEM, for mutual TLS; both or neither; **they turn TLS on**; see [Authenticating with a client certificate](#authenticating-with-a-client-certificate-mtls) |
 
 Options passed to `App` with no environment variable: `codec` (the payload codec, `JsonCodec` by default), `telemetry`
