@@ -43,9 +43,12 @@ async def archive_order(cmd: ArchiveOrder) -> None:
 
 `authenticated()`, `role()` and `caller_matches()` answer an anonymous caller `UNAUTHENTICATED`, before the payload is
 decoded, and a caller they refuse `PERMISSION_DENIED`, once the payload is decoded. Every guard needs `jwks_url` and
-`issuer` in `Settings`: registering a guarded handler without them raises `ConfigurationError`. `query_handler(shared=True)`
-registers a query type as shared: many services may own it, and a `gather` asks every instance of every owner. Every
-owner must register it shared.
+`issuer` in `Settings`: registering a guarded handler without them raises `ConfigurationError`.
+
+`@app.query_handler(shared=True)` registers a query type as shared: many services may own it, and a `gather` asks every
+instance of every owner. Every owner must register it shared. `@app.stream_handler(shared=True)` shares a streaming type
+the same way (its name goes to `Register.shared_query_types`): many services may own it, and a `stream` goes to one live
+instance that owns it; a point query of the type is still refused with `INVALID_REQUEST`.
 
 ## Sending
 
