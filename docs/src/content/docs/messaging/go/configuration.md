@@ -4,8 +4,9 @@ title: "Configuration"
 
 Every setting is an option (`snodra.Service`, `snodra.Hubs`, `snodra.MaxConcurrent`, ...). `snodra.FromEnv()` reads the
 `SNODRA_*` variables, the same ones the Rust library reads; the Kotlin library is configured with Spring properties
-(`snodra.messaging.*`) instead. Options apply in order, so one given after `FromEnv()`
-overrides what the environment set. The same list is in the documentation of `FromEnv` (`go doc snodra.FromEnv`).
+(`snodra.messaging.*`) instead. The add-ons read their own variables through a `FromEnv` of their own
+([Add-ons](#add-ons)). Options apply in order, so one given after `FromEnv()` overrides what the environment set. The
+same list is in the documentation of `FromEnv` (`go doc snodra.FromEnv`).
 
 A variable that is unset, or blank, changes nothing. Numbers are non-negative integers; flags are `true`, `1`, `yes`,
 `false`, `0` or `no`, in any letter case. A value that does not parse, or is out of range, makes `New` fail.
@@ -44,9 +45,88 @@ A variable that is unset, or blank, changes nothing. Numbers are non-negative in
 | `SNODRA_SERVER_TLS_SERVER_NAME` | `TLSConfig.ServerName` | the host of each hub address | the name the hubs' certificates must carry, also sent as SNI; needs `SNODRA_SERVER_TLS=true` |
 | `SNODRA_SERVER_TLS_CLIENT_CERT`, `SNODRA_SERVER_TLS_CLIENT_KEY` | `ClientCertificate` | none | the client certificate chain (leaf first) and its private key, PEM, for mutual TLS; both or neither; **they turn TLS on** (`SNODRA_SERVER_TLS=false` next to them is an error); see [Authenticating with a client certificate](#authenticating-with-a-client-certificate-mtls) |
 
+### Events
+
+| Variable | Option | Default | Meaning |
+|---|---|---|---|
+| `SNODRA_EVENTS_SOURCE` | `EventsSource` | `snodra.events` | the event store's source the service publishes to and every processor reads; one source for both |
+| `SNODRA_OUTBOX_ENABLED` | `OutboxEnabled` | true | every instance runs the outbox relay; `false` on every instance stops the service's events being published, `false` on all but one keeps the order per key of what one instance publishes |
+| `SNODRA_OUTBOX_POLL_INTERVAL_MS` | none | 200 | the relay's longest wait between two claims (at least 1); a committed append may wake it sooner |
+| `SNODRA_OUTBOX_BATCH_SIZE` | none | 100 | the most entries one claim returns (at least 1) |
+| `SNODRA_OUTBOX_MAX_ATTEMPTS` | none | 10 | how many sends one entry gets before it is marked failed (at least 1) |
+| `SNODRA_OUTBOX_LEASE_MS` | none | 120000 | how long a claimed batch stays the relay's; it must be longer than a send (40 s), or `New` fails. A crashed relay's entries are claimed again after the lease |
+| `SNODRA_CONSUMER_ENABLED` | `ConsumerEnabled` | true | every instance reads the subscriptions of the processors it has handlers for; a tool that only publishes turns it off |
+| `SNODRA_CONSUMER_MAX_ATTEMPTS` | none | 5 | handler invocations per record, the first included (at least 1); after them the record is logged and skipped at level 2 |
+| `SNODRA_STORE_INIT_SCHEMA` | none | true | `Start` applies or creates the message store's schema; `false` checks it instead, for a service that runs its own migrations |
+
 Options with no variable: `Codec` (the payload codec, JSON by default), `Logger` (a `*slog.Logger`, `slog.Default`
-by default), `Telemetry` (see [API](/docs/messaging/go/api/#telemetry)) and, per call, `Timeout`, `Retry`, `NoRetry`, `RoutingKey`,
+by default), `Telemetry` (see [API](/docs/messaging/go/api/#telemetry)), `WithStore` and `WithEventStore` (the stores
+themselves, see [Add-ons](#add-ons)) and, per call, `Timeout`, `Retry`, `NoRetry`, `RoutingKey`,
 `Priority`, `Header`, `InitialCredit` and `MaxResults`.
+
+## Add-ons
+
+The core reads the variables above. An add-on has a `FromEnv` of its own, and the service hands the result to the
+add-on: `kafka.New(kafka.FromEnv())`, `sql.New(sql.FromEnv())`, `mongo.New(mongo.FromEnv())` and
+`rabbitmq.New(rabbitmq.FromEnv())`. An add-on reads its variables only when the service calls its `FromEnv`; having
+them in the environment changes nothing by itself. The store is then passed to `snodra.New` with `WithEventStore` or
+`WithStore`. A service needs one event store and one message store; there is no classpath, so the choice is in code.
+
+### Kafka (`kafka.FromEnv`)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `SNODRA_KAFKA_BOOTSTRAP` | `kafka:19092` | the brokers, `host:port` entries separated by commas; required |
+
+`kafka.FromEnv` returns only the bootstrap servers. The other settings are fields of `kafka.Config`: `MaxPollRecords`
+(100), `StatusRefresh` (1 s), `AdminTimeout` (10 s) and `Options`, which takes extra franz-go options for the
+connection (TLS, SASL, a logger); the store sets the group, the topic, the reset offset, the group protocol, the
+partitioner and the commit behavior itself. See [Kafka event store](/docs/add-ons/kafka-event-store/).
+
+### SQL (`sql.FromEnv`)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `SNODRA_STORE_SQL_URL` | required | the database: `postgres://user:password@host:port/database?params`, `postgresql://...`, `mysql://user:password@host:port/database?params`, or a native `go-sql-driver/mysql` DSN |
+| `SNODRA_STORE_SQL_DRIVER` | from the URL's scheme | `postgres` or `mysql`; set it when the URL does not say (a native MySQL DSN is recognized) |
+| `SNODRA_STORE_SQL_NOTIFY` | true | PostgreSQL: an append sends `pg_notify` in its transaction and the relay listens, so a commit wakes it at once; `false` polls. Turn it off behind PgBouncer in transaction mode. MySQL always polls |
+| `SNODRA_STORE_SQL_PURGE_INTERVAL_MS` | 60000 | how often the retention purge runs; `0` turns the purge off |
+
+The retentions are fields of `sql.Config` (outbox 7 days, processed markers 30 days, and the later ports' retentions).
+See [SQL message store](/docs/add-ons/sql-message-store/).
+
+### MongoDB (`mongo.FromEnv`)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `SNODRA_STORE_MONGO_URI` | required | `mongodb://...` or `mongodb+srv://...`; the database must be a replica set (a single-node one is enough), because the store joins the service's transaction |
+| `SNODRA_STORE_MONGO_DATABASE` | required | the service's database, which holds the shared collections |
+
+The retentions are fields of `mongo.Config`. A service that already owns a `*mongo.Client` passes it to
+`mongo.NewWithClient` instead. See [MongoDB message store](/docs/add-ons/mongodb-message-store/).
+
+### RabbitMQ Streams (`rabbitmq.FromEnv`)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `SNODRA_RABBITMQ_HOSTS` | `rabbitmq` | the nodes to try first, `host` or `host:port`, comma-separated |
+| `SNODRA_RABBITMQ_PORT` | 5552 (5551 with TLS) | the port of a host given without one |
+| `SNODRA_RABBITMQ_VIRTUAL_HOST` | `/` | the virtual host; empty reads as `/` |
+| `SNODRA_RABBITMQ_USERNAME`, `SNODRA_RABBITMQ_PASSWORD` | `guest` | the user and its password; the password is never logged |
+| `SNODRA_RABBITMQ_TLS` | false | `true` connects with TLS 1.2 or later, verified against the system roots; a private CA goes in `Config.TLS`, since there is no CA-file variable |
+| `SNODRA_RABBITMQ_MANAGEMENT_URL` | none | the management API's root (`http://rabbitmq:15672`, no credentials in it); setting it declares `replay`, and `rabbitmq.Open` checks the API once at startup |
+
+The management API's own login (`Config.ManagementUsername`, `.ManagementPassword`) defaults to the stream user's;
+`Config.ManagementTimeout` is 5 s, `ConfirmTimeout` 30 s, `RequestTimeout` 10 s, `OffsetStoreMessages` 10 000 and
+`OffsetStoreInterval` 5 s. See [RabbitMQ Streams event store](/docs/add-ons/rabbitmq-streams-event-store/).
+
+## Event stores and message stores
+
+An event store publishes the service's events and serves its processors' subscriptions; a message store holds the
+outbox, the processed-event markers, the dead letters and the processor control state (level 3) and the sagas
+(level 4). The in-memory ones, `snodra.NewMemoryEventStore()` and `snodra.NewMemoryMessageStore()`, are for tests and
+local runs: nothing survives the process, and `Start` warns once for each. A service that only handles commands,
+queries and subscription queries needs neither store and starts without them.
 
 ## Credentials
 

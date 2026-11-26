@@ -4,9 +4,14 @@ title: "Testing"
 
 ## Testing your handlers
 
-A handler is a plain function, `func(context.Context, C) (R, error)`, so a service tests it as one: call the function
-with a context and a message and check the result and the error. Keep the function apart from the registration (a named
-function or a method, passed to `HandleCommand`) so that a test can reach it.
+A handler is a plain function, `func(context.Context, C) (R, error)` (an event handler returns only its error), so a
+service tests it as one: call the function with a context and a message and check the result and the error. Keep the
+function apart from the registration (a named function or a method, passed to `HandleCommand` or `HandleEvent`) so
+that a test can reach it.
+
+An event handler is tested the same way. A test that wants the outbox and the markers can use the in-memory stores:
+`snodra.NewMemoryMessageStore()` and `snodra.NewMemoryEventStore()` are complete stores with no infrastructure, for
+tests only. They are not durable, and `Start` warns when one is active.
 
 The library's own scripted hub, `internal/fakehub`, is an internal package: Go does not let another module import it.
 A service does not need it. To test the wiring against a real hub, run the hub image (`snodra/snodra-server`, see the
@@ -14,11 +19,52 @@ A service does not need it. To test the wiring against a real hub, run the hub i
 
 ## The library's own tests
 
-The library's unit tests need no Docker and run against an in-process scripted hub, in the core module and in `observability/`:
+The library's unit tests need no Docker and run against an in-process scripted hub, in the core module and in
+`observability/`:
 
 ```sh
 go test -race ./...
 ```
+
+The add-on modules are separate modules, each with its own tests:
+
+```sh
+cd kafka    && go test -race ./...   # a Kafka broker
+cd rabbitmq && go test -race ./...   # RabbitMQ with the stream and management plugins
+cd mongo    && go test -race ./...   # a MongoDB replica set
+cd sql      && go test -race ./...   # PostgreSQL and MySQL
+```
+
+Their integration tests use Testcontainers, with every image pinned by digest; without a working Docker they skip and
+the unit tests still run. The SQL module runs its suite on both PostgreSQL and MySQL. The workspace (`go.work`)
+builds each add-on against the core in this checkout.
+
+## The add-on kits
+
+`snodratest` is the conformance kit for add-ons; it imports only the standard library and the core, so an add-on
+depends on the core, never the reverse. An add-on runs the kit from its own test:
+
+```go
+func TestMyEventStore(t *testing.T) {
+	snodratest.EventStore(t, "snodra.events",
+		func() snodra.EventStore { return newMyEventStore(t) },
+		markers.Processed())
+}
+
+func TestMyMessageStore(t *testing.T) {
+	snodratest.MessageStore(t, func() snodra.MessageStore { return newMyMessageStore(t) })
+}
+```
+
+`snodratest.EventStore` runs the nine level-2 event-store checks (`headers_round_trip`,
+`same_key_arrives_in_publish_order`, `every_processor_gets_every_event`, `instances_share_a_processor`, and the rest of
+the list on the [event-store contract](/docs/library-authors/event-store-add-ons/#the-conformance-kit));
+`snodratest.MessageStore` runs the nine outbox and processed-event checks. Each check is a subtest named exactly as the
+Rust kit names it, and every check is exported, so a failing one can be run by itself. The capability checks (replay,
+lag, dead letters and browse) and the processor checks come with level 3.
+
+`snodratest` has no Docker and no store client. The add-on's own test provides the store and the infrastructure; the
+kit only proves the contract.
 
 ## The conformance runner
 
@@ -38,9 +84,12 @@ in `scripts/conformance-runner.sha256` (or uses the runner that `SNODRA_CONFORMA
 so set `SNODRA_HUB_PORT` there. CI runs the same script with the same pinned runner, fails when a check fails or is
 skipped, and keeps the runner's report as a build artifact.
 
-The checks and what each asserts are listed in [Feature levels](/docs/library-authors/feature-levels/) and in
+The runner proves level 1 only; level 2 is proved by the add-on kits above and by the library's own tests of the
+outbox, the relay and the consumer. The checks and what each asserts are listed in
+[Feature levels](/docs/library-authors/feature-levels/) and in
 [Conformance](/docs/library-authors/conformance/).
 
-## Level 2 to 4
+## Levels 3 and 4
 
-The Go library has no event store, message store or saga add-ons, so there are no kits to run for it yet.
+The Go library has no processor status, processor control, dead letters or sagas yet, so there are no level-3 or
+level-4 kits to run for it. The ports exist in the message-store interface and return `ErrUnsupported`.

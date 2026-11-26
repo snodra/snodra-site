@@ -5,19 +5,19 @@ title: "Add-ons"
 Events live in an **event store**; the reliability plumbing lives in a **message store**. Both are
 add-ons: the core library ships neither, so you choose the infrastructure you already run.
 
-| Add-on | Kind | Artifact or crate | What it holds |
+| Add-on | Kind | Artifact, crate or module | What it holds |
 |---|---|---|---|
-| [Kafka event store](/docs/add-ons/kafka-event-store/) | event store | `snodra-messaging-kafka` | Events, in ordered partitions |
-| [RabbitMQ Streams event store](/docs/add-ons/rabbitmq-streams-event-store/) | event store | `snodra-messaging-rabbitmq` | Events, in partitioned streams |
-| [MongoDB message store](/docs/add-ons/mongodb-message-store/) | message store | `snodra-messaging-mongo` | Outbox, markers, dead letters, sagas, processor control |
-| [SQL message store](/docs/add-ons/sql-message-store/) | message store | `snodra-messaging-jdbc` (Kotlin), `snodra-messaging-sqlx` (Rust) | The same, in PostgreSQL or MySQL tables |
+| [Kafka event store](/docs/add-ons/kafka-event-store/) | event store | `snodra-messaging-kafka`, `snodra-messaging-go/kafka` | Events, in ordered partitions |
+| [RabbitMQ Streams event store](/docs/add-ons/rabbitmq-streams-event-store/) | event store | `snodra-messaging-rabbitmq`, `snodra-messaging-go/rabbitmq` | Events, in partitioned streams |
+| [MongoDB message store](/docs/add-ons/mongodb-message-store/) | message store | `snodra-messaging-mongo`, `snodra-messaging-go/mongo` | Outbox, markers, dead letters, sagas, processor control |
+| [SQL message store](/docs/add-ons/sql-message-store/) | message store | `snodra-messaging-jdbc` (Kotlin), `snodra-messaging-sqlx` (Rust), `snodra-messaging-go/sql` (Go) | The same, in PostgreSQL or MySQL tables |
 
 ## Two choices, one of each
 
-A service needs one event store and one message store. The libraries refuse an ambiguous setup: if
-two event-store add-ons are on the classpath, `snodra.messaging.event-store` must name the one that
-runs; two message-store add-ons without `snodra.messaging.store.type` fail the startup naming both.
-A store bean the application defines itself wins over every add-on.
+A service needs one event store and one message store. The libraries refuse an ambiguous setup: in
+the Kotlin library, if two event-store add-ons are on the classpath, `snodra.messaging.event-store`
+must name the one that runs; two message-store add-ons without `snodra.messaging.store.type` fail the
+startup naming both. A store bean the application defines itself wins over every add-on.
 
 ```yaml
 snodra:
@@ -28,11 +28,12 @@ snodra:
 ```
 
 The Rust library has no classpath: you pass the store to the builder (`.event_store(...)`,
-`.store(...)`), so the choice is in code.
+`.store(...)`), so the choice is in code. The Go library has no classpath either: each add-on is a
+module, and you pass the store to `snodra.New` with `WithEventStore(...)` or `WithStore(...)`.
 
 ## In-memory stores
 
-Both libraries ship in-memory stores for tests and local runs. They are not durable, keep everything
+The libraries ship in-memory stores for tests and local runs. They are not durable, keep everything
 until the process ends, and are never a fallback for a missing store. The libraries warn at startup
 when one is active. See [Testing](/docs/operations/testing/).
 

@@ -12,9 +12,13 @@ already owns a relational database and wants the outbox in the same transaction 
 |---|---|
 | Kotlin | `com.damoreira.snodra:snodra-messaging-jdbc:0.6.1` |
 | Rust | `snodra-messaging-sqlx = "0.8"`, with feature `postgres` or `mysql` |
+| Go | `github.com/snodra/snodra-messaging-go/sql` (`go get github.com/snodra/snodra-messaging-go/sql@latest`) |
 
 The Kotlin module runs on the application's `DataSource` through Spring's `JdbcClient`; it needs at
-least two connections in the pool. The Rust crate runs on `sqlx` and takes your pool.
+least two connections in the pool. The Rust crate runs on `sqlx` and takes your pool. The Go module
+is one add-on module: `sql.New(sql.FromEnv())` owns its `*sql.DB` (ten connections by default, at
+least two), and the store is passed to `snodra.New` with `WithStore`
+([Go events](/docs/messaging/go/api/#events)).
 
 ## Configuration
 
@@ -32,28 +36,74 @@ Kotlin:
 Rust: `SNODRA_STORE_SQL_NOTIFY`, `SNODRA_STORE_SQL_PURGE_INTERVAL_MS` and
 `SNODRA_STORE_INIT_SCHEMA`; retention variables mirror the Kotlin keys.
 
+Go, through `sql.FromEnv` and `sql.Config`:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `SNODRA_STORE_SQL_URL` | required | `postgres://...`, `postgresql://...`, `mysql://...`, or a native `go-sql-driver/mysql` DSN |
+| `SNODRA_STORE_SQL_DRIVER` | detected from the URL | `postgres` or `mysql`; set it only for a URL whose scheme does not say (a native MySQL DSN is detected) |
+| `SNODRA_STORE_SQL_NOTIFY` | `true` | PostgreSQL: `pg_notify('snodra_outbox', '')` in the append's transaction wakes the relay; turn it off behind PgBouncer in transaction mode. MySQL always polls |
+| `SNODRA_STORE_SQL_PURGE_INTERVAL_MS` | 60000 | How often retention runs; `0` turns the purge off |
+| `Config.MaxOpenConns` / `Config.MaxIdleConns` | 10 / 5 | The pool; at least two connections, because a write that commits on its own inside the service's transaction takes a second one |
+| `Config.ConnMaxLifetime` | 30m | How long a pooled connection is reused |
+| `Config.OutboxRetention` | 7d | Sent outbox rows |
+| `Config.ProcessedRetention` | 30d | Processed-event markers |
+| `Config.ExternalCallRetention`, `Config.SagaEndedRetention`, `Config.FailedRetention` | 30d | External calls after their last update, ended sagas, what failed for good |
+| `Config.SagaDispatchRetention`, `Config.DeadlineRetention` | 7d | Dispatched saga entries, fired or cancelled deadlines |
+
+`sql.FromEnv` reads the URL, the driver, notify and the purge interval and leaves the rest at their
+defaults. `SNODRA_STORE_INIT_SCHEMA` (the core variable) decides whether `App.Start` applies V1 or
+checks the schema. The full Go settings are in
+[Go configuration](/docs/messaging/go/configuration/#sql-sqlfromenv).
+
+The schema is the published layout: [`V1__snodra.sql` for PostgreSQL](/docs/library-authors/sql/v1/postgresql/V1__snodra.sql)
+and [`V1__snodra.sql` for MySQL](/docs/library-authors/sql/v1/mysql/V1__snodra.sql), byte-identical in
+every add-on and checked against its published SHA-256.
+
 ## Guarantees
 
 - **Joins the service's transaction.** `DataSourceTransactionManager` and `JpaTransactionManager`
   both bind the connection, so a business write, the outbox entry and the marker commit together.
+  In Rust the crate takes the service's transaction through its own helper. In Go `store.Begin`
+  returns a context carrying the transaction and `store.Tx` returns its `*sql.Tx` for the service's
+  own writes; `store.WithTx` and `store.WithConn` bind a transaction or connection the service
+  began. A store call outside a transaction runs in a short READ COMMITTED transaction of its own.
 - **One schema per logical service.** The tables are `snodra_outbox`, `snodra_processed_events`,
   `snodra_dead_letters`, `snodra_processor_control`, `snodra_external_calls`, `snodra_sagas`,
   `snodra_saga_associations`, `snodra_saga_dispatch`, `snodra_deadlines` and `snodra_saga_failures`
-  (plus `snodra_schema`). Every column and stored value is shared with the Rust crate, so both
-  libraries can share one database.
+  (plus `snodra_schema`). Every column and stored value is shared with the other libraries, so any
+  of them can share one database.
 - **Safe competing relays.** Claims use `SELECT ... FOR UPDATE SKIP LOCKED`; a crashed claimer's rows
   are claimed again after its lease.
 - **PostgreSQL wake-up.** `pg_notify('snodra_outbox', '')` runs inside the append's transaction, so a
   rollback sends nothing and a commit wakes the relay at once.
 - **No silent truncation.** A missing STRICT mode, an old server, MariaDB or a one-connection pool
   fails the startup with a message naming what is supported.
+- **Level 2 ports in Go.** The Go store implements the outbox and the processed-event markers; the
+  dead-letter, processor-control, external-call and saga ports of the frozen interface return
+  `ErrUnsupported` at level 2 (the official add-ons implement every port by level 4).
 
 The schema files are versioned (`V1__snodra.sql`) and the schema is applied once at startup unless
-the service runs its own migration.
+the service runs its own migration. The Go store embeds the published files and checks their SHA-256
+values; `InitSchema` takes the shared database lock, so instances of any library starting together
+apply V1 once.
+
+## Capabilities
+
+| Port | Kotlin | Rust | Go |
+|---|---|---|---|
+| Outbox | yes | yes | yes |
+| Processed events | yes | yes | yes |
+| Dead letters | yes | yes | no (level 3) |
+| Processor control | yes | yes | no (level 3) |
+| External calls | yes | yes | no (level 4) |
+| Sagas | yes | yes | no (level 4) |
 
 ## Read next
 
 - The full SQL add-on reference: [the messaging model](/docs/messaging/).
 - Kotlin settings: [Kotlin configuration](/docs/messaging/kotlin/configuration/).
+- The Go settings and API: [Go configuration](/docs/messaging/go/configuration/#sql-sqlfromenv) and
+  [Go events](/docs/messaging/go/api/#events).
 - The other message store: [MongoDB](/docs/add-ons/mongodb-message-store/).
 - The transaction guarantee: [Consistency](/docs/concepts/consistency/).
