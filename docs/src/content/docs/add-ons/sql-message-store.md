@@ -13,12 +13,16 @@ already owns a relational database and wants the outbox in the same transaction 
 | Kotlin | `com.damoreira.snodra:snodra-messaging-jdbc:0.6.1` |
 | Rust | `snodra-messaging-sqlx = "0.8"`, with feature `postgres` or `mysql` |
 | Go | `github.com/snodra/snodra-messaging-go/sql` (`go get github.com/snodra/snodra-messaging-go/sql@latest`) |
+| Python | `snodra-messaging-sql` (`pip install snodra-messaging-sql`) |
 
 The Kotlin module runs on the application's `DataSource` through Spring's `JdbcClient`; it needs at
 least two connections in the pool. The Rust crate runs on `sqlx` and takes your pool. The Go module
 is one add-on module: `sql.New(sql.FromEnv())` owns its `*sql.DB` (ten connections by default, at
 least two), and the store is passed to `snodra.New` with `WithStore`
-([Go events](/docs/messaging/go/api/#events)).
+([Go events](/docs/messaging/go/api/#events)). The Python package is `snodra-messaging-sql`:
+`SqlStore(SqlConfig.from_env())` owns its connection pool on `asyncpg` (PostgreSQL) or `asyncmy`
+(MySQL), and the store is passed to `snodra.App` with `store=`
+([Python events](/docs/messaging/python/api/#events)).
 
 ## Configuration
 
@@ -56,6 +60,25 @@ defaults. `SNODRA_STORE_INIT_SCHEMA` (the core variable) decides whether `App.St
 checks the schema. The full Go settings are in
 [Go configuration](/docs/messaging/go/configuration/#sql-sqlfromenv).
 
+Python, through `SqlConfig.from_env` and `SqlConfig`:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `SNODRA_STORE_SQL_URL` | required | `postgres://...`, `postgresql://...`, or `mysql://...` |
+| `SNODRA_STORE_SQL_DRIVER` | detected from the URL | `postgres` or `mysql`; set it only for a URL whose scheme does not say |
+| `SNODRA_STORE_SQL_NOTIFY` | `true` | PostgreSQL: `pg_notify('snodra_outbox', '')` in the append's transaction wakes the relay; turn it off behind PgBouncer in transaction mode. MySQL always polls |
+| `SNODRA_STORE_SQL_PURGE_INTERVAL_MS` | 60000 | How often retention runs; `0` or negative turns the purge off |
+| `SqlConfig.min_size` / `SqlConfig.max_size` | 1 / 10 | The connection pool (at least two connections, because a write that commits on its own inside the service's transaction takes a second one) |
+| `SqlConfig.outbox_retention` | 7d | Sent outbox rows |
+| `SqlConfig.processed_retention` | 30d | Processed-event markers |
+| `SqlConfig.external_call_retention`, `SqlConfig.saga_ended_retention`, `SqlConfig.failed_retention` | 30d | External calls after their last update, ended sagas, what failed for good |
+| `SqlConfig.saga_dispatch_retention`, `SqlConfig.deadline_retention` | 7d | Dispatched saga entries, fired or cancelled deadlines |
+
+`SqlConfig.from_env()` reads the URL, driver, notify and purge interval and leaves the rest at their defaults.
+`SNODRA_STORE_INIT_SCHEMA` (the core variable) decides whether `App.start()` applies V1 or checks the schema.
+The package is `snodra-messaging-sql`; the full Python settings are in
+[Python configuration](/docs/messaging/python/configuration/#sql-sqlconfigfrom_env).
+
 The schema is the published layout: [`V1__snodra.sql` for PostgreSQL](/docs/library-authors/sql/v1/postgresql/V1__snodra.sql)
 and [`V1__snodra.sql` for MySQL](/docs/library-authors/sql/v1/mysql/V1__snodra.sql), byte-identical in
 every add-on and checked against its published SHA-256.
@@ -67,7 +90,9 @@ every add-on and checked against its published SHA-256.
   In Rust the crate takes the service's transaction through its own helper. In Go `store.Begin`
   returns a context carrying the transaction and `store.Tx` returns its `*sql.Tx` for the service's
   own writes; `store.WithTx` and `store.WithConn` bind a transaction or connection the service
-  began. A store call outside a transaction runs in a short READ COMMITTED transaction of its own.
+  began. In Python `async with store.transaction():` binds the transaction to the context, and
+  `store.transaction(conn=conn)` binds a connection the service began. A store call outside a
+  transaction runs in a short READ COMMITTED transaction of its own.
 - **One schema per logical service.** The tables are `snodra_outbox`, `snodra_processed_events`,
   `snodra_dead_letters`, `snodra_processor_control`, `snodra_external_calls`, `snodra_sagas`,
   `snodra_saga_associations`, `snodra_saga_dispatch`, `snodra_deadlines` and `snodra_saga_failures`
@@ -79,9 +104,9 @@ every add-on and checked against its published SHA-256.
   rollback sends nothing and a commit wakes the relay at once.
 - **No silent truncation.** A missing STRICT mode, an old server, MariaDB or a one-connection pool
   fails the startup with a message naming what is supported.
-- **Level 2 ports in Go.** The Go store implements the outbox and the processed-event markers; the
+- **Level 2 ports in Go and Python.** The Go and Python stores implement the outbox and the processed-event markers; the
   dead-letter, processor-control, external-call and saga ports of the frozen interface return
-  `ErrUnsupported` at level 2 (the official add-ons implement every port by level 4).
+  `ErrUnsupported` (or raise `MessageStoreUnsupported` in Python) at level 2 (the official add-ons implement every port by level 4).
 
 The schema files are versioned (`V1__snodra.sql`) and the schema is applied once at startup unless
 the service runs its own migration. The Go store embeds the published files and checks their SHA-256
@@ -90,14 +115,14 @@ apply V1 once.
 
 ## Capabilities
 
-| Port | Kotlin | Rust | Go |
-|---|---|---|---|
-| Outbox | yes | yes | yes |
-| Processed events | yes | yes | yes |
-| Dead letters | yes | yes | no (level 3) |
-| Processor control | yes | yes | no (level 3) |
-| External calls | yes | yes | no (level 4) |
-| Sagas | yes | yes | no (level 4) |
+| Port | Kotlin | Rust | Go | Python |
+|---|---|---|---|---|
+| Outbox | yes | yes | yes | yes |
+| Processed events | yes | yes | yes | yes |
+| Dead letters | yes | yes | no (level 3) | no (level 3) |
+| Processor control | yes | yes | no (level 3) | no (level 3) |
+| External calls | yes | yes | no (level 4) | no (level 4) |
+| Sagas | yes | yes | no (level 4) | no (level 4) |
 
 ## Read next
 
@@ -105,5 +130,7 @@ apply V1 once.
 - Kotlin settings: [Kotlin configuration](/docs/messaging/kotlin/configuration/).
 - The Go settings and API: [Go configuration](/docs/messaging/go/configuration/#sql-sqlfromenv) and
   [Go events](/docs/messaging/go/api/#events).
+- The Python settings and API: [Python configuration](/docs/messaging/python/configuration/#sql-sqlconfigfrom_env) and
+  [Python events](/docs/messaging/python/api/#events).
 - The other message store: [MongoDB](/docs/add-ons/mongodb-message-store/).
 - The transaction guarantee: [Consistency](/docs/concepts/consistency/).

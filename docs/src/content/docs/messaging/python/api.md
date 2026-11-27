@@ -257,7 +257,173 @@ a call its options refuse and a call answered in-process record no metric. The i
 a handler serves gets a server span named after the message type, a child of the request's `traceparent`, and the requests
 the handler sends carry its trace context.
 
+## Events
+
+An event is a message type like a command or a query: a class decorated with `@snodra.message_type("...")` (a
+dataclass or Pydantic model), whose payload is serialized as a JSON object. `app.publish` builds it and appends it to
+the service's outbox, for example
+`await app.publish(OrderPlaced(order_id=cmd.order_id, total=cmd.total), key=cmd.order_id)`.
+
+`publish` needs the message store and the event store ([Add-ons](#event-stores-and-message-stores)); without them the
+first call raises `ConfigurationError`, naming the missing add-on. It returns once the entry is appended, not when the
+event reaches the event store. The event's type is the class's `@message_type` name, its id a fresh UUID, its timestamp
+the creation time in UTC, and `key` is its order key (an empty key is a key; without `key` the event has none). A
+payload that is not a JSON object, or that is invalid, raises `InvalidMessage` and nothing is appended.
+
+### Event headers
+
+Every published event carries the first six headers; `traceparent` is added when the work that published it carries a
+trace context. `publish` stores the correlation id, the user id and the trace context in the outbox; the relay adds
+the type, id, timestamp and source from the entry, so a store never holds a stale copy of them.
+
+| Header | Content |
+|---|---|
+| `type` | the event's type name, for example `orders.OrderPlaced` |
+| `id` | the event's id (a UUID): the key of every duplicate check |
+| `correlationId` | the correlation id of the message being handled when the event was published; a new UUID when there is none |
+| `timestamp` | when the event was created, RFC 3339 in UTC with milliseconds (`2026-10-28T14:03:22.000Z`) |
+| `source` | the publishing service's name, not the event store's source |
+| `userId` | the acting user's id: the verified caller's subject, or the userId of the event being handled; empty for a system event. A token never crosses into an event |
+| `traceparent` | the W3C trace context of the work that published it, when that work carries one |
+
+`snodra.EventHeaders` lists the seven names in order. Outside any handling an event has no traceparent and its
+correlation id is a fresh UUID.
+
+### The outbox and the relay
+
+`publish` appends in the transaction bound to the current context: the one `async with store.transaction():` began,
+the service's own transaction bound with the SQL add-on's `conn=` or the MongoDB add-on's `session=`, or a short
+transaction of its own when no transaction is bound. A rolled-back transaction leaves no event. A committed one leaves
+an entry the relay will publish.
+
+Every instance runs one relay unless `Settings(outbox_enabled=False)` (`SNODRA_OUTBOX_ENABLED=false`):
+
+- **Claimed under a lease.** A relay claims pending entries in `(created_at, seq)` order, up to the batch size, and
+  holds them for the lease (`SNODRA_OUTBOX_LEASE_MS`, 2 minutes by default). A crashed relay's entries are claimed
+  again once its lease has passed; nothing is lost.
+- **Sent one after the other.** The relay publishes an entry, then marks it sent. A crash between the two publishes
+  the event again after the lease, and consumers skip the duplicate by its marker.
+- **Order per key, per relay.** Events with one key reach the event store in publish order while one relay sends
+  them. Several relays can claim different batches, so batches of different instances are not ordered against each
+  other; run the relay on one instance (`Settings(outbox_enabled=False)` on the others) when the order of everything one
+  instance publishes must hold.
+- **Failures.** An event the store rejects for good (`Rejected`) is given up at once; another failure counts an
+  attempt and ends the batch, so the next claim retries that entry before the later ones. After
+  `SNODRA_OUTBOX_MAX_ATTEMPTS` sends the entry is marked failed and logged. Level 3 is where a dead letter replaces
+  that log-and-skip.
+
+### Event handlers
+
+`@app.event_handler` registers a handler of the event type annotated on its first parameter;
+`@app.event_handler(processor="...")` puts it in a named processor. As for the other handlers, registration happens
+before `start` (or `run`) and an error is raised at once or during startup.
+
+A handler runs inside the processor's transaction, together with the event's processed-event marker:
+
+1. the store records the marker (`processor:<processor>:<eventId>`) in a transaction;
+2. a marker that exists already means the event is a duplicate: no handler runs and the record is acknowledged;
+3. every handler of the type, in registration order, runs in the same transaction (an error in one fails the record);
+4. the transaction commits, and only then the record is acknowledged.
+
+So the handler's own writes and the marker commit together, and a record that comes again after a crash is skipped
+instead of handled twice. An event type the processor has no handler for is acknowledged and runs nothing; a record
+without a type header, or whose payload is not a JSON object or does not decode as the handler's type, is logged and
+acknowledged. A handler that fails is tried up to `SNODRA_CONSUMER_MAX_ATTEMPTS` times (5 by default), the first
+included, one second apart; after that the record is logged and skipped at level 2. A subscription that fails is
+reopened after 1 s, doubling up to 30 s, and the wait starts over after a delivery or a subscription that lived 30 s.
+
+An event handler has no caller: `current_caller()` is `None` (an event carries a user id, never a token).
+`current_message()` returns the event's id, type, correlation id and headers. What the handler publishes carries that
+correlation id, that user id and its trace context.
+
+### Processors
+
+| Processor | Registered with | Subscription | Markers |
+|---|---|---|---|
+| `default` | `@app.event_handler` without `processor` | `<service>.default` | `processor:default:<eventId>` |
+| `<name>` | `@app.event_handler(processor=name)` | `<service>.<name>` | `processor:<name>:<eventId>` |
+
+A processor name matches `[a-z0-9][a-z0-9-]{0,47}` (at most 48 characters) and is never `default`. One event type in
+two processors reaches both, each in its own transaction and marker family: a failure in one does not affect the
+other. Every instance of a service that registers a handler for a processor reads that subscription; the instances
+share its segments, so a segment is read by one instance at a time.
+
+**A new processor reads from the beginning of what the event store keeps.** Moving a handler from `default` to a
+named processor, or adding a handler of an event type that has history, runs it over every event still in the store's
+retention: the new subscription and its marker family are new. That is what a projection wants when it can rebuild;
+a handler with effects outside the database repeats every one of them. Leave such a handler in `default`, or move the
+new subscription to the end of the source before you deploy it with the event store's own tooling (for Kafka, reset
+the consumer group `<service>.<name>` to `latest` while it has no member).
+
+`Settings(consumer_enabled=False)` (`SNODRA_CONSUMER_ENABLED=false`) stops the instances reading event subscriptions,
+for a tool that only publishes.
+
+## Event stores and message stores
+
+The two stores are add-ons: the core ships neither and imports neither. A service passes one of each to `App`, with
+`store=` and `event_store=`:
+
+```python
+app = snodra.App(settings, store=store, event_store=event_store)
+```
+
+| Add-on | Package | Interface |
+|---|---|---|
+| Kafka | `snodra-messaging-kafka` | event store (`KafkaEventStore`) |
+| RabbitMQ Streams | `snodra-messaging-rabbitmq` | event store (`RabbitMQEventStore`) |
+| MongoDB | `snodra-messaging-mongo` | message store (`MongoStore`) |
+| SQL (PostgreSQL, MySQL) | `snodra-messaging-sql` | message store (`SqlStore`) |
+
+The event-store interface expects one subscription per processor, competing instances sharing its segments, order per
+key, at-least-once delivery with acknowledgement, pause and resume, and the headers as the store's native metadata. The
+message-store interface is frozen at level 2: its outbox and processed-event ports are implemented by both official
+stores, and the dead-letter, processor-control, external-call and saga ports raise `MessageStoreUnsupported` at level 2
+(the official add-ons implement every port by level 4). A third-party add-on implements the same interfaces and depends
+on the core only; `snodra.testing` is its conformance kit (see [Testing](/docs/messaging/python/testing/)).
+
+`App.start` hands the message store the application's clock, then prepares its schema (`init_schema`) or, with
+`SNODRA_STORE_INIT_SCHEMA=false`, checks it (`check_schema`); a failure fails `start`. A store that also implements
+`StoreLifecycle` starts its own background work there (the SQL add-on's purge, for example). A publish or an event
+handler without the two stores fails: an event handler at `start`, naming the missing add-on, and a publish at its
+first call, because a service that only publishes cannot be told apart at build time.
+
+The in-memory stores, `snodra.MemoryEventStore()` and `snodra.MemoryStore()`, are not durable and are for tests and
+local runs; `start` warns once for each. The [add-ons pages](/docs/add-ons/) list the artifacts, settings,
+guarantees and capabilities of each store.
+
+### Transactions and context binding
+
+A message store implements `async with store.transaction():`. `publish` and the consumer's marker use the transaction
+bound to the current task context; the service's own writes join it through the store's transaction helpers:
+
+- **SQL.** `async with store.transaction():` begins a transaction (at READ COMMITTED) and binds it.
+  `store.transaction(conn=conn)` binds a connection the service began (an `asyncpg.Connection` or `asyncmy`
+  connection). A pool with at least two connections is required; the default is ten.
+- **MongoDB.** `async with store.transaction():` runs on a session transaction. `store.transaction(session=session)`
+  binds a session the service began. `store.session(tx)` or `store.session()` returns the `AsyncClientSession` of the
+  current transaction. The database must be a replica set.
+
+Transactions are managed across async tasks using Python's `contextvars`:
+- `snodra.bind_transaction(tx)` binds a `Tx` to the current task context, returning a token.
+- `snodra.current_transaction()` returns the currently bound `Tx`, or `None`.
+- `snodra.unbind_transaction(token)` restores the previous binding.
+
+Outside any transaction, a store call runs in a short transaction of its own.
+
+### Event errors
+
+| Error | Meaning |
+|---|---|
+| `Invalid` / `InvalidMessage` | the event or a store argument is invalid: a payload that is not a JSON object, an integer too large, a missing setting. Nothing was appended |
+| `Rejected` | the event store will never take the event; the relay gives it up at once |
+| `Failed` / `MessageStoreFailed` | the store failed; another try may succeed, and the relay retries within its attempts |
+| `Conflict` | another writer got to the record first; the caller retries the operation as a whole, in a new transaction |
+| `Unsupported` / `MessageStoreUnsupported` | the port or the operation is not implemented at this level |
+
 ## Not in the Python library yet
 
-Events, event stores, message stores, the outbox, event processors, dead letters and sagas (feature levels 2 to 4) are
-not in the Python library. Use the [Kotlin](/docs/messaging/kotlin/) or [Rust](/docs/messaging/rust/) library for them.
+Processor status and control (pause, resume, reset and replay), dead letters, and sagas (feature levels 3 and 4) are
+not in the Python library. A record that exhausts its attempts is logged and skipped at level 2; the level-3 ports exist
+in the interfaces and raise `MessageStoreUnsupported`. The library has no event browser either, so its event-store
+add-ons declare no `browse` capability. For those features, use the [Kotlin](/docs/messaging/kotlin/) or
+[Rust](/docs/messaging/rust/) library.

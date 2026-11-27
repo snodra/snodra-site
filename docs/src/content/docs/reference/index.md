@@ -32,13 +32,13 @@ configuration, the API, dead letters, sagas, testing and the modules and build.
 
 ## The Go library
 
-[snodra-messaging-go](/docs/messaging/go/) is the Go library, pre-1.0 and at feature level 1 (commands and
-queries; no events, sagas or add-ons yet). Its pages cover the quick start, configuration, the API and testing.
+[snodra-messaging-go](/docs/messaging/go/) is the Go library, pre-1.0 and at feature level 2 (commands,
+queries and events; no sagas yet). Its pages cover the quick start, configuration, the API and testing.
 
 ## The Python library
 
-[snodra-messaging-python](/docs/messaging/python/) is the Python library, pre-1.0 and at feature level 1 (commands and
-queries; no events, sagas or add-ons yet). Its pages cover the quick start, configuration, the API and testing.
+[snodra-messaging-python](/docs/messaging/python/) is the Python library, pre-1.0 and at feature level 2 (commands,
+queries and events; no sagas yet). Its pages cover the quick start, configuration, the API and testing.
 
 ## The stores
 

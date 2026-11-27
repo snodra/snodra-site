@@ -9,8 +9,8 @@ Five entry points, one stack. Pick the one that matches what you are building.
 | **Server image** | The gRPC router, the dashboard, processor control and the event browser | [Installation: server](/docs/getting-started/installation/#server) |
 | **Kotlin library** | A Spring Boot starter: buses, handlers, outbox, sagas, testing kits | [Installation: Kotlin](/docs/getting-started/installation/#kotlin) |
 | **Rust library** | A crate: one builder for the hub client, event store, outbox and handlers | [Installation: Rust](/docs/getting-started/installation/#rust) |
-| **Go library** | A module at feature level 1: handlers and sending for commands and queries, in every query mode; no events or sagas yet | [Installation: Go](/docs/getting-started/installation/#go) |
-| **Python library** | A package at feature level 1: handlers and sending for commands and queries, in every query mode; no events or sagas yet | [Installation: Python](/docs/getting-started/installation/#python) |
+| **Go library** | A module at feature level 2: commands and queries in every query mode, and events through the outbox and event stores; no sagas yet | [Installation: Go](/docs/getting-started/installation/#go) |
+| **Python library** | A package at feature level 2: commands and queries in every query mode, and events through the outbox and event stores; no sagas yet | [Installation: Python](/docs/getting-started/installation/#python) |
 
 A first system needs two things: a server, and at least one service that registers a handler. The
 walkthrough in [Your first service](/docs/getting-started/first-service/) links the existing quickstarts instead of

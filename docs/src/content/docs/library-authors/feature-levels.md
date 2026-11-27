@@ -28,7 +28,7 @@ check that proves them. The **Proved by** column says what runs a check today:
   ([the conformance contract](https://github.com/snodra/snodra-conformance/blob/main/docs/contract.md#how-each-check-is-proved) says how, check by check).
 - **runner, not checked yet**: a later runner version will run it; until then nothing checks it but each library's own
   tests.
-- **kit**: the event-store and message-store conformance kits that ship with the Kotlin and Rust libraries.
+- **kit**: the event-store and message-store conformance kits that ship with the Kotlin, Rust, Go and Python libraries.
   Every add-on runs them today; a library in another language ports them. The kits' checks are listed by name, with
   what each asserts, in [event-store-add-ons.md](/docs/library-authors/event-store-add-ons/#the-conformance-kit) and
   [message-store-add-ons.md](/docs/library-authors/message-store-add-ons/#the-conformance-kit). The names are the Rust kit's; the Kotlin

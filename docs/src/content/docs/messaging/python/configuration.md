@@ -4,7 +4,8 @@ title: "Configuration"
 
 Every setting is a field of `snodra.Settings` (`service`, `hubs`, `max_concurrent`, ...). `snodra.Settings.from_env()`
 reads the `SNODRA_*` variables, the same ones the Rust and Go libraries read; the Kotlin library is configured with Spring
-properties (`snodra.messaging.*`) instead. Keyword arguments passed to `from_env()` override what the environment set.
+properties (`snodra.messaging.*`) instead. The add-ons read their own variables through a `from_env()` of their own
+([Add-ons](#add-ons)). Keyword arguments passed to `from_env()` override what the environment set.
 
 A variable that is unset, or blank, changes nothing. Numbers are non-negative integers; flags are `true`, `1`, `yes`,
 `on`, `false`, `0`, `no` or `off`, in any letter case. In `Settings`, duration fields are numbers of seconds (floats),
@@ -45,9 +46,92 @@ while the environment variables use milliseconds (`_MS`). A value that does not 
 | `SNODRA_SERVER_TLS_SERVER_NAME` | `TLSConfig.server_name` | the host of each hub address | the name the hubs' certificates must carry, also sent as SNI; needs TLS (`SNODRA_SERVER_TLS=true`, or a client certificate) |
 | `SNODRA_SERVER_TLS_CLIENT_CERT`, `SNODRA_SERVER_TLS_CLIENT_KEY` | `client_certificate` (`ClientCertificate`) | none | the client certificate chain (leaf first) and its private key, PEM, for mutual TLS; both or neither; **they turn TLS on**; see [Authenticating with a client certificate](#authenticating-with-a-client-certificate-mtls) |
 
-Options passed to `App` with no environment variable: `codec` (the payload codec, `JsonCodec` by default), `telemetry`
-(see [API](/docs/messaging/python/api/#telemetry)) and, per call on `send`, `query`, `gather`, `stream` and `subscribe`:
+### Events
+
+| Variable | `Settings` field | Default | Meaning |
+|---|---|---|---|
+| `SNODRA_EVENTS_SOURCE` | `events_source` | `snodra.events` | the event store's source the service publishes its events to and every processor reads; one source for both |
+| `SNODRA_OUTBOX_ENABLED` | `outbox_enabled` | true | every instance runs the outbox relay; `false` on every instance stops the service's events being published, `false` on all but one keeps the order per key of what one instance publishes |
+| `SNODRA_OUTBOX_POLL_INTERVAL_MS` | `outbox_poll_interval` | 0.2 (200 ms) | the relay's longest wait between two claims of the outbox (at least 1 ms); a committed append may wake it sooner |
+| `SNODRA_OUTBOX_BATCH_SIZE` | `outbox_batch_size` | 100 | the most outbox entries one claim returns (at least 1) |
+| `SNODRA_OUTBOX_MAX_ATTEMPTS` | `outbox_max_attempts` | 10 | sends of one outbox entry in all before it is marked failed (at least 1) |
+| `SNODRA_OUTBOX_LEASE_MS` | `outbox_lease` | 120.0 (120000 ms) | how long a claimed outbox batch stays one relay's; it must be longer than a send (40 s). A crashed relay's entries are claimed again after the lease |
+| `SNODRA_CONSUMER_ENABLED` | `consumer_enabled` | true | every instance reads its event processors' subscriptions; a tool that only publishes turns it off |
+| `SNODRA_CONSUMER_MAX_ATTEMPTS` | `consumer_max_attempts` | 5 | event handler invocations per delivered record in all, the first included (at least 1); after them the record is logged and skipped at level 2 |
+| `SNODRA_STORE_INIT_SCHEMA` | `store_init_schema` | true | `start` applies or creates the message store's schema; `false` checks it instead, for a service that runs its own migrations |
+
+Options passed to `App` with no environment variable: `store` and `event_store` (the stores themselves, see
+[Add-ons](#add-ons)), `codec` (the payload codec, `JsonCodec` by default), `telemetry` (see
+[API](/docs/messaging/python/api/#telemetry)) and, per call on `send`, `query`, `gather`, `stream` and `subscribe`:
 `timeout`, `retry`, `routing_key`, `priority`, `headers`, `initial_credit` and `max_results`.
+
+## Add-ons
+
+The core reads the variables above. An add-on has a `from_env()` of its own, and the service hands the result to the
+add-on: `KafkaEventStore(KafkaConfig.from_env())`, `SqlStore(SqlConfig.from_env())`, `MongoStore(MongoConfig.from_env())`
+and `RabbitMQEventStore(RabbitMQConfig.from_env())`. An add-on reads its variables only when the service calls its
+`from_env()`; having them in the environment changes nothing by itself. The store is then passed to `snodra.App` with
+`event_store=` or `store=`. A service needs one event store and one message store; there is no classpath, so the choice
+is in code.
+
+### Kafka (`KafkaConfig.from_env`)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `SNODRA_KAFKA_BOOTSTRAP` | `kafka:19092` | the brokers, `host:port` entries separated by commas; required |
+
+`KafkaConfig.from_env()` returns the configuration with the bootstrap servers. The other settings are fields of
+`KafkaConfig`: `client_id` (`"snodra-messaging"`), `request_timeout_ms` (30 000 ms), `session_timeout_ms` (10 000 ms),
+`max_poll_records` (100), `status_refresh` (1.0 s), `admin_timeout` (10.0 s); the store sets the group, the topic, the
+reset offset, the group protocol, the partitioner and the commit behavior itself. See
+[Kafka event store](/docs/add-ons/kafka-event-store/).
+
+### SQL (`SqlConfig.from_env`)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `SNODRA_STORE_SQL_URL` | required | the database: `postgres://user:password@host:port/database?params`, `postgresql://...`, or `mysql://user:password@host:port/database?params` |
+| `SNODRA_STORE_SQL_DRIVER` | from the URL's scheme | `postgres` or `mysql`; set it when the URL does not say |
+| `SNODRA_STORE_SQL_NOTIFY` | true | PostgreSQL: an append sends `pg_notify` in its transaction and the relay listens, so a commit wakes it at once; `false` polls. Turn it off behind PgBouncer in transaction mode. MySQL always polls |
+| `SNODRA_STORE_SQL_PURGE_INTERVAL_MS` | 60000 | how often the retention purge runs; `0` or negative turns the purge off |
+
+The connection pool (`min_size` 1, `max_size` 10, at least two connections) and retentions are fields of `SqlConfig`
+(outbox 7 days, processed markers 30 days, and the later ports' retentions). See
+[SQL message store](/docs/add-ons/sql-message-store/).
+
+### MongoDB (`MongoConfig.from_env`)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `SNODRA_STORE_MONGO_URI` | required | `mongodb://...` or `mongodb+srv://...`; the database must be a replica set (a single-node one is enough), because the store joins the service's transaction |
+| `SNODRA_STORE_MONGO_DATABASE` | required | the service's database, which holds the shared collections |
+
+The retentions are fields of `MongoConfig`. A service that already owns an `AsyncMongoClient` passes it to
+`MongoStore(config, client=...)` instead. See [MongoDB message store](/docs/add-ons/mongodb-message-store/).
+
+### RabbitMQ Streams (`RabbitMQConfig.from_env`)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `SNODRA_RABBITMQ_HOSTS` | `rabbitmq` | the nodes to try first, `host` or `host:port`, comma-separated |
+| `SNODRA_RABBITMQ_PORT` | 0 (5552, or 5551 with TLS) | the port of a host given without one |
+| `SNODRA_RABBITMQ_VIRTUAL_HOST` | `/` | the virtual host; empty reads as `/` |
+| `SNODRA_RABBITMQ_USERNAME`, `SNODRA_RABBITMQ_PASSWORD` | `guest` | the user and its password; the password is never logged |
+| `SNODRA_RABBITMQ_TLS` | false | `true` connects with TLS 1.2 or later, verified against the system roots or `tls_ca_file` |
+| `SNODRA_RABBITMQ_MANAGEMENT_URL` | none | the management API's root (`http://rabbitmq:15672`, no credentials in it); setting it declares `replay`, and `RabbitMQEventStore` checks the API once at startup |
+
+The management API's own login (`RabbitMQConfig.management_username`, `management_password`) defaults to the stream user's;
+`management_timeout` is 5.0 s, `confirm_timeout` 30.0 s, `request_timeout` 10.0 s, `offset_store_messages` 10 000,
+`offset_store_interval` 5.0 s, and `status_refresh` 2.0 s. See
+[RabbitMQ Streams event store](/docs/add-ons/rabbitmq-streams-event-store/).
+
+### Event stores and message stores
+
+An event store publishes the service's events and serves its processors' subscriptions; a message store holds the
+outbox, the processed-event markers, the dead letters and the processor control state (level 3) and the sagas
+(level 4). The in-memory ones, `snodra.MemoryEventStore()` and `snodra.MemoryStore()`, are for tests and local runs:
+nothing survives the process, and `start` warns once for each. A service that only handles commands, queries and
+subscription queries needs neither store and starts without them.
 
 ## Credentials
 

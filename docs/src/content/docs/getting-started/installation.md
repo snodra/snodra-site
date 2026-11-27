@@ -119,34 +119,47 @@ Next: [the Rust quick start](/docs/messaging/rust/quickstart/), then
 
 ## Go
 
-The Go library is pre-1.0 and at feature level 1: commands and queries, in every query mode, with no events, stores or
-sagas yet. It needs Go 1.26 or later:
+The Go library is pre-1.0 and at feature level 2: commands and queries in every query mode, and events through the
+outbox, event stores and processors; no sagas yet. It needs Go 1.26 or later:
 
 ```sh
 go get github.com/snodra/snodra-messaging-go@latest
 go get github.com/snodra/snodra-messaging-go/observability@latest   # optional: OpenTelemetry metrics and traces
+
+# One event store and one message store, when the service publishes or handles events:
+go get github.com/snodra/snodra-messaging-go/kafka@latest           # Kafka event store
+go get github.com/snodra/snodra-messaging-go/rabbitmq@latest        # RabbitMQ Streams event store
+go get github.com/snodra/snodra-messaging-go/mongo@latest           # MongoDB message store
+go get github.com/snodra/snodra-messaging-go/sql@latest             # SQL message store (PostgreSQL, MySQL)
 ```
 
 The package is named `snodra`; import it as `snodra "github.com/snodra/snodra-messaging-go"`. The core module depends
-only on gRPC and protobuf.
+only on gRPC and protobuf. Each add-on is a separate module with its own client.
 
 Next: [the Go quick start](/docs/messaging/go/quickstart/), then
-[configuration](/docs/messaging/go/configuration/).
+[configuration](/docs/messaging/go/configuration/) and [add-ons](/docs/add-ons/).
 
 ## Python
 
-The Python library is pre-1.0 and at feature level 1: commands and queries, in every query mode, with no events, stores or
-sagas yet. It needs Python 3.12 or later:
+The Python library is pre-1.0 and at feature level 2: commands and queries in every query mode, and events through the
+outbox, event stores and processors; no sagas yet. It needs Python 3.12 or later:
 
 ```sh
 pip install snodra-messaging
 pip install snodra-messaging-observability   # optional: OpenTelemetry metrics and traces
+
+# One event store and one message store, when the service publishes or handles events:
+pip install snodra-messaging-kafka           # Kafka event store
+pip install snodra-messaging-rabbitmq        # RabbitMQ Streams event store
+pip install snodra-messaging-mongo           # MongoDB message store
+pip install snodra-messaging-sql             # SQL message store (PostgreSQL, MySQL)
 ```
 
-The package is named `snodra`. The core package depends only on `grpcio`, `protobuf` and `cryptography`.
+The package is named `snodra`. The core package depends only on `grpcio`, `protobuf` and `cryptography`. Each add-on is a
+separate package with its own client.
 
 Next: [the Python quick start](/docs/messaging/python/quickstart/), then
-[configuration](/docs/messaging/python/configuration/).
+[configuration](/docs/messaging/python/configuration/) and [add-ons](/docs/add-ons/).
 
 ## After installation
 

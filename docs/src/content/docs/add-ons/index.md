@@ -5,12 +5,12 @@ title: "Add-ons"
 Events live in an **event store**; the reliability plumbing lives in a **message store**. Both are
 add-ons: the core library ships neither, so you choose the infrastructure you already run.
 
-| Add-on | Kind | Artifact, crate or module | What it holds |
+| Add-on | Kind | Artifact, crate, module or package | What it holds |
 |---|---|---|---|
 | [Kafka event store](/docs/add-ons/kafka-event-store/) | event store | `snodra-messaging-kafka`, `snodra-messaging-go/kafka` | Events, in ordered partitions |
 | [RabbitMQ Streams event store](/docs/add-ons/rabbitmq-streams-event-store/) | event store | `snodra-messaging-rabbitmq`, `snodra-messaging-go/rabbitmq` | Events, in partitioned streams |
 | [MongoDB message store](/docs/add-ons/mongodb-message-store/) | message store | `snodra-messaging-mongo`, `snodra-messaging-go/mongo` | Outbox, markers, dead letters, sagas, processor control |
-| [SQL message store](/docs/add-ons/sql-message-store/) | message store | `snodra-messaging-jdbc` (Kotlin), `snodra-messaging-sqlx` (Rust), `snodra-messaging-go/sql` (Go) | The same, in PostgreSQL or MySQL tables |
+| [SQL message store](/docs/add-ons/sql-message-store/) | message store | `snodra-messaging-jdbc` (Kotlin), `snodra-messaging-sqlx` (Rust), `snodra-messaging-go/sql` (Go), `snodra-messaging-sql` (Python) | The same, in PostgreSQL or MySQL tables |
 
 ## Two choices, one of each
 
@@ -30,6 +30,8 @@ snodra:
 The Rust library has no classpath: you pass the store to the builder (`.event_store(...)`,
 `.store(...)`), so the choice is in code. The Go library has no classpath either: each add-on is a
 module, and you pass the store to `snodra.New` with `WithEventStore(...)` or `WithStore(...)`.
+The Python library has no classpath either: each add-on is a package, and you pass the store to
+`snodra.App` with `event_store=` or `store=`.
 
 ## In-memory stores
 

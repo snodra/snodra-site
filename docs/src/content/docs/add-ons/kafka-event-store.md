@@ -4,7 +4,7 @@ title: "Kafka event store"
 
 The event store on Apache Kafka. Use it when Kafka is already your event backbone: it gives ordered,
 partitioned events with replay, lag and a native dead-letter topic, and it is the layout the Kotlin,
-Rust and Go libraries share.
+Rust, Go and Python libraries share.
 
 ## Artifact
 
@@ -13,10 +13,12 @@ Rust and Go libraries share.
 | Kotlin | `com.damoreira.snodra:snodra-messaging-kafka:0.6.1` |
 | Rust | `snodra-messaging-kafka = "0.8"` |
 | Go | `github.com/snodra/snodra-messaging-go/kafka` (`go get github.com/snodra/snodra-messaging-go/kafka@latest`) |
+| Python | `snodra-messaging-kafka` (`pip install snodra-messaging-kafka`) |
 
 The Kotlin module depends on the core starter; the Rust crate is passed to the builder with
 `.event_store(...)`. The Go module is one add-on module, passed to `snodra.New` with `WithEventStore`
-([Go events](/docs/messaging/go/api/#events)).
+([Go events](/docs/messaging/go/api/#events)). The Python package is `snodra-messaging-kafka`, passed
+to `snodra.App` with `event_store=` ([Python events](/docs/messaging/python/api/#events)).
 
 ## Configuration
 
@@ -60,10 +62,27 @@ setting is a franz-go option in `Config.Options`. The module is
 `github.com/snodra/snodra-messaging-go/kafka`; the full Go settings are in
 [Go configuration](/docs/messaging/go/configuration/#kafka-kafkafromenv).
 
+Python, from the environment and `KafkaConfig`:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `SNODRA_KAFKA_BOOTSTRAP` | `kafka:19092` | The bootstrap servers, `host:port` entries separated by commas |
+| `KafkaConfig.client_id` | `snodra-messaging` | The client identifier sent with broker requests |
+| `KafkaConfig.request_timeout_ms` | 30 000 | The longest one broker request waits |
+| `KafkaConfig.session_timeout_ms` | 10 000 | How long a crashed instance stays a group member |
+| `KafkaConfig.max_poll_records` | 100 | The most records one poll hands a subscription |
+| `KafkaConfig.status_refresh` | 1.0s | How often a subscription refreshes the end offsets it counts lag from |
+| `KafkaConfig.admin_timeout` | 10.0s | The most one admin call, commit or offset read waits |
+
+`KafkaConfig.from_env()` reads `SNODRA_KAFKA_BOOTSTRAP` and leaves the other fields at their defaults; set
+them on the returned `KafkaConfig`. Pass the store to `snodra.App` with `event_store=KafkaEventStore(config)`.
+The package is `snodra-messaging-kafka`; the full Python settings are in
+[Python configuration](/docs/messaging/python/configuration/#kafka-kafkaconfigfrom_env).
+
 ## Guarantees
 
 - **Ordering per key.** The producer uses the Java client's default partitioner, so a key from a
-  Kotlin, Rust or Go publisher lands on the same partition. (The Go producer uses murmur2 of the
+  Kotlin, Rust, Go or Python publisher lands on the same partition. (The Go and Python producers use murmur2 of the
   key's bytes, seed `0x9747b28c`, masked positive and taken modulo the partitions.)
 - **Idempotent publish.** The producer sets `enable.idempotence` and `acks=all`; a send takes at
   most 40 seconds. The Go add-on sets `acks=all` and a 30-second delivery timeout; franz-go's
@@ -72,12 +91,12 @@ setting is a franz-go option in `Config.Options`. The module is
   starts at the earliest offset. Processed-event markers suppress duplicates.
 - **One consumer group per processor**, `<service>.<processor>`.
 - **Native dead letters.** Mode `event-store` produces to `<source>.dlt`. The store declares the
-  capability; the Go core reaches for it at level 3 (at level 2 it logs and skips a record that
+  capability; the Go and Python cores reach for it at level 3 (at level 2 they log and skip a record that
   exhausted its attempts).
-- **Replay, lag and browse.** The Kotlin and Rust stores declare all four capabilities. The Go
-  add-on declares `replay`, `lag` and `native-dead-letter` and no `browse`, because the Go library
-  has no event browser; a replay is available to a control request from level 3.
-- **Group protocol.** The Go add-on joins the classic group protocol with the `range` assignor, and
+- **Replay, lag and browse.** The Kotlin and Rust stores declare all four capabilities. The Go and
+  Python add-ons declare `replay`, `lag` and `native-dead-letter` and no `browse`, because neither
+  library has an event browser; a replay is available to a control request from level 3.
+- **Group protocol.** The Go and Python add-ons join the classic group protocol with the `range` assignor, and
   a group's committed offset is the next one to read, so the members of every official library meet
   in one group.
 
@@ -86,12 +105,12 @@ authorization is given up at once; other failures are retried by the outbox rela
 
 ## Capabilities
 
-| Capability | Kotlin | Rust | Go |
-|---|---|---|---|
-| `replay` | yes | yes | yes |
-| `lag` | yes | yes | yes |
-| `native-dead-letter` | yes | yes | yes |
-| `browse` | yes | yes | no: the Go library has no event browser |
+| Capability | Kotlin | Rust | Go | Python |
+|---|---|---|---|---|
+| `replay` | yes | yes | yes | yes |
+| `lag` | yes | yes | yes | yes |
+| `native-dead-letter` | yes | yes | yes | yes |
+| `browse` | yes | yes | no: the Go library has no event browser | no: the Python library has no event browser |
 
 ## Read next
 
@@ -102,3 +121,5 @@ authorization is given up at once; other failures are retried by the outbox rela
 - The Go settings and API: [Go configuration](/docs/messaging/go/configuration/#kafka-kafkafromenv) and
   [Go events](/docs/messaging/go/api/#events).
 - The Go add-on's own contract: [Event-store add-ons](/docs/library-authors/event-store-add-ons/).
+- The Python settings and API: [Python configuration](/docs/messaging/python/configuration/#kafka-kafkaconfigfrom_env) and
+  [Python events](/docs/messaging/python/api/#events).

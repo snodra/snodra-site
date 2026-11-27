@@ -2,18 +2,25 @@
 title: "Python quick start"
 ---
 
-The Python library is pre-1.0 and at feature level 1: the API may still change between minor versions. It needs Python
+The Python library is pre-1.0 and at feature level 2: the API may still change between minor versions. It needs Python
 3.12 or later.
 
-## Dependency
+## Dependencies
 
 ```sh
 pip install snodra-messaging
 pip install snodra-messaging-observability   # optional: OpenTelemetry
+
+# One event store and one message store, when the service publishes or handles events:
+pip install snodra-messaging-kafka           # Kafka event store
+pip install snodra-messaging-rabbitmq        # RabbitMQ Streams event store
+pip install snodra-messaging-mongo           # MongoDB message store
+pip install snodra-messaging-sql             # SQL message store (PostgreSQL, MySQL)
 ```
 
 The package is named `snodra`. The core package depends only on `grpcio`, `protobuf` and `cryptography`. Telemetry is a
-separate package, `snodra-messaging-observability` (see [API](/docs/messaging/python/api/#telemetry)).
+separate package, `snodra-messaging-observability` (see [API](/docs/messaging/python/api/#telemetry)). Each add-on is a
+package of its own and brings its store client; the core imports none of them.
 
 ## A service
 
@@ -105,6 +112,52 @@ A message is a dataclass (or Pydantic model) decorated with `@snodra.message_typ
 protocol's wire type name; its payload is JSON by default. Handlers are registered before `start` (or `run`); a
 registration error is raised when registered or checked during startup.
 
+## Publish and handle an event
+
+An event is a message type too. Build the service with one event store and one message store, then publish the event
+inside the transaction that holds the service's own writes:
+
+```python
+from dataclasses import dataclass
+import snodra
+from snodra_kafka import KafkaConfig, KafkaEventStore
+from snodra_sql import SqlConfig, SqlStore
+
+
+@snodra.message_type("orders.OrderPlaced")
+@dataclass
+class OrderPlaced:
+    order_id: str
+    total: int
+
+
+store = SqlStore(SqlConfig.from_env())             # the message store: outbox and processed-event markers
+events = KafkaEventStore(KafkaConfig.from_env())   # the event store: where the relay publishes
+
+settings = snodra.Settings.from_env(service="orders-service")
+app = snodra.App(settings, store=store, event_store=events)
+```
+
+```python
+# In a command handler: one transaction, the service's rows and the outbox entry.
+async with store.transaction():
+    # your own database writes here...
+    await app.publish(OrderPlaced(order_id=cmd.order_id, total=cmd.total), key=cmd.order_id)
+```
+
+```python
+# In the same service, or in any other one: the handler and its marker commit together.
+@app.event_handler(processor="orders")
+async def on_order_placed(event: OrderPlaced) -> None:
+    await project_order(event)
+```
+
+The relay in every instance publishes what the outbox holds, at least once; a redelivered event finds its
+`processor:orders:<eventId>` marker and is skipped. `key` is the order key: events with one key reach a
+processor in publish order. A handler without `processor=` runs in the `default` processor. The pieces are in
+[API](/docs/messaging/python/api/#events), the settings in [Configuration](/docs/messaging/python/configuration/#events), and
+the stores in [Add-ons](/docs/add-ons/).
+
 ## Run it against a hub
 
 The hub is the `snodra/snodra-server` image (see the [Hub quick start](/docs/server/quickstart/)). Start one, then
@@ -124,7 +177,14 @@ python -m orders_quickstart.service
 configured with Spring properties instead); keyword arguments passed to `from_env()` win over the environment.
 [Configuration](/docs/messaging/python/configuration/) lists them all.
 
+A service that publishes or handles events also needs its event store and its message store: Kafka or RabbitMQ
+Streams, and MongoDB or SQL. Their variables (`SNODRA_KAFKA_BOOTSTRAP`, `SNODRA_STORE_MONGO_URI`, `SNODRA_STORE_SQL_URL`, ...) are read by the
+add-on's own `from_env()` and are listed in [Configuration](/docs/messaging/python/configuration/#add-ons).
+
 ## Next
 
-- [API](/docs/messaging/python/api/): the other handlers, sending, the four query modes, errors, identity, lifecycle and telemetry.
-- [Testing](/docs/messaging/python/testing/): testing handlers and running the conformance runner.
+- [API](/docs/messaging/python/api/): events, stores and processors, the other handlers, sending, the four query modes,
+  errors, identity, lifecycle and telemetry.
+- [Configuration](/docs/messaging/python/configuration/): every `SNODRA_*` variable of the core and of every add-on,
+  and every credential.
+- [Testing](/docs/messaging/python/testing/): testing handlers, the `snodra.testing` kits and the conformance runner.
