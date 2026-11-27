@@ -8,9 +8,10 @@ Pause, resume, reset and replay processors, and work their dead letters, from th
 
 The hub is a stateless
 control plane: it asks the instances that run a processor to act and turns their answers into one HTTP answer. The
-state lives in each service's MongoDB (`processor_control`, one document per processor), which every instance reads at
-start and every 5 s: a pause outlives every hub and reaches instances that start later. For control the hub reads no
-Kafka and no MongoDB and sees no payload.
+state lives in each service's message store (the `processor_control` table in SQL, or the `processor_control`
+collection in MongoDB; one row or document per processor), which every instance reads at start and every 5 s: a pause
+outlives every hub and reaches instances that start later. For control the hub reads no event store and no message
+store and sees no payload.
 
 - **Who is asked.** Every live session of the service whose latest status lists the processor.
 - **Pause, resume** go to all of them; the answer comes when every one answered or `SNODRA_SERVER_CONTROL_TIMEOUT` passed.
@@ -25,7 +26,8 @@ Kafka and no MongoDB and sees no payload.
   renewal that still reaches it after its finish (`NOT_PREPARED`): a late renewal never takes the lock again.
 - **A refused execute is not always "nothing changed".** Refusals before the reset handlers (`INVALID`,
   `GROUP_NOT_EMPTY` on the members check) changed nothing. After them (a reset handler failed, the executor's lease was
-  lost, a MongoDB or Kafka error, Kafka refusing the commit) the handlers' effects stay, and the instance's message says
+  lost, a message-store or event-store error, Kafka refusing the commit) the handlers' effects stay, and the instance's
+  message says
   what else changed, e.g. `reset handlers ran (2), 37 markers deleted, offsets not moved: retry the reset`. An execute
   that times out (`504`) or whose instance left (`502`) may still finish, or may already have run reset handlers or
   deleted markers: its `error.message` says so; check the processor before resetting again.
@@ -77,7 +79,7 @@ An instance's answer, wherever it appears: `{"result":"ok"|"refused"|"timeout"|"
 { "service": "service-b", "processor": "audit", "action": "reset",
   "operationId": "0f3c9a1e-7d2b-4c1a-9e8f-5a6b7c8d9e0f", "target": { "to": "earliest" },
   "outcome": "ok", "executedBy": "b-2", "replay": true,
-  "ranges": [ { "partition": 0, "from": 0, "until": 42 } ], "markersDeleted": 3, "resetHandlers": 1, "error": null,
+  "ranges": [ { "segment": 0, "from": 0, "until": 42 } ], "markersDeleted": 3, "resetHandlers": 1, "error": null,
   "instances": [
     { "instanceId": "b-1", "prepare": { "result": "ok", "code": null, "message": "" },
       "finish": { "result": "ok", "code": null, "message": "" } },
@@ -91,8 +93,8 @@ An instance's answer, wherever it appears: `{"result":"ok"|"refused"|"timeout"|"
 
 // GET .../dead-letters?limit=50  (200)
 { "service": "service-b", "processor": "audit", "instanceId": "b-1", "total": 3,
-  "letters": [ { "id": "audit:snodra.events:1:141", "processor": "audit", "topic": "snodra.events",
-                 "partition": 1, "offset": 141, "key": "order-7", "eventId": "...", "eventType": "examples.OrderPlaced",
+  "letters": [ { "id": "audit:snodra.events:1:141", "processor": "audit", "source": "snodra.events",
+                 "segment": 1, "position": 141, "key": "order-7", "eventId": "...", "eventType": "examples.OrderPlaced",
                  "reason": "HANDLER_FAILED", "errorType": "IllegalStateException", "errorMessage": "boom",
                  "blockedBy": "", "attempts": 3, "parkedAtMs": 1762250000000, "lastAttemptAtMs": 1762250001000 } ] }
 
