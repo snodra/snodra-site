@@ -59,12 +59,12 @@ func TestMyMessageStore(t *testing.T) {
 `snodratest.EventStore` runs the nine level-2 event-store checks (`headers_round_trip`,
 `same_key_arrives_in_publish_order`, `every_processor_gets_every_event`, `instances_share_a_processor`, and the rest of
 the list on the [event-store contract](/docs/library-authors/event-store-add-ons/#the-conformance-kit)) and the six
-level-3 capability checks in the form the store declares: `replay_from_earliest_redelivers_history` (or
+possible level-3 ids, one form per capability: `replay_from_earliest_redelivers_history` (or
 `admin_without_replay_is_unsupported` without `replay`), `lag_counts_unacked` (or `lag_unknown_without_capability`),
-`dead_letter_source_receives` when the store declares `native-dead-letter`, and `no_browser_without_capability`. The
-four `browse` checks are omitted as a kit difference, because the Go library has no event browser; `CheckIDs()` lists
-the 15 ids the kit may run (both forms of `replay` and `lag` included), and `EventStoreKit` is what every check runs
-on.
+`dead_letter_source_receives` when the store declares `native-dead-letter`, and `no_browser_without_capability`
+always. The four positive `browse` checks are omitted as a kit difference, because the Go library has no event
+browser; `CheckIDs()` lists the 15 possible ids (both forms of `replay` and `lag` included), and `EventStoreKit` is
+what every check runs on.
 
 `snodratest.MessageStore` runs 17 checks: the nine level-2 outbox and processed-event checks, and the eight level-3
 processor checks (`delete_markers_removes_only_the_range`, `dead_letters_sequence_per_key`,

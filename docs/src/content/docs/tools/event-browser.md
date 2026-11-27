@@ -19,7 +19,7 @@ service (`SNODRA_SERVER_ADDRESS` takes a list).
 ```yaml
 services:
   snodra-event-browser:
-    image: snodra-event-browser:0.5.0
+    image: snodra-event-browser:0.3.3
     environment:
       SNODRA_SERVER_ADDRESS: static://snodra-server:7000
       SNODRA_KAFKA_BOOTSTRAP: kafka:19092

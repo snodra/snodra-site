@@ -67,10 +67,10 @@ event-store add-ons declare no `browse` capability; its conformance kit runs the
 
 | Add-on | Package |
 |---|---|
-| Kafka event store | `snodra-messaging-kafka` (`pip install snodra-messaging-kafka`) |
-| RabbitMQ Streams event store | `snodra-messaging-rabbitmq` (`pip install snodra-messaging-rabbitmq`) |
-| MongoDB message store | `snodra-messaging-mongo` (`pip install snodra-messaging-mongo`) |
-| SQL message store (PostgreSQL, MySQL) | `snodra-messaging-sql` (`pip install snodra-messaging-sql`) |
+| Kafka event store | `snodra-messaging-kafka` (`pip install snodra-messaging-kafka==0.7.0`) |
+| RabbitMQ Streams event store | `snodra-messaging-rabbitmq` (`pip install snodra-messaging-rabbitmq==0.7.0`) |
+| MongoDB message store | `snodra-messaging-mongo` (`pip install snodra-messaging-mongo==0.7.0`) |
+| SQL message store (PostgreSQL, MySQL) | `snodra-messaging-sql` (`pip install snodra-messaging-sql==0.7.0`) |
 
 A service needs one event store and one message store, passed to `snodra.App` with `event_store=` and `store=`. The
 [add-ons pages](/docs/add-ons/) describe the artifacts, the settings, the guarantees and the capabilities of each.

@@ -189,8 +189,9 @@ curl -s -X POST -H "Authorization: Bearer $WRITE_TOKEN" \
 curl -s -X POST -H "Authorization: Bearer $WRITE_TOKEN" "$HUB/dead-letters/retry-all"
 ```
 
-A pause and a reset persist in the message store, so they outlive the hub and reach every instance on its next poll.
-The status, the control protocol and every outcome are in
+A pause persists in the message store, and so do a reset's lock and replay ranges, so they reach every instance on its
+next poll. A reset the hub does not finish (the hub died mid-way) is not carried on: its lease lapses and the
+instances release it and consume again by themselves. The status, the control protocol and every outcome are in
 [API](/docs/messaging/python/api/#processor-control) and
 [Dead letters](/docs/messaging/python/api/#dead-letters).
 

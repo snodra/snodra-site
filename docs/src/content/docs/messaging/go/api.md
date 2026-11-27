@@ -265,7 +265,7 @@ app, err := snodra.New(
 ```
 
 ```sh
-go get github.com/snodra/snodra-messaging-go/observability@latest
+go get github.com/snodra/snodra-messaging-go/observability@v0.6.0
 ```
 
 `observability.New` takes `WithMeterProvider`, `WithTracerProvider` and `WithPropagator` to use others than the global ones. One
@@ -356,12 +356,15 @@ A handler runs inside the processor's transaction, together with the event's pro
 4. the transaction commits, and only then the record is acknowledged.
 
 So the handler's own writes and the marker commit together, and a record that comes again after a crash is skipped
-instead of handled twice. An event type the processor has no handler for is acknowledged and runs nothing; a record
-without a type header, or whose payload is not a JSON object or does not decode as the handler's type, is logged and
-acknowledged. A handler that fails is tried up to `SNODRA_CONSUMER_MAX_ATTEMPTS` times (5 by default), the first
-included, one second apart; after that the record becomes a dead letter, according to
-[`DeadLetterMode`](#dead-letters). A subscription that fails is reopened after 1 s, doubling up to 30 s, and the wait
-starts over after a delivery or a subscription that lived 30 s.
+instead of handled twice. An event type the processor has no handler for is acknowledged and runs nothing. A record
+without a `type` header, or whose payload is not a JSON object for a type the processor handles, can never be handled:
+in mode `collection` it is parked as an `INVALID` letter, in `event-store` it is published to the dead-letter source,
+and in `log` it is logged and skipped. A payload that does not decode as the handler's type is not retried either: in
+`collection` it is parked as a `HANDLER_FAILED` letter with `InvalidMessage` as its error type, and in the other modes
+it is published or logged like any other exhausted record. A handler that fails is tried up to
+`SNODRA_CONSUMER_MAX_ATTEMPTS` times (5 by default), the first included, one second apart; after that the record
+becomes a dead letter, according to [`DeadLetterMode`](#dead-letters). A subscription that fails is reopened after 1 s,
+doubling up to 30 s, and the wait starts over after a delivery or a subscription that lived 30 s.
 
 An event handler has no caller: `CallerFrom` reports false (an event carries a user id, never a token).
 `MessageFrom` returns the event's id, type, correlation id and headers. What the handler publishes carries that
@@ -404,7 +407,7 @@ event store, the message store or a handler, so it cannot delay a tick or a cons
 | `segments` | the assignment, sorted by `SegmentOrder`; per segment `position` (the next position this instance delivers), `committed` (after its last acknowledgement), `head` and `lag` (`committed` to `head`, `position` to `head` without a commit; `-1` when unknown, never negative otherwise), and `replay_until` while an open replay range has not been passed |
 | `processed_total`, `failed_total` | records whose delivery completed, a skipped duplicate included, and records that exhausted their attempts, since start (`SEQUENCED` and `INVALID` letters count in neither) |
 | `dead_letters` | `DeadLetterStore.Count` at start, every 30 s and right after this instance parked a letter; `0` unless the mode is `collection` |
-| `last_error`, `last_error_at_ms` | `<type>: <message>` of the last failure, never the payload, cut at 512 bytes |
+| `last_error`, `last_error_at_ms` | the last failure's error message (a plain `err.Error()`, with no type prefix), never the payload, cut at 512 bytes |
 | `event_types`, `dead_letter_mode` | the types with a handler in the processor, sorted; the [dead-letter mode](#dead-letters) |
 | `operation_id` | the reset operation holding the processor's lock, empty when none |
 | `replaying` | an open replay range on this instance's subscription has not been passed |

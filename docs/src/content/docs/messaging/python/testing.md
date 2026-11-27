@@ -66,11 +66,11 @@ async def test_my_message_store_at_level_3():
 `instances_share_a_processor`, and the rest of the list on the
 [event-store contract](/docs/library-authors/event-store-add-ons/#the-conformance-kit)); `open_store` is called once
 per service instance, and `store` is a message store for the at-least-once check's markers. `level=3` runs those nine
-checks and the six level-3 capability checks in the form the store declares: `replay_from_earliest_redelivers_history`
+checks and the six possible level-3 ids, one form per capability: `replay_from_earliest_redelivers_history`
 (or `admin_without_replay_is_unsupported` without `replay`), `lag_counts_unacked` (or `lag_unknown_without_capability`),
-`dead_letter_source_receives` when the store declares `native-dead-letter`, and `no_browser_without_capability`.
-`EVENT_STORE_CHECKS` holds the nine, `EVENT_STORE_L3_CHECKS` the six level-3 ids (each capability in the form the
-store declares), and `run_event_store_l3_conformance(source, open_store, store)` is the same run as `level=3`.
+`dead_letter_source_receives` when the store declares `native-dead-letter`, and `no_browser_without_capability`
+always. `EVENT_STORE_CHECKS` holds the nine, `EVENT_STORE_L3_CHECKS` the six possible ids, and
+`run_event_store_l3_conformance(source, open_store, store)` is the same run as `level=3`.
 `run_store_conformance(open_store, *, level=2)` runs the nine level-2
 outbox and processed-event checks, or with `level=3` the 17: those nine and the eight level-3 dead-letter and
 processor-control checks (`delete_markers_removes_only_the_range`, `dead_letters_sequence_per_key`,
@@ -129,8 +129,9 @@ the outbox, the relay and the consumer. The checks and what each asserts are lis
 ## Levels 3 and 4
 
 Level 3 is proved by both kits above: `run_event_store_conformance(..., level=3)` runs the nine level-2 checks and the
-six level-3 capability checks (`EVENT_STORE_L3_CHECKS`), with `run_event_store_l3_conformance` as the named entry point;
-`run_store_conformance(..., level=3)` runs the nine level-2 store checks and the eight level-3 dead-letter and
-processor-control checks (`MESSAGE_STORE_L3_CHECKS`), with `run_store_l3_conformance` as the named entry point. The
+six possible level-3 ids, one form per capability (`EVENT_STORE_L3_CHECKS`), with `run_event_store_l3_conformance` as
+the named entry point; `run_store_conformance(..., level=3)` runs the nine level-2 store checks and the eight level-3
+dead-letter and processor-control checks (`MESSAGE_STORE_L3_CHECKS`), with `run_store_l3_conformance` as the named entry
+point. The
 library's own tests prove the status, the control plane, the reset state machine and the three dead-letter modes; the
 runner still proves level 1 only. The level-4 saga and external-call kits are not there yet.

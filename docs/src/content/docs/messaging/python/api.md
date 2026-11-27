@@ -2,7 +2,7 @@
 title: "API"
 ---
 
-The package is `snodra`, installed via `pip install snodra-messaging`. This page is the tour of the API.
+The package is `snodra`, installed via `pip install snodra-messaging==0.7.0`. This page is the tour of the API.
 
 ## Messages
 
@@ -237,7 +237,7 @@ app = snodra.App(
 ```
 
 ```sh
-pip install snodra-messaging-observability
+pip install snodra-messaging-observability==0.7.0
 ```
 
 One `Observability` serves one `App`. The metrics have the names and labels of the Kotlin, Rust and Go libraries, so
@@ -325,12 +325,15 @@ A handler runs inside the processor's transaction, together with the event's pro
 4. the transaction commits, and only then the record is acknowledged.
 
 So the handler's own writes and the marker commit together, and a record that comes again after a crash is skipped
-instead of handled twice. An event type the processor has no handler for is acknowledged and runs nothing; a record
-without a type header, or whose payload is not a JSON object or does not decode as the handler's type, is logged and
-acknowledged. A handler that fails is tried up to `SNODRA_CONSUMER_MAX_ATTEMPTS` times (5 by default), the first
-included, one second apart; after that the record becomes a dead letter, according to
-[`dead_letter_mode`](#dead-letters). A subscription that fails is reopened after 1 s, doubling up to 30 s, and the wait
-starts over after a delivery or a subscription that lived 30 s.
+instead of handled twice. An event type the processor has no handler for is acknowledged and runs nothing. A record
+without a `type` header, or whose payload is not a JSON object for a type the processor handles, can never be handled:
+in mode `collection` it is parked as an `INVALID` letter, in `event-store` it is published to the dead-letter source,
+and in `log` it is logged and skipped. A payload that does not decode as the handler's type is not retried either: in
+`collection` it is parked as a `HANDLER_FAILED` letter with `InvalidMessage` as its error type, and in the other modes
+it is published or logged like any other exhausted record. A handler that fails is tried up to
+`SNODRA_CONSUMER_MAX_ATTEMPTS` times (5 by default), the first included, one second apart; after that the record
+becomes a dead letter, according to [`dead_letter_mode`](#dead-letters). A subscription that fails is reopened after
+1 s, doubling up to 30 s, and the wait starts over after a delivery or a subscription that lived 30 s.
 
 An event handler has no caller: `current_caller()` is `None` (an event carries a user id, never a token).
 `current_message()` returns the event's id, type, correlation id and headers. What the handler publishes carries that
@@ -372,7 +375,7 @@ topology, `GET /api/v1/processors` and the dashboard's Processors page; this lib
 | `segments` | the assignment, sorted by `segment_order`; per segment `position` (the next position this instance delivers), `committed` (after its last acknowledgement), `head` and `lag` (`committed` to `head`, `position` to `head` without a commit; `-1` when unknown, never negative otherwise), and `replay_until` while an open replay range has not been passed |
 | `processed_total`, `failed_total` | records whose delivery completed, a skipped duplicate included, and records that exhausted their attempts, since start (`SEQUENCED` and `INVALID` letters count in neither) |
 | `dead_letters` | the store's dead-letter count at start, every 30 s and right after this instance parked a letter; `0` unless the mode is `collection` |
-| `last_error`, `last_error_at_ms` | `<type>: <message>` of the last failure, never the payload, cut at 512 bytes |
+| `last_error`, `last_error_at_ms` | the last failure's error message, never the payload, cut at 512 bytes (a handler's exception class is prefixed, `TypeError: ...`; a subscription or park failure is plain text) |
 | `event_types`, `dead_letter_mode` | the types with a handler in the processor, sorted; the [dead-letter mode](#dead-letters) |
 | `operation_id` | the reset operation holding the processor's lock, empty when none |
 | `replaying` | an open replay range on this instance's subscription has not been passed |
