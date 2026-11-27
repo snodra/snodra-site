@@ -13,9 +13,9 @@ pip install snodra-messaging
 
 **Status: pre-1.0, feature level 2.** The library implements levels 1 and 2 of the protocol: it passes all 33 checks of
 the [conformance runner](/docs/tools/conformance-runner/) through `examples/conformance-service`, and the level-2
-event-store and message-store kits through its add-on packages. The versions are on
-[PyPI](https://pypi.org/project/snodra-messaging/); all are pre-1.0, so the API may still change between minor versions.
-It needs Python 3.12 or later.
+event-store and message-store kits (and, on `main`, the level-3 store kit) through its add-on packages. The versions are
+on [PyPI](https://pypi.org/project/snodra-messaging/); all are pre-1.0, so the API may still change between minor
+versions. It needs Python 3.12 or later.
 
 ## What it gives you
 
@@ -29,8 +29,8 @@ It needs Python 3.12 or later.
 - Event handlers: `@app.event_handler` runs in the `default` processor or in a named one (`processor=`), with the
   processed-event marker and the handler's writes in one transaction, so a redelivery is skipped.
 - Stores: one event store and one message store, each a separate package: Kafka or RabbitMQ Streams for events; MongoDB
-  or SQL (PostgreSQL, MySQL) for the outbox and the markers. In-memory stores (`MemoryStore`, `MemoryEventStore`) are
-  there for tests and local runs.
+  or SQL (PostgreSQL, MySQL) for the outbox and the markers, and — on `main`, unreleased — the dead letters and
+  processor control. In-memory stores (`MemoryStore`, `MemoryEventStore`) are there for tests and local runs.
 - The hub connection: registration, heartbeats, reconnect with backoff, flow control, timeouts, several hubs and an
   ordered shutdown.
 - Static token, OAuth2 JWT (client credentials) and mutual TLS credentials, with rotation.
@@ -48,10 +48,12 @@ events through the outbox, at-least-once handlers and named processors. The inte
 message store are frozen at this level, so a third-party add-on compiles once.
 
 Level 3 — processor status and control (pause and resume, reset and replay) and dead letters — is in progress: the
-APIs are implemented and are claimed with the level-3 release. Sagas (level 4) are not in the library yet. The Python
-library has no event browser either, so its event-store add-ons declare no `browse` capability. The latest level-2
-release logs and skips a record that exhausts its attempts; with the level-3 release the record becomes a dead letter,
-in the `collection` mode by default ([Configuration](/docs/messaging/python/configuration/#dead-letters-level-3-in-progress)).
+APIs are implemented, and the official SQL and MongoDB stores implement the dead-letter and processor-control ports on
+`main`, unreleased; they are documented and claimed with the level-3 release. Sagas and external calls (level 4) are not
+in the library yet. The Python library has no event browser either, so its event-store add-ons declare no `browse`
+capability. The latest level-2 release logs and skips a record that exhausts its attempts; with the level-3 release the
+record becomes a dead letter, in the `collection` mode by default
+([Configuration](/docs/messaging/python/configuration/#dead-letters-level-3-in-progress)).
 
 ## Add-ons
 

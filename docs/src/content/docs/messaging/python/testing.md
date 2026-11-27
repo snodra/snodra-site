@@ -55,6 +55,10 @@ async def test_my_event_store_at_level_3():
 
 async def test_my_message_store():
     await run_store_conformance(lambda: make_message_store())
+
+async def test_my_message_store_at_level_3():
+    # run_store_l3_conformance(lambda: make_message_store()) is the same run.
+    await run_store_conformance(lambda: make_message_store(), level=3)
 ```
 
 `run_event_store_conformance(source, open_store, store, *, level=2)` runs the nine level-2 event-store checks
@@ -65,9 +69,17 @@ per service instance, and `store` is a message store for the at-least-once check
 checks and the six level-3 capability checks in the form the store declares: `replay_from_earliest_redelivers_history`
 (or `admin_without_replay_is_unsupported` without `replay`), `lag_counts_unacked` (or `lag_unknown_without_capability`),
 `dead_letter_source_receives` when the store declares `native-dead-letter`, and `no_browser_without_capability`.
-`run_store_conformance` runs the nine outbox and processed-event checks. Each check is an async function named exactly as
-the Rust kit names it, and every check is exported, so a failing one can be run by itself (on an `EventStoreKit` for the
-event-store checks).
+`run_store_conformance(open_store, *, level=2)` runs the nine level-2 outbox and processed-event checks, or with
+`level=3` the 17: those nine and the eight level-3 dead-letter and processor-control checks
+(`delete_markers_removes_only_the_range`, `dead_letters_sequence_per_key`,
+`dead_letter_parked_inside_rolled_back_transaction_is_kept`, `dead_letter_deleted_in_a_transaction_goes_with_it`,
+`control_lock_is_exclusive_until_lease_expires`, `pause_state_round_trips`, `replay_ranges_round_trip` and
+`processor_control_write_inside_rolled_back_transaction_is_kept`). The default `level=2` preserves the published entry
+point; `run_store_l3_conformance(open_store)` is the same run as a named entry point, and `MESSAGE_STORE_L3_CHECKS`
+lists the eight on their own (what each asserts is on the
+[store contract](/docs/library-authors/message-store-add-ons/#the-conformance-kit)). Each check is an async function
+named exactly as the Rust kit names it, and every check is exported, so a failing one can be run by itself (a
+`MessageStore` for the store checks, an `EventStoreKit` for the event-store checks).
 
 `snodra.testing` has no Docker and no store client. The add-on's own test provides the store and the infrastructure;
 the kit only proves the contract.
@@ -97,6 +109,8 @@ outbox, the relay and the consumer. The checks and what each asserts are listed 
 
 ## Levels 3 and 4
 
-The level-3 event-store kit exists: `run_event_store_conformance(..., level=3)` runs the nine level-2 checks and the
-six level-3 capability checks, and `run_event_store_l3_conformance` is the same run as a named entry point. The
-library's level-3 work is in progress; the level-4 saga and external-call kits are not there yet.
+The level-3 kits exist: `run_event_store_conformance(..., level=3)` runs the nine level-2 checks and the six level-3
+capability checks, and `run_event_store_l3_conformance` is the same run as a named entry point;
+`run_store_conformance(..., level=3)` runs the nine level-2 store checks and the eight level-3 dead-letter and
+processor-control checks, with `run_store_l3_conformance` as the named entry point and `MESSAGE_STORE_L3_CHECKS` listing
+the eight. The library's level-3 work is in progress; the level-4 saga and external-call kits are not there yet.

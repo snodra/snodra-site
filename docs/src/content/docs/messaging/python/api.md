@@ -378,9 +378,10 @@ app = snodra.App(settings, store=store, event_store=event_store)
 The event-store interface expects one subscription per processor, competing instances sharing its segments, order per
 key, at-least-once delivery with acknowledgement, pause and resume, and the headers as the store's native metadata. The
 message-store interface is frozen at level 2: its outbox and processed-event ports are implemented by both official
-stores, and the dead-letter, processor-control, external-call and saga ports raise `MessageStoreUnsupported` at level 2
-(the official add-ons implement every port by level 4). A third-party add-on implements the same interfaces and depends
-on the core only; `snodra.testing` is its conformance kit (see [Testing](/docs/messaging/python/testing/)).
+stores, and so are, on `main`, the dead-letter and processor-control ports (claimed with the level-3 release); the
+external-call and saga ports raise `MessageStoreUnsupported` until level 4. A third-party add-on implements the same
+interfaces and depends on the core only; `snodra.testing` is its conformance kit (see
+[Testing](/docs/messaging/python/testing/)).
 
 `App.start` hands the message store the application's clock, then prepares its schema (`init_schema`) or, with
 `SNODRA_STORE_INIT_SCHEMA=false`, checks it (`check_schema`); a failure fails `start`. A store that also implements
@@ -423,7 +424,9 @@ Outside any transaction, a store call runs in a short transaction of its own.
 
 ## Not in the Python library yet
 
-Sagas (feature level 4) are not in the Python library. The level-3 APIs — processor status and control (pause, resume,
-reset and replay), dead letters, `@app.reset_handler` and `ResetContext` — are implemented and are documented with the
-level-3 release. The library has no event browser either, so its event-store add-ons declare no `browse` capability. For
-sagas, use the [Kotlin](/docs/messaging/kotlin/) or [Rust](/docs/messaging/rust/) library.
+Sagas and external calls (feature level 4) are not in the Python library: the official SQL and MongoDB stores raise
+`MessageStoreUnsupported` for those ports. The level-3 APIs — processor status and control (pause, resume, reset and
+replay), dead letters, `@app.reset_handler` and `ResetContext` — are implemented, and the official SQL and MongoDB
+stores implement the dead-letter and processor-control ports on `main`, unreleased; they are documented and claimed
+with the level-3 release. The library has no event browser either, so its event-store add-ons declare no `browse`
+capability. For sagas, use the [Kotlin](/docs/messaging/kotlin/) or [Rust](/docs/messaging/rust/) library.
