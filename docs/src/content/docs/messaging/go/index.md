@@ -47,10 +47,11 @@ The library is at [feature level 2](/docs/library-authors/feature-levels/): comm
 events through the outbox, at-least-once handlers and named processors. The interfaces of the event store and the
 message store are frozen at this level, so a third-party add-on compiles once.
 
-The level-3 and level-4 features are not in it yet: processor status and control (pause, reset and replay), dead
-letters, and sagas. The Go library has no event browser either, so its event-store add-ons declare no `browse`
-capability. At level 2 a record that exhausts its attempts is logged and skipped; level 3 is where it becomes a dead
-letter.
+Level 3 — processor status and control (pause and resume, reset and replay) and dead letters — is in progress: the
+APIs are implemented on `main` and are claimed with the level-3 release. Sagas (level 4) are not in the library yet. The
+Go library has no event browser either, so its event-store add-ons declare no `browse` capability. The latest level-2
+release logs and skips a record that exhausts its attempts; with the level-3 release the record becomes a dead letter,
+in the `collection` mode by default ([Configuration](/docs/messaging/go/configuration/#dead-letters-level-3-in-progress)).
 
 ## Add-ons
 

@@ -106,9 +106,10 @@ database the same retentions. The package is `snodra-messaging-mongo`; the full 
   the other.
 - **One database per logical service.** Instances share it; two different services keep separate
   databases, because markers and claims carry no service name.
-- **Level 2 ports in Go and Python.** The Go and Python stores implement the outbox and the processed-event markers; the
-  dead-letter, processor-control, external-call and saga ports of the frozen interface return
-  `ErrUnsupported` (or raise `MessageStoreUnsupported` in Python) at level 2 (the official add-ons implement every port by level 4). Its claims,
+- **Level 2 ports, and the Go level-3 ports on `main`.** The Go and Python stores implement the outbox and the
+  processed-event markers. On `main`, unreleased, the Go store also implements the dead-letter and processor-control
+  ports; its external-call and saga ports return `ErrUnsupported` (the official add-ons implement every port by
+  level 4). Its claims,
   marks and retentions follow the shared layout, and times it stamps itself come from the
   application's clock.
 
@@ -118,8 +119,8 @@ database the same retentions. The package is `snodra-messaging-mongo`; the full 
 |---|---|---|---|---|
 | Outbox | yes | yes | yes | yes |
 | Processed events | yes | yes | yes | yes |
-| Dead letters | yes | yes | no (level 3) | no (level 3) |
-| Processor control | yes | yes | no (level 3) | no (level 3) |
+| Dead letters | yes | yes | level 3, on `main`, unreleased | no (level 3) |
+| Processor control | yes | yes | level 3, on `main`, unreleased | no (level 3) |
 | External calls | yes | yes | no (level 4) | no (level 4) |
 | Sagas | yes | yes | no (level 4) | no (level 4) |
 

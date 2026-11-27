@@ -91,11 +91,12 @@ The package is `snodra-messaging-kafka`; the full Python settings are in
   starts at the earliest offset. Processed-event markers suppress duplicates.
 - **One consumer group per processor**, `<service>.<processor>`.
 - **Native dead letters.** Mode `event-store` produces to `<source>.dlt`. The store declares the
-  capability; the Go and Python cores reach for it at level 3 (at level 2 they log and skip a record that
-  exhausted its attempts).
+  capability; on `main` the Go and Python cores use it in the `event-store` mode, claimed with their level-3 release
+  (the latest level-2 release logs and skips a record that exhausted its attempts).
 - **Replay, lag and browse.** The Kotlin and Rust stores declare all four capabilities. The Go and
   Python add-ons declare `replay`, `lag` and `native-dead-letter` and no `browse`, because neither
-  library has an event browser; a replay is available to a control request from level 3.
+  library has an event browser; on `main` a replay is available to a control request, claimed with their level-3
+  release.
 - **Group protocol.** The Go and Python add-ons join the classic group protocol with the `range` assignor, and
   a group's committed offset is the next one to read, so the members of every official library meet
   in one group.

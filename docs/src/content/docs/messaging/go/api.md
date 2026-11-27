@@ -339,8 +339,7 @@ Every instance runs one relay unless `OutboxEnabled(false)` (`SNODRA_OUTBOX_ENAB
   instance publishes must hold.
 - **Failures.** An event the store rejects for good (`ErrRejected`) is given up at once; another failure counts an
   attempt and ends the batch, so the next claim retries that entry before the later ones. After
-  `SNODRA_OUTBOX_MAX_ATTEMPTS` sends the entry is marked failed and logged. Level 3 is where a dead letter replaces
-  that log-and-skip.
+  `SNODRA_OUTBOX_MAX_ATTEMPTS` sends the entry is marked failed and logged.
 
 ### Event handlers
 
@@ -359,8 +358,10 @@ So the handler's own writes and the marker commit together, and a record that co
 instead of handled twice. An event type the processor has no handler for is acknowledged and runs nothing; a record
 without a type header, or whose payload is not a JSON object or does not decode as the handler's type, is logged and
 acknowledged. A handler that fails is tried up to `SNODRA_CONSUMER_MAX_ATTEMPTS` times (5 by default), the first
-included, one second apart; after that the record is logged and skipped at level 2. A subscription that fails is
-reopened after 1 s, doubling up to 30 s, and the wait starts over after a delivery or a subscription that lived 30 s.
+included, one second apart; after that with the level-3 release the record becomes a dead letter in the `collection`
+mode, the default ([Configuration](/docs/messaging/go/configuration/#dead-letters-level-3-in-progress)); the latest
+level-2 release logs and skips it. A subscription that fails is reopened after 1 s, doubling up to 30 s, and the wait
+starts over after a delivery or a subscription that lived 30 s.
 
 An event handler has no caller: `CallerFrom` reports false (an event carries a user id, never a token).
 `MessageFrom` returns the event's id, type, correlation id and headers. What the handler publishes carries that
@@ -404,9 +405,9 @@ The two stores are add-ons: the core ships neither and imports neither. A servic
 The event-store interface expects one subscription per processor, competing instances sharing its segments, order per
 key, at-least-once delivery with acknowledgement, pause and resume, and the headers as the store's native metadata. The
 message-store interface is frozen at level 2: its outbox and processed-event ports are implemented by both official
-stores, and the dead-letter, processor-control, external-call and saga ports return `ErrUnsupported` at level 2 (the
-official add-ons implement every port by level 4). A third-party add-on implements the same interfaces and depends on
-the core only; `snodratest` is its conformance kit (see [Testing](/docs/messaging/go/testing/)).
+stores, and so are, on `main`, the dead-letter and processor-control ports (claimed with the level-3 release); the
+external-call and saga ports return `ErrUnsupported` until level 4. A third-party add-on implements the same interfaces
+and depends on the core only; `snodratest` is its conformance kit (see [Testing](/docs/messaging/go/testing/)).
 
 `App.Start` hands the message store the application's clock, then prepares its schema (`InitSchema`) or, with
 `SNODRA_STORE_INIT_SCHEMA=false`, checks it (`CheckSchema`); a failure fails `Start`. A store that also implements
@@ -446,8 +447,7 @@ The add-on's own errors wrap these, so `errors.Is` works across the stores.
 
 ## Not in the Go library yet
 
-Processor status and control (pause, resume, reset and replay), dead letters, and sagas (feature levels 3 and 4) are
-not in the Go library. A record that exhausts its attempts is logged and skipped at level 2; the level-3 ports exist
-in the interfaces and return `ErrUnsupported`. The library has no event browser either, so its event-store add-ons
-declare no `browse` capability. For those features, use the [Kotlin](/docs/messaging/kotlin/) or
-[Rust](/docs/messaging/rust/) library.
+Sagas (feature level 4) are not in the Go library. The level-3 APIs — processor status and control (pause and resume,
+reset and replay), dead letters, `HandleReset` and `ResetContext` — are implemented and are documented with the
+level-3 release. The library has no event browser either, so its event-store add-ons declare no `browse` capability. For
+sagas, use the [Kotlin](/docs/messaging/kotlin/) or [Rust](/docs/messaging/rust/) library.
