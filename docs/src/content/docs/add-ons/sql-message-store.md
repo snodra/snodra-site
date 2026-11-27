@@ -12,8 +12,8 @@ already owns a relational database and wants the outbox in the same transaction 
 |---|---|
 | Kotlin | `com.damoreira.snodra:snodra-messaging-jdbc:0.6.1` |
 | Rust | `snodra-messaging-sqlx = "0.8"`, with feature `postgres` or `mysql` |
-| Go | `github.com/snodra/snodra-messaging-go/sql` (`go get github.com/snodra/snodra-messaging-go/sql@latest`) |
-| Python | `snodra-messaging-sql` (`pip install snodra-messaging-sql`) |
+| Go | `github.com/snodra/snodra-messaging-go/sql` (`go get github.com/snodra/snodra-messaging-go/sql@v0.6.0`) |
+| Python | `snodra-messaging-sql` (`pip install snodra-messaging-sql==0.7.0`) |
 
 The Kotlin module runs on the application's `DataSource` through Spring's `JdbcClient`; it needs at
 least two connections in the pool. The Rust crate runs on `sqlx` and takes your pool. The Go module
@@ -104,10 +104,9 @@ every add-on and checked against its published SHA-256.
   rollback sends nothing and a commit wakes the relay at once.
 - **No silent truncation.** A missing STRICT mode, an old server, MariaDB or a one-connection pool
   fails the startup with a message naming what is supported.
-- **Level 2 ports, and the Go and Python level-3 ports on `main`.** The Go and Python stores implement the outbox
-  and the processed-event markers. On `main`, unreleased, both also implement the dead-letter and processor-control
-  ports; their external-call and saga ports return `ErrUnsupported` in Go and raise `MessageStoreUnsupported` in
-  Python (the official add-ons implement every port by level 4).
+- **Level 3 ports.** The Go (0.6.0) and Python (0.7.0) stores implement the outbox, the processed-event markers, the
+  dead letters and the processor control; their external-call and saga ports return `ErrUnsupported` in Go and raise
+  `MessageStoreUnsupported` in Python (the official add-ons implement every port by level 4).
 
 The schema files are versioned (`V1__snodra.sql`) and the schema is applied once at startup unless
 the service runs its own migration. The Go store embeds the published files and checks their SHA-256
@@ -120,8 +119,8 @@ apply V1 once.
 |---|---|---|---|---|
 | Outbox | yes | yes | yes | yes |
 | Processed events | yes | yes | yes | yes |
-| Dead letters | yes | yes | level 3, on `main`, unreleased | level 3, on `main`, unreleased |
-| Processor control | yes | yes | level 3, on `main`, unreleased | level 3, on `main`, unreleased |
+| Dead letters | yes | yes | yes (0.6.0) | yes (0.7.0) |
+| Processor control | yes | yes | yes (0.6.0) | yes (0.7.0) |
 | External calls | yes | yes | no (level 4) | no (level 4) |
 | Sagas | yes | yes | no (level 4) | no (level 4) |
 

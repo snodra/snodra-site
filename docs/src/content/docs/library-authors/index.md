@@ -31,14 +31,17 @@ every query mode, credentials, several hubs), **2 Events**, **3 Processors**, **
 |---|---|---|---|---|
 | [snodra-messaging](/docs/messaging/kotlin/) ([releases](https://github.com/snodra/snodra-messaging/releases)) | Kotlin (Spring Boot starter) | Apache-2.0 | 4, implemented; level 1 proved by the runner | level 1 passes every check of the runner through `examples/conformance-service`; the event-store and message-store kits pass |
 | [snodra-messaging](/docs/messaging/rust/) ([releases](https://github.com/snodra/snodra-messaging-rs/releases)) | Rust | Apache-2.0 | 4, implemented; level 1 proved by the runner | level 1 passes every check of the runner through the runner's own reference service; the event-store and message-store kits pass |
-| [snodra-messaging-go](/docs/messaging/go/) ([releases](https://github.com/snodra/snodra-messaging-go/releases)) | Go | Apache-2.0 | 2, implemented; levels 1 and 2 proved by the runner and the add-on kits | level 1 passes every check of the runner through `examples/conformance-service`; the event-store and message-store kits pass |
-| [snodra-messaging-python](/docs/messaging/python/) ([PyPI](https://pypi.org/project/snodra-messaging/)) | Python | Apache-2.0 | 2, implemented; levels 1 and 2 proved by the runner and the add-on kits | level 1 passes every check of the runner through `examples/conformance-service`; the event-store and message-store kits pass |
+| [snodra-messaging-go](/docs/messaging/go/) ([releases](https://github.com/snodra/snodra-messaging-go/releases)) | Go | Apache-2.0 | 3, implemented; level 1 proved by the runner, levels 2 and 3 by the add-on kits and the library's own tests | level 1 passes every check of the runner through `examples/conformance-service`; the level-2 and level-3 event-store and message-store kits pass (the event-store kit omits the four `browse`-capability checks: no event browser) |
+| [snodra-messaging-python](/docs/messaging/python/) ([PyPI](https://pypi.org/project/snodra-messaging/)) | Python | Apache-2.0 | 3, implemented; level 1 proved by the runner, levels 2 and 3 by the add-on kits and the library's own tests | level 1 passes every check of the runner through `examples/conformance-service`; the level-2 and level-3 event-store and message-store kits pass |
 
 The Kotlin and Rust libraries are reference implementations of the same contract: a service on one is indistinguishable
-from a service on the other in front of the hub and the event store. The Go and Python libraries are pre-1.0 and implement level 2:
-commands and queries through the hub, and events through the outbox and the event stores; they have no dead letters or sagas yet. The
+from a service on the other in front of the hub and the event store. The Go and Python libraries are pre-1.0 and
+implement level 3: commands and queries through the hub, events through the outbox and the event stores, and named
+processors with their status, control, leased reset and replay and dead letters. They have no sagas or external calls
+(level 4) and no event browser yet. The
 [conformance runner](/docs/library-authors/conformance/) ([releases](https://github.com/snodra/snodra-conformance/releases)) proves level 1
-for all four; levels 2 to 4 are proved by the add-on kits.
+for all four; levels 2 to 4 are proved by the add-on kits and, for the rules the runner does not check yet, each
+library's own tests.
 
 ### Interoperability
 

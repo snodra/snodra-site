@@ -8,13 +8,14 @@ library keeps the hub streams, permits, retries, timeouts, the outbox, the relay
 functions.
 
 ```sh
-go get github.com/snodra/snodra-messaging-go@latest
+go get github.com/snodra/snodra-messaging-go@v0.6.0
 ```
 
-**Status: pre-1.0, feature level 2.** The library implements levels 1 and 2 of the protocol: it passes all 33 checks of
-the [conformance runner](/docs/tools/conformance-runner/) through `examples/conformance-service`, and the level-2
-event-store and message-store kits through its add-on modules. The versions are on the
-[releases page](https://github.com/snodra/snodra-messaging-go/releases); all are pre-1.0, so the API may still change
+**Status: pre-1.0, feature level 3 (`v0.6.0`).** The library implements levels 1 to 3 of the protocol: it passes all 33
+checks of the [conformance runner](/docs/tools/conformance-runner/) through `examples/conformance-service`, and the
+level-2 and level-3 event-store and message-store kits through its add-on modules. The current release is `v0.6.0`, with
+each add-on module and `observability` tagged `v0.6.0` too; the versions are on the
+[releases page](https://github.com/snodra/snodra-messaging-go/releases). All are pre-1.0, so the API may still change
 between minor versions. It needs Go 1.26 or later.
 
 ## What it gives you
@@ -28,8 +29,16 @@ between minor versions. It needs Go 1.26 or later.
   every instance publishes it to the event store, at least once. `Key` gives the event its order key.
 - Event handlers: `HandleEvent` runs in the `default` processor or in a named one (`InProcessor`), with the
   processed-event marker and the handler's writes in one transaction, so a redelivery is skipped.
+- Processor status and control: every started processor reports its state, segments, counters, last error and
+  dead-letter count to the hub; the hub pauses and resumes it persistently, resets it to earliest, latest, a timestamp
+  or explicit positions (a leased operation, with `HandleReset` handlers), and lists, retries and discards its dead
+  letters. `DisallowReplay()` keeps a handler out of a replay, and every control runs off the hub read loop.
+- Dead letters: a record that exhausts its attempts is parked according to `DeadLetterMode`
+  (`SNODRA_DEAD_LETTER_MODE`): `collection` keeps it in the message store's dead letters, `event-store` publishes it to
+  the `<source>.dlt` source with the six `snodra-dlt-*` headers, and `log` logs it and moves on.
 - Stores: one event store and one message store, each a separate module: Kafka or RabbitMQ Streams for events; MongoDB
-  or SQL (PostgreSQL, MySQL) for the outbox and the markers. In-memory stores are there for tests and local runs.
+  or SQL (PostgreSQL, MySQL) for the outbox, the markers, the dead letters and the processor control. In-memory stores
+  are there for tests and local runs.
 - The hub connection: registration, heartbeats, reconnect with backoff, flow control, timeouts, several hubs and an
   ordered shutdown.
 - Static token, OAuth2 JWT (client credentials) and mutual TLS credentials, with rotation.
@@ -41,17 +50,17 @@ between minor versions. It needs Go 1.26 or later.
 - A conformance kit for add-ons, `snodratest`, on the standard library only: an add-on depends on the core, never the
   reverse.
 
-## Level 2
+## Level 3
 
-The library is at [feature level 2](/docs/library-authors/feature-levels/): commands and queries in every mode, plus
-events through the outbox, at-least-once handlers and named processors. The interfaces of the event store and the
-message store are frozen at this level, so a third-party add-on compiles once.
+The library is at [feature level 3](/docs/library-authors/feature-levels/): commands and queries in every mode, events
+through the outbox, at-least-once handlers and named processors, plus the processor status and control of level 3 —
+pause and resume, the leased reset with reset handlers and replay, and the dead letters in their three modes. The
+interfaces of the event store and the message store are frozen through this level, so a third-party add-on compiles
+once.
 
-Level 3 — processor status and control (pause and resume, reset and replay) and dead letters — is in progress: the
-APIs are implemented on `main` and are claimed with the level-3 release. Sagas (level 4) are not in the library yet. The
-Go library has no event browser either, so its event-store add-ons declare no `browse` capability. The latest level-2
-release logs and skips a record that exhausts its attempts; with the level-3 release the record becomes a dead letter,
-in the `collection` mode by default ([Configuration](/docs/messaging/go/configuration/#dead-letters-level-3-in-progress)).
+Sagas (level 4) are not in the library yet. The Go library has no event browser, so its event-store add-ons declare no
+`browse` capability and its conformance kit omits the four `browse`-capability checks
+([Testing](/docs/messaging/go/testing/#the-add-on-kits)).
 
 ## Add-ons
 
@@ -70,8 +79,8 @@ A service needs one event store and one message store, passed with `WithEventSto
 - [Quick start](/docs/messaging/go/quickstart/): a service in one file, then an event.
 - [Configuration](/docs/messaging/go/configuration/): the `SNODRA_*` variables of the core and of every add-on, the
   option that sets each, and every hub credential.
-- [API](/docs/messaging/go/api/): handlers, sending, the four query modes, events, stores, processors, errors,
-  identity, lifecycle and telemetry.
+- [API](/docs/messaging/go/api/): handlers, sending, the four query modes, events, stores, processors, processor
+  status and control, reset and replay, dead letters, errors, identity, lifecycle and telemetry.
 - [Testing](/docs/messaging/go/testing/): testing handlers, the `snodratest` kits, and running the conformance runner
   against the library's own service.
 - [Kafka event store](/docs/add-ons/kafka-event-store/),

@@ -69,20 +69,39 @@ per service instance, and `store` is a message store for the at-least-once check
 checks and the six level-3 capability checks in the form the store declares: `replay_from_earliest_redelivers_history`
 (or `admin_without_replay_is_unsupported` without `replay`), `lag_counts_unacked` (or `lag_unknown_without_capability`),
 `dead_letter_source_receives` when the store declares `native-dead-letter`, and `no_browser_without_capability`.
-`run_store_conformance(open_store, *, level=2)` runs the nine level-2 outbox and processed-event checks, or with
-`level=3` the 17: those nine and the eight level-3 dead-letter and processor-control checks
-(`delete_markers_removes_only_the_range`, `dead_letters_sequence_per_key`,
+`EVENT_STORE_CHECKS` holds the nine, `EVENT_STORE_L3_CHECKS` the six level-3 ids (each capability in the form the
+store declares), and `run_event_store_l3_conformance(source, open_store, store)` is the same run as `level=3`.
+`run_store_conformance(open_store, *, level=2)` runs the nine level-2
+outbox and processed-event checks, or with `level=3` the 17: those nine and the eight level-3 dead-letter and
+processor-control checks (`delete_markers_removes_only_the_range`, `dead_letters_sequence_per_key`,
 `dead_letter_parked_inside_rolled_back_transaction_is_kept`, `dead_letter_deleted_in_a_transaction_goes_with_it`,
 `control_lock_is_exclusive_until_lease_expires`, `pause_state_round_trips`, `replay_ranges_round_trip` and
 `processor_control_write_inside_rolled_back_transaction_is_kept`). The default `level=2` preserves the published entry
-point; `run_store_l3_conformance(open_store)` is the same run as a named entry point, and `MESSAGE_STORE_L3_CHECKS`
-lists the eight on their own (what each asserts is on the
+point; `run_store_l3_conformance(open_store)` is the same run as a named entry point, `MESSAGE_STORE_CHECKS` lists the
+nine and `MESSAGE_STORE_L3_CHECKS` the eight (what each asserts is on the
 [store contract](/docs/library-authors/message-store-add-ons/#the-conformance-kit)). Each check is an async function
 named exactly as the Rust kit names it, and every check is exported, so a failing one can be run by itself (a
-`MessageStore` for the store checks, an `EventStoreKit` for the event-store checks).
+`MessageStore` for the store checks, an `EventStoreKit` for the event-store checks):
+
+```python
+from snodra.testing import (
+    dead_letters_sequence_per_key,
+    pause_state_round_trips,
+    replay_ranges_round_trip,
+)
+
+async def test_control_state():
+    store = make_message_store()
+    await replay_ranges_round_trip(store)   # the reset's ranges
+    await pause_state_round_trips(store)    # the persisted pause
+    await dead_letters_sequence_per_key(store)
+```
 
 `snodra.testing` has no Docker and no store client. The add-on's own test provides the store and the infrastructure;
-the kit only proves the contract.
+the kit only proves the contract. For a service's own tests, `MemoryStore` implements the dead-letter and
+processor-control ports, so a test can drive `store.dead_letters` and `store.control` directly; `MemoryEventStore`
+declares `replay` and `lag` and **not** `native-dead-letter` (like the reference in-memory stores), so the `event-store`
+dead-letter mode needs a durable event store, or a test store that declares the capability.
 
 ## The conformance runner
 
@@ -102,15 +121,16 @@ in `scripts/conformance-runner.sha256` (or uses the runner that `SNODRA_CONFORMA
 so set `SNODRA_HUB_PORT` there. CI runs the same script with the same pinned runner, fails when a check fails or is
 skipped, and keeps the runner's report as a build artifact.
 
-The runner proves level 1 only; level 2 is proved by the add-on kits above and by the library's own tests of the
-outbox, the relay and the consumer. The checks and what each asserts are listed in
+The runner proves level 1 only; levels 2 and 3 are proved by the add-on kits above and by the library's own tests of
+the outbox, the relay and the consumer. The checks and what each asserts are listed in
 [Feature levels](/docs/library-authors/feature-levels/) and in
 [Conformance](/docs/library-authors/conformance/).
 
 ## Levels 3 and 4
 
-The level-3 kits exist: `run_event_store_conformance(..., level=3)` runs the nine level-2 checks and the six level-3
-capability checks, and `run_event_store_l3_conformance` is the same run as a named entry point;
+Level 3 is proved by both kits above: `run_event_store_conformance(..., level=3)` runs the nine level-2 checks and the
+six level-3 capability checks (`EVENT_STORE_L3_CHECKS`), with `run_event_store_l3_conformance` as the named entry point;
 `run_store_conformance(..., level=3)` runs the nine level-2 store checks and the eight level-3 dead-letter and
-processor-control checks, with `run_store_l3_conformance` as the named entry point and `MESSAGE_STORE_L3_CHECKS` listing
-the eight. The library's level-3 work is in progress; the level-4 saga and external-call kits are not there yet.
+processor-control checks (`MESSAGE_STORE_L3_CHECKS`), with `run_store_l3_conformance` as the named entry point. The
+library's own tests prove the status, the control plane, the reset state machine and the three dead-letter modes; the
+runner still proves level 1 only. The level-4 saga and external-call kits are not there yet.

@@ -2,20 +2,20 @@
 title: "Go quick start"
 ---
 
-The Go library is pre-1.0 and at feature level 2: the API may still change between minor versions. It needs Go 1.26
-or later.
+The Go library is pre-1.0 and at feature level 3 (`v0.6.0`): the API may still change between minor versions. It needs
+Go 1.26 or later.
 
 ## Dependencies
 
 ```sh
-go get github.com/snodra/snodra-messaging-go@latest
-go get github.com/snodra/snodra-messaging-go/observability@latest   # optional: OpenTelemetry
+go get github.com/snodra/snodra-messaging-go@v0.6.0
+go get github.com/snodra/snodra-messaging-go/observability@v0.6.0   # optional: OpenTelemetry
 
 # One event store and one message store, when the service publishes or handles events:
-go get github.com/snodra/snodra-messaging-go/kafka@latest           # Kafka event store
-go get github.com/snodra/snodra-messaging-go/rabbitmq@latest        # RabbitMQ Streams event store
-go get github.com/snodra/snodra-messaging-go/mongo@latest           # MongoDB message store
-go get github.com/snodra/snodra-messaging-go/sql@latest             # SQL message store (PostgreSQL, MySQL)
+go get github.com/snodra/snodra-messaging-go/kafka@v0.6.0           # Kafka event store
+go get github.com/snodra/snodra-messaging-go/rabbitmq@v0.6.0        # RabbitMQ Streams event store
+go get github.com/snodra/snodra-messaging-go/mongo@v0.6.0           # MongoDB message store
+go get github.com/snodra/snodra-messaging-go/sql@v0.6.0             # SQL message store (PostgreSQL, MySQL)
 ```
 
 The package is named `snodra`; the examples import it as `snodra "github.com/snodra/snodra-messaging-go"`.
@@ -176,6 +176,44 @@ processor in publish order. A handler without `InProcessor` runs in the `default
 [API](/docs/messaging/go/api/#events), the settings in [Configuration](/docs/messaging/go/configuration/#events), and
 the stores in [Add-ons](/docs/add-ons/).
 
+## Level 3: control, reset and dead letters
+
+Level 3 needs nothing new in the service: the hub's dashboard and API drive the processor. A record that exhausts its
+attempts is parked in the message store by default (`SNODRA_DEAD_LETTER_MODE=collection`), and the hub lists, retries
+and discards it. A reset runs a handler you register first, then replays the range, skipping handlers marked
+`DisallowReplay()`:
+
+```go
+// Runs before any marker or position moves when a reset replays anything.
+err := snodra.HandleReset(app, "orders", func(ctx context.Context, reset snodra.ResetContext) error {
+	return resetProjection(ctx) // rebuilt from the replay
+})
+if err != nil {
+	return err
+}
+
+// An effect outside the database is never replayed.
+err = snodra.HandleEvent(app, func(ctx context.Context, e OrderPlaced) error {
+	return sendConfirmation(ctx, e)
+}, snodra.InProcessor("orders"), snodra.DisallowReplay())
+```
+
+With the service registered, pause, reset and read the letters through the hub (the write credential is the hub's, see
+[Processor control](/docs/server/processor-control/)):
+
+```sh
+WRITE_TOKEN=<the hub's write token>
+HUB=http://localhost:7001/api/v1/services/orders-service/processors/orders
+curl -s -X POST -H "Authorization: Bearer $WRITE_TOKEN" "$HUB/pause"
+curl -s -X POST -H "Authorization: Bearer $WRITE_TOKEN" \
+  -H 'Content-Type: application/json' -d '{"to":"earliest"}' "$HUB/reset"
+curl -s -X POST -H "Authorization: Bearer $WRITE_TOKEN" "$HUB/dead-letters/retry-all"
+```
+
+A pause and a reset persist in the message store, so they outlive the hub and reach every instance on its next poll.
+The status, the control protocol and every outcome are in [API](/docs/messaging/go/api/#processor-control) and
+[Dead letters](/docs/messaging/go/api/#dead-letters).
+
 ## Run it against a hub
 
 The hub is the `snodra/snodra-server` image (see the [Hub quick start](/docs/server/quickstart/)). Start one, then
@@ -194,7 +232,7 @@ add-on's own `FromEnv` and are listed in [Configuration](/docs/messaging/go/conf
 
 ## Next
 
-- [API](/docs/messaging/go/api/): events, stores and processors, the other handlers, sending, the four query modes,
-  errors, identity, lifecycle and telemetry.
+- [API](/docs/messaging/go/api/): events, stores and processors, processor status and control, reset and replay, dead
+  letters, the other handlers, sending, the four query modes, errors, identity, lifecycle and telemetry.
 - [Configuration](/docs/messaging/go/configuration/): every `SNODRA_*` variable and every credential.
 - [Testing](/docs/messaging/go/testing/): testing handlers, the `snodratest` kits and the conformance runner.

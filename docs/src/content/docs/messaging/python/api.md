@@ -328,9 +328,8 @@ So the handler's own writes and the marker commit together, and a record that co
 instead of handled twice. An event type the processor has no handler for is acknowledged and runs nothing; a record
 without a type header, or whose payload is not a JSON object or does not decode as the handler's type, is logged and
 acknowledged. A handler that fails is tried up to `SNODRA_CONSUMER_MAX_ATTEMPTS` times (5 by default), the first
-included, one second apart; after that the next release makes the record a dead letter in the `collection` mode, the
-default ([Configuration](/docs/messaging/python/configuration/#dead-letters-level-3-in-progress)); the latest level-2
-release logged and skipped it. A subscription that fails is reopened after 1 s, doubling up to 30 s, and the wait
+included, one second apart; after that the record becomes a dead letter, according to
+[`dead_letter_mode`](#dead-letters). A subscription that fails is reopened after 1 s, doubling up to 30 s, and the wait
 starts over after a delivery or a subscription that lived 30 s.
 
 An event handler has no caller: `current_caller()` is `None` (an event carries a user id, never a token).
@@ -359,6 +358,193 @@ the consumer group `<service>.<name>` to `latest` while it has no member).
 `Settings(consumer_enabled=False)` (`SNODRA_CONSUMER_ENABLED=false`) stops the instances reading event subscriptions,
 for a tool that only publishes.
 
+## Processor status
+
+Every status report (`SNODRA_SERVER_STATUS_INTERVAL_MS`, 5 s by default) carries one `ProcessorStatus` per processor
+that has started on this instance, and the whole list every time. The status is built from memory and never waits on
+the event store, the message store or a handler, so it cannot delay a tick or a consumer. The hub shows it in its
+topology, `GET /api/v1/processors` and the dashboard's Processors page; this library has no local status method.
+
+| Field | Content |
+|---|---|
+| `name`, `subscription`, `source` | the processor, its subscription `<service>.<processor>`, and the event store's source |
+| `state` | `PROCESSOR_STOPPED` while its consumer does not run (stopping, or out of its subscription for a reset, with `operation_id` set); else `PROCESSOR_PAUSED` while [paused](#pause-and-resume); else `PROCESSOR_FAILING` for 60 s after a record exhausted its attempts, a letter could not be parked or the subscription reported an error; else `PROCESSOR_STARTING` before the first assignment and between a `Revoked` and the next `Assigned` (an empty assignment counts as assigned: such an instance is running); else `PROCESSOR_RUNNING` |
+| `segments` | the assignment, sorted by `segment_order`; per segment `position` (the next position this instance delivers), `committed` (after its last acknowledgement), `head` and `lag` (`committed` to `head`, `position` to `head` without a commit; `-1` when unknown, never negative otherwise), and `replay_until` while an open replay range has not been passed |
+| `processed_total`, `failed_total` | records whose delivery completed, a skipped duplicate included, and records that exhausted their attempts, since start (`SEQUENCED` and `INVALID` letters count in neither) |
+| `dead_letters` | the store's dead-letter count at start, every 30 s and right after this instance parked a letter; `0` unless the mode is `collection` |
+| `last_error`, `last_error_at_ms` | `<type>: <message>` of the last failure, never the payload, cut at 512 bytes |
+| `event_types`, `dead_letter_mode` | the types with a handler in the processor, sorted; the [dead-letter mode](#dead-letters) |
+| `operation_id` | the reset operation holding the processor's lock, empty when none |
+| `replaying` | an open replay range on this instance's subscription has not been passed |
+| `event_store`, `capabilities` | the event store's `name` and `capabilities`, distinct and sorted, each within the protocol's 64-byte name bound |
+
+## Processor control
+
+The hub is the control plane: its dashboard and HTTP API pause, resume and reset a processor on every instance, and
+work its dead letters (see [the hub's processor control](/docs/server/processor-control/), which owns the routes and
+the write credential). The hub keeps nothing. Each processor's pause, reset lock and replay ranges live in the service's
+message store, in the processor-control port, which every instance reads once at start and then every 5 s; a
+`ControlRequest` is only the fast path, and an instance that missed one converges on its next poll.
+
+Every request is handled off the hub stream's read loop — the read loop only queues it, so heartbeats and request
+dispatch keep flowing — one at a time per processor, in arrival order, and answered with **exactly one** `ControlReply`
+carrying the request's `control_id`, on the stream the request arrived on (a reply for a stream that is gone is
+dropped). An unknown action is `CONTROL_REFUSAL_INVALID`; a processor this instance does not run is
+`CONTROL_REFUSAL_UNKNOWN_PROCESSOR`; an exception inside an action is `CONTROL_REFUSAL_FAILED`. Every action is logged at
+INFO with its control id, processor, action and result. The actions are `pause`, `resume`, `reset_prepare`,
+`reset_execute`, `reset_finish`, `dead_letter_list`, `dead_letter_retry`, `dead_letter_retry_all` and
+`dead_letter_discard`; a refusal is one of `INVALID`, `LOCKED`, `NOT_PREPARED`, `SUBSCRIBERS_ACTIVE`,
+`RESET_HANDLER_FAILED`, `UNKNOWN_PROCESSOR`, `NOT_FOUND`, `UNSUPPORTED` or `FAILED`, with a message cut at 512 bytes.
+
+A renewal of the operation an execute holds and a `dead_letter_list` are answered beside the execute, never behind it
+(the hub renews every 10 s and waits at most 10 s for an answer). A dead-letter change (`retry`, `retry_all`, `discard`)
+during an execute is refused `LOCKED` at once, so it cannot race the reset handlers and the marker deletion.
+
+### Pause and resume
+
+A pause is written to the message store first, with the request's control id as its author (`local` for a local
+write), and then applied here: the processor's subscription stops delivering **without leaving it** (the event store
+keeps the assigned segments, and a record handed out before the pause comes again on the resume), and the status reads
+`PROCESSOR_PAUSED`. A resume clears the stored pause and delivers from where it stopped. The state is idempotent, so a
+repeated pause is not an error.
+
+A processor that starts while the stored state says paused starts paused; it reads the state before it subscribes, so a
+pause is never missed between a restart and the first poll. A message store without the processor-control port leaves
+its processors running unpaused and is not asked again; it cannot persist a pause.
+
+A pause stops subscription delivery only: dead-letter actions keep working (a retry runs the handler directly), and the
+status tick, the control workers and the rest of the library are unaffected. A reset lock is separate from a pause: a
+reset leaves the processor stopped, and the finish resumes consumption still paused if it was paused before.
+
+## Reset and replay
+
+A reset moves the subscription of a processor to a new position as a **leased operation**, in three control actions.
+The state lives in the message store's `processor_control` state (the `snodra_processor_control` table in SQL, the
+`processor_control` collection in MongoDB, one row or document per processor): its pause, its operation
+`{id, kind: "reset", lease_until, prepared_at}`, and its open replay ranges. `ProcessorControlStore` is the port
+(`get`, `set_paused`, `lock`, `extend`, `release`, `expire`, `set_replay`, `remove_range`), and
+`ProcessorControlState`, `ControlOperation` and `Locked` are its values; every write is a write of its own, outside any
+transaction.
+
+1. **Prepare.** `reset_prepare` takes the processor's lock for the operation id until the requested lease (at least
+   1 s) and leaves the subscription: the consumer finishes the record in hand and stops reading, and the status reads
+   `PROCESSOR_STOPPED` with `operation_id`. Preparing the same operation again renews its lease; another operation
+   holding an unexpired lease is `CONTROL_REFUSAL_LOCKED`, and an operation that already ended on this instance is
+   `CONTROL_REFUSAL_NOT_PREPARED`. An instance that starts, or polls, while a foreign lock it was not prepared for is
+   unexpired keeps out of the subscription too.
+2. **Execute.** `reset_execute` must be answered by the instance that prepared the operation (`NOT_PREPARED`
+   otherwise). The event store's admin plans the target per segment; a plan with members still reading is
+   `CONTROL_REFUSAL_SUBSCRIBERS_ACTIVE` and nothing changes. Then, in this order: the processor's reset handlers (only
+   when something replays), the deletion of its stage-1 markers in the ranges, the ranges written to the state, a
+   second check that no instance reads the subscription, and the commit of the new positions. The execute renews its
+   lease every 10 s (at most a third of it) and refuses with `FAILED` "lease lost: ..." after 120 s or when the lease
+   cannot be renewed, before moving anything more. Its reply (`ResetDone`) carries the ranges, the markers deleted and
+   the number of reset handlers that ran.
+3. **Finish.** `reset_finish` releases the lock, remembers that the operation ended on this instance and consumes
+   again, still paused if it was paused before. A finish for an operation nothing holds is OK (it never claims to have
+   released a lock); another operation's lock is `NOT_PREPARED`. A late renewal after the finish never takes the lock
+   again: an operation that ended here (finished, aborted, its lease passed or its lock lost) is remembered for at
+   least `max(2 x lease, 60 s)`, at most a day, and a prepare or renewal of it is refused `NOT_PREPARED`.
+
+A hub that dies mid-reset stops renewing: the lease passes, and every instance releases the operation on its next poll
+(`expire`) and consumes again by itself; an execute in flight gives up at its limit and refuses. A refusal after the
+reset handlers ran is **not "nothing changed"**: their effects stay, and the message says what else happened, for
+example `reset handlers ran (2), 37 markers deleted, replay ranges written, positions not moved: retry the reset`.
+
+**Targets.** `Earliest()` moves every segment to its first position (everything the event store still keeps is a
+replay); `Latest()` moves it to its head (nothing is replayed); `Timestamp(timestamp_ms)` to the first position
+appended at or after that time (else the head); `Positions((segment, position), ...)` moves the listed segments, each
+once, and leaves a segment it does not list at its committed position. An unknown segment or a position past the head is
+`INVALID`. These are the same values the hub's reset target carries; an add-on's `EventStoreAdmin.plan(target)` returns
+one `ReplayRange` per segment it addresses.
+
+**Ranges and replay.** A `ReplayRange(source, segment, start, until)` means the records of `segment` at positions
+`start` (inclusive) to `until` (exclusive) are a replay; `start` is the target, `until` the subscription's committed
+position before the reset (empty when it had none). Only a range with `until` set and `start` before it replays
+anything; `latest` makes none. In a replay the processor's handlers run again except those registered with
+`replay=False`, the stage-1 marker is still recorded (and the record acknowledged), and the sagas are never run (the
+Python library has none). The range closes once the committed position of a segment this instance holds (or its next
+position while nothing is committed) reaches its `until`: the instance removes it from the state, and the status stops
+showing `replaying`; another instance's range is left to that instance. A reset never touches the dead letters.
+
+```python
+# Once per reset that replays anything, on the instance that executes it, before any marker
+# or position moves. An exception stops the reset with RESET_HANDLER_FAILED; the handlers
+# that ran have run.
+@app.reset_handler("orders")
+async def clear_orders(reset: snodra.ResetContext) -> None:
+    if isinstance(reset.target, snodra.Earliest):
+        await orders.delete_all()   # the projection is rebuilt from the replay
+
+# Never again in a replay: an effect outside the database.
+@app.event_handler(processor="orders", replay=False)
+async def on_order_placed(event: OrderPlaced) -> None:
+    await mail.confirm(event)
+```
+
+`@app.reset_handler` takes the `default` processor; `@app.reset_handler("orders")` a named one, and the name matches
+`[a-z0-9][a-z0-9-]{0,47}`. The function is an `async def` taking a `ResetContext` or nothing, and the handlers of a
+processor run in registration order. Registration happens before `start` (`RegistrationClosed` after it), and a
+function that is not such an `async def` raises `TypeError`. `ResetContext` is `(processor, operation_id, target,
+ranges)`; `ranges` is never empty when the handlers run. `replay=False` is an argument of
+`@app.event_handler`/`@app.event_handler(...)`, alongside `processor=`.
+
+## Dead letters
+
+A record a processor cannot handle is kept, not only logged. `Settings.dead_letter_mode`
+(`SNODRA_EVENTS_DEAD_LETTER_MODE`) chooses where it goes:
+
+| Mode | What happens | Sequenced per key | Hub control |
+|---|---|---|---|
+| `collection` (default) | parked in the message store's dead letters (`dead_letters` in MongoDB, `snodra_dead_letters` in SQL), then the record is acknowledged | yes | list, retry, retry-all and discard |
+| `event-store` | published to the event store's dead-letter source `<source>.dlt` (`dead_letter_source(source)`), which needs `Capability.NATIVE_DEAD_LETTER`; the record is acknowledged once the store took it. **The topic or stream must exist** | no | none (the destination is the operator's) |
+| `log` | logged (never the payload) and skipped | no | none |
+
+The three reasons, per processor and stage 1 only:
+
+- `DeadLetterReason.HANDLER_FAILED`: the processor's handlers failed on every attempt (`attempts` is the invocations
+  made; one for a payload the type cannot be read from). It blocks its key.
+- `DeadLetterReason.SEQUENCED`: the record's key has an earlier letter in this processor; it is parked without running
+  the handlers, and `blocked_by` names the key's head letter. A record without a key is never sequenced. It blocks its
+  key.
+- `DeadLetterReason.INVALID`: no `type` header, or a value that is not a JSON object for a type the processor handles.
+  It blocks nothing and can only be discarded. A type no handler of the processor knows is skipped, not a letter.
+
+A letter's id is `letter_id(processor, source, segment, position)`, that is
+`<processor>:<source>:<segment>:<position>` (`<processor>:<topic>:<partition>:<offset>` on Kafka), so a redelivered
+record finds its own letter and is acknowledged instead of parked twice. A `DeadLetter` has `parked_at_ms`,
+`last_attempt_at_ms` and `expire_at_ms` (`Settings.dead_letter_retention`, 30 days by default; the store's retention
+removes it), and its `replay` flag says it was parked while its processor replayed the record, so its retry is a replay
+too. The document keeps the record's `key`, `headers`, `event_id` (the `id` header), `event_type` (the `type` header)
+and `payload` byte for byte.
+
+In `event-store` mode the published event carries the record's key, value and headers (minus the six the library
+writes) and six `snodra-dlt-*` headers: `snodra-dlt-processor`, `snodra-dlt-reason`,
+`snodra-dlt-error` (`<type>: <message>`, at most 2000 characters), `snodra-dlt-original-topic`,
+`snodra-dlt-original-partition` and `snodra-dlt-original-offset`.
+
+**Working the letters through the hub.** These actions answer only in mode `collection`; in `event-store` and `log`
+every one is refused `INVALID` ("there is nothing to list, retry or discard").
+
+- `dead_letter_list` takes a limit of 1 to 100 and answers the oldest letters first, without payloads or headers, with
+  the processor's total count.
+- `dead_letter_retry` retries one letter: the processor's handlers for its type run in stage 1 under the record's
+  marker, and the letter's deletion is in the same transaction, so a failure keeps the letter (`attempts + 1`, the new
+  error and last attempt, reason `HANDLER_FAILED`) and a crash can neither handle it twice nor handle it and keep it.
+  The outcome is `Retried`, `Duplicate` (a marker existed already: the letter is deleted), `Failed`, `Blocked` (the
+  key's earlier letter must go first; the detail names it), `NotRetriable` (`INVALID` or no event type) or `NotFound`.
+  No back-off; the sagas are not re-run.
+- `dead_letter_retry_all` goes per key in position order, keys by their head letter's `parked_at_ms`, a key stopping at
+  its first failure (its later letters count as `blocked`), then the keyless letters by `parked_at_ms`; `INVALID`
+  letters are `skipped`. It answers the counts `retried`, `failed`, `blocked` and `skipped`.
+- `dead_letter_discard` deletes a letter (`NOT_FOUND` when it is gone); discarding a key's head unblocks its next
+  letter. A letter that expires unblocks its key too.
+
+A retry reaches only the processors this instance runs; a letter of another processor is `NotFound` (retry) or
+`NOT_FOUND` (discard). `DeadLetterStore` is the port an add-on implements (`park`, `head`, `earlier`, `parked_keys`,
+`get`, `list`, `summaries`, `count`, `delete`, `delete_in`, `record_failure`); the in-memory message store implements it
+and the control state, for tests.
+
 ## Event stores and message stores
 
 The two stores are add-ons: the core ships neither and imports neither. A service passes one of each to `App`, with
@@ -376,12 +562,12 @@ app = snodra.App(settings, store=store, event_store=event_store)
 | SQL (PostgreSQL, MySQL) | `snodra-messaging-sql` | message store (`SqlStore`) |
 
 The event-store interface expects one subscription per processor, competing instances sharing its segments, order per
-key, at-least-once delivery with acknowledgement, pause and resume, and the headers as the store's native metadata. The
-message-store interface is frozen at level 2: its outbox and processed-event ports are implemented by both official
-stores, and so are, on `main`, the dead-letter and processor-control ports (claimed with the level-3 release); the
-external-call and saga ports raise `MessageStoreUnsupported` until level 4. A third-party add-on implements the same
-interfaces and depends on the core only; `snodra.testing` is its conformance kit (see
-[Testing](/docs/messaging/python/testing/)).
+key, at-least-once delivery with acknowledgement, pause and resume, the headers as the store's native metadata, and the
+admin side of a reset (`admin`, `members`, `plan`, `apply`). The message-store interface is frozen through level 3: its
+outbox, processed-event, dead-letter and processor-control ports are implemented by both official stores (the
+dead-letter and control ports since 0.7.0); the external-call and saga ports raise `MessageStoreUnsupported` until level
+4. A third-party add-on implements the same interfaces and depends on the core only; `snodra.testing` is its conformance
+kit (see [Testing](/docs/messaging/python/testing/)).
 
 `App.start` hands the message store the application's clock, then prepares its schema (`init_schema`) or, with
 `SNODRA_STORE_INIT_SCHEMA=false`, checks it (`check_schema`); a failure fails `start`. A store that also implements
@@ -425,8 +611,5 @@ Outside any transaction, a store call runs in a short transaction of its own.
 ## Not in the Python library yet
 
 Sagas and external calls (feature level 4) are not in the Python library: the official SQL and MongoDB stores raise
-`MessageStoreUnsupported` for those ports. The level-3 APIs — processor status and control (pause, resume, reset and
-replay), dead letters, `@app.reset_handler` and `ResetContext` — are implemented, and the official SQL and MongoDB
-stores implement the dead-letter and processor-control ports on `main`, unreleased; they are documented and claimed
-with the level-3 release. The library has no event browser either, so its event-store add-ons declare no `browse`
-capability. For sagas, use the [Kotlin](/docs/messaging/kotlin/) or [Rust](/docs/messaging/rust/) library.
+`MessageStoreUnsupported` for those ports. The library has no event browser either, so its event-store add-ons declare
+no `browse` capability. For sagas, use the [Kotlin](/docs/messaging/kotlin/) or [Rust](/docs/messaging/rust/) library.

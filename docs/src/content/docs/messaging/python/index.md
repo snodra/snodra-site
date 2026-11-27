@@ -8,13 +8,14 @@ library keeps the hub streams, permits, retries, timeouts, the outbox, the relay
 async functions.
 
 ```sh
-pip install snodra-messaging
+pip install snodra-messaging==0.7.0
 ```
 
-**Status: pre-1.0, feature level 2.** The library implements levels 1 and 2 of the protocol: it passes all 33 checks of
-the [conformance runner](/docs/tools/conformance-runner/) through `examples/conformance-service`, and the level-2
-event-store and message-store kits (and, on `main`, the level-3 store kit) through its add-on packages. The versions are
-on [PyPI](https://pypi.org/project/snodra-messaging/); all are pre-1.0, so the API may still change between minor
+**Status: pre-1.0, feature level 3 (0.7.0).** The library implements levels 1 to 3 of the protocol: it passes all 33
+checks of the [conformance runner](/docs/tools/conformance-runner/) through `examples/conformance-service`, and the
+level-2 and level-3 event-store and message-store kits through its add-on packages. The current release is 0.7.0, for
+the core, `snodra-messaging-observability` and every add-on package; the versions are on
+[PyPI](https://pypi.org/project/snodra-messaging/). All are pre-1.0, so the API may still change between minor
 versions. It needs Python 3.12 or later.
 
 ## What it gives you
@@ -28,9 +29,18 @@ versions. It needs Python 3.12 or later.
   the relay in every instance publishes it to the event store, at least once. `key` gives the event its order key.
 - Event handlers: `@app.event_handler` runs in the `default` processor or in a named one (`processor=`), with the
   processed-event marker and the handler's writes in one transaction, so a redelivery is skipped.
+- Processor status and control: every started processor reports its state, segments, counters, last error and
+  dead-letter count to the hub; the hub pauses and resumes it persistently, resets it to earliest, latest, a timestamp
+  or explicit positions (a leased operation, with `@app.reset_handler` handlers), and lists, retries and discards its
+  dead letters. `replay=False` keeps a handler out of a replay, and every control runs off the hub read loop.
+- Dead letters: `Settings.dead_letter_mode` (`SNODRA_EVENTS_DEAD_LETTER_MODE`) parks a record that exhausts its
+  attempts in `collection` (the message store's dead letters), publishes it to the `<source>.dlt` source with the six
+  `snodra-dlt-*` headers in `event-store`, or logs it and moves on in `log`;
+  `Settings.dead_letter_retention` (`SNODRA_EVENTS_DEAD_LETTER_RETENTION_MS`, 30 days by default) is how long a
+  collected letter is kept.
 - Stores: one event store and one message store, each a separate package: Kafka or RabbitMQ Streams for events; MongoDB
-  or SQL (PostgreSQL, MySQL) for the outbox and the markers, and — on `main`, unreleased — the dead letters and
-  processor control. In-memory stores (`MemoryStore`, `MemoryEventStore`) are there for tests and local runs.
+  or SQL (PostgreSQL, MySQL) for the outbox, the markers, the dead letters and the processor control. In-memory stores
+  (`MemoryStore`, `MemoryEventStore`) are there for tests and local runs.
 - The hub connection: registration, heartbeats, reconnect with backoff, flow control, timeouts, several hubs and an
   ordered shutdown.
 - Static token, OAuth2 JWT (client credentials) and mutual TLS credentials, with rotation.
@@ -41,19 +51,17 @@ versions. It needs Python 3.12 or later.
   package and the metric names and labels of the Kotlin, Rust and Go libraries.
 - Conformance kits for add-ons, in `snodra.testing`: an add-on depends on the core, never the reverse.
 
-## Level 2
+## Level 3
 
-The library is at [feature level 2](/docs/library-authors/feature-levels/): commands and queries in every mode, plus
-events through the outbox, at-least-once handlers and named processors. The interfaces of the event store and the
-message store are frozen at this level, so a third-party add-on compiles once.
+The library is at [feature level 3](/docs/library-authors/feature-levels/): commands and queries in every mode, events
+through the outbox, at-least-once handlers and named processors, plus the processor status and control of level 3 —
+pause and resume, the leased reset with reset handlers and replay, and the dead letters in their three modes. The
+interfaces of the event store and the message store are frozen through this level, so a third-party add-on compiles
+once.
 
-Level 3 — processor status and control (pause and resume, reset and replay) and dead letters — is in progress: the
-APIs are implemented, and the official SQL and MongoDB stores implement the dead-letter and processor-control ports on
-`main`, unreleased; they are documented and claimed with the level-3 release. Sagas and external calls (level 4) are not
-in the library yet. The Python library has no event browser either, so its event-store add-ons declare no `browse`
-capability. The latest level-2 release logs and skips a record that exhausts its attempts; with the level-3 release the
-record becomes a dead letter, in the `collection` mode by default
-([Configuration](/docs/messaging/python/configuration/#dead-letters-level-3-in-progress)).
+Sagas and external calls (level 4) are not in the library yet. The Python library has no event browser, so its
+event-store add-ons declare no `browse` capability; its conformance kit runs the browser check as
+`no_browser_without_capability` ([Testing](/docs/messaging/python/testing/#the-add-on-kits)).
 
 ## Add-ons
 
@@ -72,8 +80,8 @@ A service needs one event store and one message store, passed to `snodra.App` wi
 - [Quick start](/docs/messaging/python/quickstart/): a service in one file, then an event.
 - [Configuration](/docs/messaging/python/configuration/): the `SNODRA_*` variables of the core and of every add-on, the
   `Settings` field that sets each, and every hub credential.
-- [API](/docs/messaging/python/api/): handlers, sending, the four query modes, events, stores, processors, errors,
-  identity, lifecycle and telemetry.
+- [API](/docs/messaging/python/api/): handlers, sending, the four query modes, events, stores, processors, processor
+  status and control, reset and replay, dead letters, errors, identity, lifecycle and telemetry.
 - [Testing](/docs/messaging/python/testing/): testing handlers, the `snodra.testing` kits, and running the conformance
   runner against the library's own service.
 - [Kafka event store](/docs/add-ons/kafka-event-store/),

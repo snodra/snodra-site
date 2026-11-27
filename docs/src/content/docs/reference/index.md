@@ -16,9 +16,8 @@ Start with [the quick start](/docs/server/quickstart/) or [server settings](/doc
 
 ## The messaging model
 
-[The messaging model](/docs/messaging/) is the shared specification of the Kotlin and Rust
-libraries: message naming, the wire types, query modes, the outbox, the Kafka layout, dead letters,
-sagas, event processors and the hub protocol.
+[The messaging model](/docs/messaging/) is the shared specification behind the four libraries: message naming, the
+wire types, query modes, the outbox, the Kafka layout, dead letters, sagas, event processors and the hub protocol.
 
 ## The Kotlin library
 
@@ -32,13 +31,15 @@ configuration, the API, dead letters, sagas, testing and the modules and build.
 
 ## The Go library
 
-[snodra-messaging-go](/docs/messaging/go/) is the Go library, pre-1.0 and at feature level 2 (commands,
-queries and events; no sagas yet). Its pages cover the quick start, configuration, the API and testing.
+[snodra-messaging-go](/docs/messaging/go/) is the Go library, pre-1.0 and at feature level 3 (commands, queries,
+events, processors with their status, control, reset and replay, and dead letters; no sagas yet). Its pages cover the
+quick start, configuration, the API and testing.
 
 ## The Python library
 
-[snodra-messaging-python](/docs/messaging/python/) is the Python library, pre-1.0 and at feature level 2 (commands,
-queries and events; no sagas yet). Its pages cover the quick start, configuration, the API and testing.
+[snodra-messaging-python](/docs/messaging/python/) is the Python library, pre-1.0 and at feature level 3 (commands,
+queries, events, processors with their status, control, reset and replay, and dead letters; no sagas yet). Its pages
+cover the quick start, configuration, the API and testing.
 
 ## The stores
 

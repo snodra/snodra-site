@@ -12,8 +12,8 @@ Rust, Go and Python libraries share.
 |---|---|
 | Kotlin | `com.damoreira.snodra:snodra-messaging-kafka:0.6.1` |
 | Rust | `snodra-messaging-kafka = "0.8"` |
-| Go | `github.com/snodra/snodra-messaging-go/kafka` (`go get github.com/snodra/snodra-messaging-go/kafka@latest`) |
-| Python | `snodra-messaging-kafka` (`pip install snodra-messaging-kafka`) |
+| Go | `github.com/snodra/snodra-messaging-go/kafka` (`go get github.com/snodra/snodra-messaging-go/kafka@v0.6.0`) |
+| Python | `snodra-messaging-kafka` (`pip install snodra-messaging-kafka==0.7.0`) |
 
 The Kotlin module depends on the core starter; the Rust crate is passed to the builder with
 `.event_store(...)`. The Go module is one add-on module, passed to `snodra.New` with `WithEventStore`
@@ -91,12 +91,10 @@ The package is `snodra-messaging-kafka`; the full Python settings are in
   starts at the earliest offset. Processed-event markers suppress duplicates.
 - **One consumer group per processor**, `<service>.<processor>`.
 - **Native dead letters.** Mode `event-store` produces to `<source>.dlt`. The store declares the
-  capability; on `main` the Go and Python cores use it in the `event-store` mode, claimed with their level-3 release
-  (the latest level-2 release logs and skips a record that exhausted its attempts).
+  capability, and the Go (0.6.0) and Python (0.7.0) libraries use it in the `event-store` mode.
 - **Replay, lag and browse.** The Kotlin and Rust stores declare all four capabilities. The Go and
   Python add-ons declare `replay`, `lag` and `native-dead-letter` and no `browse`, because neither
-  library has an event browser; on `main` a replay is available to a control request, claimed with their level-3
-  release.
+  library has an event browser.
 - **Group protocol.** The Go and Python add-ons join the classic group protocol with the `range` assignor, and
   a group's committed offset is the next one to read, so the members of every official library meet
   in one group.

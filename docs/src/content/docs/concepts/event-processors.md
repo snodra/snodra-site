@@ -46,4 +46,6 @@ state over the instances that report the processor.
 - Modes and retention: [the messaging model](/docs/messaging/).
 - Kotlin and Rust handles: [Kotlin API](/docs/messaging/kotlin/api/),
   [Rust API](/docs/messaging/rust/api/).
+- Go and Python handles: [Go API](/docs/messaging/go/api/#processor-control),
+  [Python API](/docs/messaging/python/api/#processor-control).
 - Delivery rules: [Consistency](/docs/concepts/consistency/).

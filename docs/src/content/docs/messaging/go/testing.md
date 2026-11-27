@@ -58,23 +58,36 @@ func TestMyMessageStore(t *testing.T) {
 
 `snodratest.EventStore` runs the nine level-2 event-store checks (`headers_round_trip`,
 `same_key_arrives_in_publish_order`, `every_processor_gets_every_event`, `instances_share_a_processor`, and the rest of
-the list on the [event-store contract](/docs/library-authors/event-store-add-ons/#the-conformance-kit)) and the level-3
-capability checks in the form the store declares: `replay_from_earliest_redelivers_history` (or
-`admin_without_replay_is_unsupported` without `replay`), `lag_counts_unacked` (or
-`lag_unknown_without_capability`), `dead_letter_source_receives` when the store declares `native-dead-letter`, and
-`no_browser_without_capability`. The four `browse` checks are omitted as a kit difference, because the Go library has
-no event browser.
+the list on the [event-store contract](/docs/library-authors/event-store-add-ons/#the-conformance-kit)) and the six
+level-3 capability checks in the form the store declares: `replay_from_earliest_redelivers_history` (or
+`admin_without_replay_is_unsupported` without `replay`), `lag_counts_unacked` (or `lag_unknown_without_capability`),
+`dead_letter_source_receives` when the store declares `native-dead-letter`, and `no_browser_without_capability`. The
+four `browse` checks are omitted as a kit difference, because the Go library has no event browser; `CheckIDs()` lists
+the 15 ids the kit may run (both forms of `replay` and `lag` included), and `EventStoreKit` is what every check runs
+on.
 
 `snodratest.MessageStore` runs 17 checks: the nine level-2 outbox and processed-event checks, and the eight level-3
 processor checks (`delete_markers_removes_only_the_range`, `dead_letters_sequence_per_key`,
 `dead_letter_parked_inside_rolled_back_transaction_is_kept`, `dead_letter_deleted_in_a_transaction_goes_with_it`,
 `control_lock_is_exclusive_until_lease_expires`, `pause_state_round_trips`, `replay_ranges_round_trip` and
-`processor_control_write_inside_rolled_back_transaction_is_kept`). Each check is a subtest named exactly as the Rust
-kit names it, and every check is exported, so a failing one can be run by itself. Both kits always run their level-3
-checks; a level-2-only entry point is a follow-up.
+`processor_control_write_inside_rolled_back_transaction_is_kept`). `StoreCheckIDs()` lists them in the Rust kit's order.
+Each check is a subtest named exactly as the Rust kit names it, and every check is exported, so a failing one can be run
+by itself:
+
+```go
+// One level-3 check, on its own: the reset lock, the pause, the replay ranges, or the markers.
+func TestReplayRanges(t *testing.T) {
+	snodratest.ReplayRangesRoundTrip(t, newMyMessageStore(t))
+}
+```
+
+Both kits always run their level-3 checks; a level-2-only entry point is a follow-up.
 
 `snodratest` has no Docker and no store client. The add-on's own test provides the store and the infrastructure; the
-kit only proves the contract.
+kit only proves the contract. For a service's own tests, the in-memory message store implements the dead-letter and
+processor-control ports too, so a test can drive `DeadLetters()` and `Control()` directly; the in-memory event store
+declares `replay` and `lag` and **not** `native-dead-letter` (like the reference in-memory stores), so the
+`event-store` dead-letter mode needs a durable event store, or a test store that declares the capability.
 
 ## The conformance runner
 
@@ -94,13 +107,13 @@ in `scripts/conformance-runner.sha256` (or uses the runner that `SNODRA_CONFORMA
 so set `SNODRA_HUB_PORT` there. CI runs the same script with the same pinned runner, fails when a check fails or is
 skipped, and keeps the runner's report as a build artifact.
 
-The runner proves level 1 only; level 2 is proved by the add-on kits above and by the library's own tests of the
-outbox, the relay and the consumer. The checks and what each asserts are listed in
+The runner proves level 1 only; levels 2 and 3 are proved by the add-on kits above and by the library's own tests of
+the outbox, the relay and the consumer. The checks and what each asserts are listed in
 [Feature levels](/docs/library-authors/feature-levels/) and in
 [Conformance](/docs/library-authors/conformance/).
 
 ## Levels 3 and 4
 
-The level-3 kits exist: `snodratest.EventStore` also runs the level-3 capability checks, and `snodratest.MessageStore`
-also runs the eight level-3 processor checks. The library's level-3 work is in progress; the level-4 saga and
-external-call kits are not there yet.
+Level 3 is proved by the kits above and by the library's own tests of the status, the control plane, the reset state
+machine and the three dead-letter modes; the runner still proves level 1 only. The level-4 saga and external-call kits
+are not in the Go library, and its message store's saga and external-call ports return `ErrUnsupported`.

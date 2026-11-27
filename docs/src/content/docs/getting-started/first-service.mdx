@@ -6,8 +6,8 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 This walkthrough connects one service to a running server and sends it a command. It links the
 existing quickstarts for the code instead of repeating them: the Kotlin, Rust, Go and Python pages are the
-reference for handlers and buses. The Go and Python libraries are at feature level 2: they cover commands, queries
-and events, not dead letters or sagas.
+reference for handlers and buses. The Go and Python libraries are at feature level 3: commands, queries and
+events, plus processor status, control, reset and replay and dead letters; sagas are Kotlin and Rust only.
 
 ## Before you start
 
@@ -62,7 +62,8 @@ export SNODRA_SERVER_ADDRESS=static://localhost:7000
 
 Follow [the Go quick start](/docs/messaging/go/quickstart/) through the message types and the handlers. A
 function passed to `snodra.HandleCommand` or `snodra.HandleQuery` is the handler; `app.Run` opens the hub stream and
-registers the types. The Go library has no events yet, so the service below answers commands and queries only.
+registers the types. Events, and their processors, need one event store and one message store; the quickstart adds
+them.
 ```sh
 export SNODRA_SERVICE_NAME=orders
 export SNODRA_SERVER_ADDRESS=static://localhost:7000
@@ -73,8 +74,9 @@ export SNODRA_SERVER_ADDRESS=static://localhost:7000
 <TabItem label="Python">
 
 Follow [the Python quick start](/docs/messaging/python/quickstart/) through the message types and the handlers. A
-function decorated with `@app.command_handler` or `@app.query_handler` is the handler; `app.run()` opens the hub stream and
-registers the types. The Python library has no events yet, so the service below answers commands and queries only.
+function decorated with `@app.command_handler` or `@app.query_handler` is the handler; `app.run()` opens the hub stream
+and registers the types. Events, and their processors, need one event store and one message store; the quickstart adds
+them.
 ```sh
 export SNODRA_SERVICE_NAME=orders
 export SNODRA_SERVER_ADDRESS=static://localhost:7000

@@ -11,8 +11,8 @@ the broker you operate and you want events in partitioned streams without adding
 |---|---|
 | Kotlin | `com.damoreira.snodra:snodra-messaging-rabbitmq:0.6.1` |
 | Rust | `snodra-messaging-rabbitmq = "0.8"` |
-| Go | `github.com/snodra/snodra-messaging-go/rabbitmq` (`go get github.com/snodra/snodra-messaging-go/rabbitmq@latest`) |
-| Python | `snodra-messaging-rabbitmq` (`pip install snodra-messaging-rabbitmq`) |
+| Go | `github.com/snodra/snodra-messaging-go/rabbitmq` (`go get github.com/snodra/snodra-messaging-go/rabbitmq@v0.6.0`) |
+| Python | `snodra-messaging-rabbitmq` (`pip install snodra-messaging-rabbitmq==0.7.0`) |
 
 The Kotlin module pins the RabbitMQ Stream Java client version; a Spring Boot service that manages
 that dependency must set `rabbit-stream-client.version` to the version the add-on needs, or the

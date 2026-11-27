@@ -2,20 +2,20 @@
 title: "Python quick start"
 ---
 
-The Python library is pre-1.0 and at feature level 2: the API may still change between minor versions. It needs Python
-3.12 or later.
+The Python library is pre-1.0 and at feature level 3 (0.7.0): the API may still change between minor versions. It
+needs Python 3.12 or later.
 
 ## Dependencies
 
 ```sh
-pip install snodra-messaging
-pip install snodra-messaging-observability   # optional: OpenTelemetry
+pip install snodra-messaging==0.7.0
+pip install snodra-messaging-observability==0.7.0   # optional: OpenTelemetry
 
 # One event store and one message store, when the service publishes or handles events:
-pip install snodra-messaging-kafka           # Kafka event store
-pip install snodra-messaging-rabbitmq        # RabbitMQ Streams event store
-pip install snodra-messaging-mongo           # MongoDB message store
-pip install snodra-messaging-sql             # SQL message store (PostgreSQL, MySQL)
+pip install snodra-messaging-kafka==0.7.0           # Kafka event store
+pip install snodra-messaging-rabbitmq==0.7.0        # RabbitMQ Streams event store
+pip install snodra-messaging-mongo==0.7.0           # MongoDB message store
+pip install snodra-messaging-sql==0.7.0             # SQL message store (PostgreSQL, MySQL)
 ```
 
 The package is named `snodra`. The core package depends only on `grpcio`, `protobuf` and `cryptography`. Telemetry is a
@@ -153,10 +153,46 @@ async def on_order_placed(event: OrderPlaced) -> None:
 ```
 
 The relay in every instance publishes what the outbox holds, at least once; a redelivered event finds its
-`processor:orders:<eventId>` marker and is skipped. `key` is the order key: events with one key reach a
-processor in publish order. A handler without `processor=` runs in the `default` processor. The pieces are in
-[API](/docs/messaging/python/api/#events), the settings in [Configuration](/docs/messaging/python/configuration/#events), and
-the stores in [Add-ons](/docs/add-ons/).
+`processor:orders:<eventId>` marker and is skipped. `key` is the order key: events with one key reach a processor in
+publish order. A handler without `processor=` runs in the `default` processor. The pieces are in
+[API](/docs/messaging/python/api/#events), the settings in
+[Configuration](/docs/messaging/python/configuration/#events), and the stores in [Add-ons](/docs/add-ons/).
+
+## Level 3: control, reset and dead letters
+
+Level 3 needs nothing new in the service: the hub's dashboard and API drive the processor. A record that exhausts its
+attempts is parked in the message store by default (`SNODRA_EVENTS_DEAD_LETTER_MODE=collection`), and the hub lists,
+retries and discards it. A reset runs a handler you register first, then replays the range, skipping handlers declared
+with `replay=False`:
+
+```python
+# Runs before any marker or position moves when a reset replays anything.
+@app.reset_handler("orders")
+async def clear_projection(reset: snodra.ResetContext) -> None:
+    await reset_projection()   # rebuilt from the replay
+
+# An effect outside the database is never replayed.
+@app.event_handler(processor="orders", replay=False)
+async def on_order_placed(event: OrderPlaced) -> None:
+    await send_confirmation(event)
+```
+
+With the service registered, pause, reset and read the letters through the hub (the write credential is the hub's, see
+[Processor control](/docs/server/processor-control/)):
+
+```sh
+WRITE_TOKEN=<the hub's write token>
+HUB=http://localhost:7001/api/v1/services/orders-service/processors/orders
+curl -s -X POST -H "Authorization: Bearer $WRITE_TOKEN" "$HUB/pause"
+curl -s -X POST -H "Authorization: Bearer $WRITE_TOKEN" \
+  -H 'Content-Type: application/json' -d '{"to":"earliest"}' "$HUB/reset"
+curl -s -X POST -H "Authorization: Bearer $WRITE_TOKEN" "$HUB/dead-letters/retry-all"
+```
+
+A pause and a reset persist in the message store, so they outlive the hub and reach every instance on its next poll.
+The status, the control protocol and every outcome are in
+[API](/docs/messaging/python/api/#processor-control) and
+[Dead letters](/docs/messaging/python/api/#dead-letters).
 
 ## Run it against a hub
 
@@ -183,8 +219,8 @@ add-on's own `from_env()` and are listed in [Configuration](/docs/messaging/pyth
 
 ## Next
 
-- [API](/docs/messaging/python/api/): events, stores and processors, the other handlers, sending, the four query modes,
-  errors, identity, lifecycle and telemetry.
+- [API](/docs/messaging/python/api/): events, stores and processors, processor status and control, reset and replay,
+  dead letters, the other handlers, sending, the four query modes, errors, identity, lifecycle and telemetry.
 - [Configuration](/docs/messaging/python/configuration/): every `SNODRA_*` variable of the core and of every add-on,
   and every credential.
 - [Testing](/docs/messaging/python/testing/): testing handlers, the `snodra.testing` kits and the conformance runner.

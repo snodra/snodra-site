@@ -56,7 +56,7 @@ A variable that is unset, or blank, changes nothing. Numbers are non-negative in
 | `SNODRA_OUTBOX_MAX_ATTEMPTS` | none | 10 | how many sends one entry gets before it is marked failed (at least 1) |
 | `SNODRA_OUTBOX_LEASE_MS` | none | 120000 | how long a claimed batch stays the relay's; it must be longer than a send (40 s), or `New` fails. A crashed relay's entries are claimed again after the lease |
 | `SNODRA_CONSUMER_ENABLED` | `ConsumerEnabled` | true | every instance reads the subscriptions of the processors it has handlers for; a tool that only publishes turns it off |
-| `SNODRA_CONSUMER_MAX_ATTEMPTS` | none | 5 | handler invocations per record, the first included (at least 1); after them the record becomes a dead letter with the level-3 release (on `main`, in the `collection` mode by default); the latest level-2 release logs and skips it |
+| `SNODRA_CONSUMER_MAX_ATTEMPTS` | none | 5 | handler invocations per record, the first included (at least 1); after them the record becomes a dead letter ([Dead letters](#dead-letters)) |
 | `SNODRA_STORE_INIT_SCHEMA` | none | true | `Start` applies or creates the message store's schema; `false` checks it instead, for a service that runs its own migrations |
 
 Options with no variable: `Codec` (the payload codec, JSON by default), `Logger` (a `*slog.Logger`, `slog.Default`
@@ -64,15 +64,22 @@ by default), `Telemetry` (see [API](/docs/messaging/go/api/#telemetry)), `WithSt
 themselves, see [Add-ons](#add-ons)) and, per call, `Timeout`, `Retry`, `NoRetry`, `RoutingKey`,
 `Priority`, `Header`, `InitialCredit` and `MaxResults`.
 
-### Dead letters (level 3, in progress)
+### Dead letters
 
 | Variable | Option | Default | Meaning |
 |---|---|---|---|
 | `SNODRA_DEAD_LETTER_MODE` | `DeadLetterMode` | `collection` | where a record a processor cannot handle goes: `collection` (the message store's dead letters), `event-store` (the event store's dead-letter source `<source>.dlt`, which needs a store with the `native-dead-letter` capability) or `log` (logged and skipped) |
 
-This setting belongs to the level-3 work, which is in progress on `main` and is claimed with its release. The latest
-level-2 release logs and skips a record that exhausts `SNODRA_CONSUMER_MAX_ATTEMPTS`; with the level-3 release the
-record becomes a dead letter in the `collection` mode.
+A collected letter is kept for 30 days: the library writes its `ExpireAt` and the store's retention removes it. There is
+no variable for that retention in Go; it is fixed, like the control and reset clocks below.
+
+### Processor control and reset
+
+There is no variable for the control state: it lives in the message store's processor-control port (`Control()`) and
+every instance reads it at start and every 5 s. The clocks are fixed too, as the protocol gives them: a reset prepare
+asks for a lease of at least 1 s, an executing reset renews it every 10 s (at most a third of it), an execute stops
+itself after 120 s, a consumer is given 30 s to leave its subscription, a processor stays `FAILING` for 60 s after a
+record exhausted its attempts, and dead-letter counts are sampled every 30 s (and after a park).
 
 ## Add-ons
 
@@ -133,11 +140,10 @@ The management API's own login (`Config.ManagementUsername`, `.ManagementPasswor
 ## Event stores and message stores
 
 An event store publishes the service's events and serves its processors' subscriptions; a message store holds the
-outbox and the processed-event markers, and — as level 3 lands, in progress — the dead letters and the processor
-control state; the sagas are level 4. The in-memory ones, `snodra.NewMemoryEventStore()` and
-`snodra.NewMemoryMessageStore()`, are for tests and local runs: nothing survives the process, and `Start` warns once
-for each. A service that only handles commands, queries and subscription queries needs neither store and starts
-without them.
+outbox, the processed-event markers, the dead letters and the processor control state; the sagas are level 4. The
+in-memory ones, `snodra.NewMemoryEventStore()` and `snodra.NewMemoryMessageStore()`, are for tests and local runs:
+nothing survives the process, and `Start` warns once for each. A service that only handles commands, queries and
+subscription queries needs neither store and starts without them.
 
 ## Credentials
 
