@@ -57,13 +57,22 @@ while the environment variables use milliseconds (`_MS`). A value that does not 
 | `SNODRA_OUTBOX_MAX_ATTEMPTS` | `outbox_max_attempts` | 10 | sends of one outbox entry in all before it is marked failed (at least 1) |
 | `SNODRA_OUTBOX_LEASE_MS` | `outbox_lease` | 120.0 (120000 ms) | how long a claimed outbox batch stays one relay's; it must be longer than a send (40 s). A crashed relay's entries are claimed again after the lease |
 | `SNODRA_CONSUMER_ENABLED` | `consumer_enabled` | true | every instance reads its event processors' subscriptions; a tool that only publishes turns it off |
-| `SNODRA_CONSUMER_MAX_ATTEMPTS` | `consumer_max_attempts` | 5 | event handler invocations per delivered record in all, the first included (at least 1); after them the record is logged and skipped at level 2 |
+| `SNODRA_CONSUMER_MAX_ATTEMPTS` | `consumer_max_attempts` | 5 | event handler invocations per delivered record in all, the first included (at least 1); after them the next release makes the record a dead letter in the `collection` mode, the default (level 3, in progress); the latest level-2 release logged and skipped it |
 | `SNODRA_STORE_INIT_SCHEMA` | `store_init_schema` | true | `start` applies or creates the message store's schema; `false` checks it instead, for a service that runs its own migrations |
 
 Options passed to `App` with no environment variable: `store` and `event_store` (the stores themselves, see
 [Add-ons](#add-ons)), `codec` (the payload codec, `JsonCodec` by default), `telemetry` (see
 [API](/docs/messaging/python/api/#telemetry)) and, per call on `send`, `query`, `gather`, `stream` and `subscribe`:
 `timeout`, `retry`, `routing_key`, `priority`, `headers`, `initial_credit` and `max_results`.
+
+### Dead letters (level 3, in progress)
+
+| Variable | `Settings` field | Default | Meaning |
+|---|---|---|---|
+| `SNODRA_EVENTS_DEAD_LETTER_MODE` | `dead_letter_mode` | `collection` | where a record that exhausted its attempts goes: `collection` (the message store's dead letters), `event-store` (the event store's dead-letter source `<source>.dlt`, which needs its `native-dead-letter` capability) or `log` (logged and skipped) |
+| `SNODRA_EVENTS_DEAD_LETTER_RETENTION_MS` | `dead_letter_retention` | 30 days (2592000000 ms) | how long a dead letter is kept, at least 1 s; written as the letter's `expire_at_ms`, and the store's retention removes it |
+
+These two variables belong to the level-3 work, which is in progress and is claimed with its release.
 
 ## Add-ons
 
@@ -128,10 +137,10 @@ The management API's own login (`RabbitMQConfig.management_username`, `managemen
 ### Event stores and message stores
 
 An event store publishes the service's events and serves its processors' subscriptions; a message store holds the
-outbox, the processed-event markers, the dead letters and the processor control state (level 3) and the sagas
-(level 4). The in-memory ones, `snodra.MemoryEventStore()` and `snodra.MemoryStore()`, are for tests and local runs:
-nothing survives the process, and `start` warns once for each. A service that only handles commands, queries and
-subscription queries needs neither store and starts without them.
+outbox and the processed-event markers, and — as level 3 lands, in progress — the dead letters and the processor
+control state; the sagas are level 4. The in-memory ones, `snodra.MemoryEventStore()` and `snodra.MemoryStore()`, are
+for tests and local runs: nothing survives the process, and `start` warns once for each. A service that only handles
+commands, queries and subscription queries needs neither store and starts without them.
 
 ## Credentials
 

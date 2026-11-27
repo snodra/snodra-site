@@ -309,8 +309,7 @@ Every instance runs one relay unless `Settings(outbox_enabled=False)` (`SNODRA_O
   instance publishes must hold.
 - **Failures.** An event the store rejects for good (`Rejected`) is given up at once; another failure counts an
   attempt and ends the batch, so the next claim retries that entry before the later ones. After
-  `SNODRA_OUTBOX_MAX_ATTEMPTS` sends the entry is marked failed and logged. Level 3 is where a dead letter replaces
-  that log-and-skip.
+  `SNODRA_OUTBOX_MAX_ATTEMPTS` sends the entry is marked failed and logged.
 
 ### Event handlers
 
@@ -329,8 +328,10 @@ So the handler's own writes and the marker commit together, and a record that co
 instead of handled twice. An event type the processor has no handler for is acknowledged and runs nothing; a record
 without a type header, or whose payload is not a JSON object or does not decode as the handler's type, is logged and
 acknowledged. A handler that fails is tried up to `SNODRA_CONSUMER_MAX_ATTEMPTS` times (5 by default), the first
-included, one second apart; after that the record is logged and skipped at level 2. A subscription that fails is
-reopened after 1 s, doubling up to 30 s, and the wait starts over after a delivery or a subscription that lived 30 s.
+included, one second apart; after that the next release makes the record a dead letter in the `collection` mode, the
+default ([Configuration](/docs/messaging/python/configuration/#dead-letters-level-3-in-progress)); the latest level-2
+release logged and skipped it. A subscription that fails is reopened after 1 s, doubling up to 30 s, and the wait
+starts over after a delivery or a subscription that lived 30 s.
 
 An event handler has no caller: `current_caller()` is `None` (an event carries a user id, never a token).
 `current_message()` returns the event's id, type, correlation id and headers. What the handler publishes carries that
@@ -422,8 +423,7 @@ Outside any transaction, a store call runs in a short transaction of its own.
 
 ## Not in the Python library yet
 
-Processor status and control (pause, resume, reset and replay), dead letters, and sagas (feature levels 3 and 4) are
-not in the Python library. A record that exhausts its attempts is logged and skipped at level 2; the level-3 ports exist
-in the interfaces and raise `MessageStoreUnsupported`. The library has no event browser either, so its event-store
-add-ons declare no `browse` capability. For those features, use the [Kotlin](/docs/messaging/kotlin/) or
-[Rust](/docs/messaging/rust/) library.
+Sagas (feature level 4) are not in the Python library. The level-3 APIs — processor status and control (pause, resume,
+reset and replay), dead letters, `@app.reset_handler` and `ResetContext` — are implemented and are documented with the
+level-3 release. The library has no event browser either, so its event-store add-ons declare no `browse` capability. For
+sagas, use the [Kotlin](/docs/messaging/kotlin/) or [Rust](/docs/messaging/rust/) library.

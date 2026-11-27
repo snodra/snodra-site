@@ -43,22 +43,31 @@ package runs its suite on both PostgreSQL and MySQL.
 depends on the core, never the reverse. An add-on runs the kit from its own test:
 
 ```python
-from snodra.testing import EventStoreKit, run_event_store_conformance, run_store_conformance
+from snodra.testing import run_event_store_conformance, run_store_conformance
 
 async def test_my_event_store():
-    kit = EventStoreKit("conformance.events", lambda: make_store(), marker_store)
-    await run_event_store_conformance(kit)
+    await run_event_store_conformance("conformance.events", lambda: make_store(), marker_store)
+
+async def test_my_event_store_at_level_3():
+    await run_event_store_conformance(
+        "conformance.events", lambda: make_store(), marker_store, level=3
+    )
 
 async def test_my_message_store():
     await run_store_conformance(lambda: make_message_store())
 ```
 
-`run_event_store_conformance` (or `EventStoreKit`) runs the nine level-2 event-store checks (`headers_round_trip`,
-`same_key_arrives_in_publish_order`, `every_processor_gets_every_event`, `instances_share_a_processor`, and the rest of
-the list on the [event-store contract](/docs/library-authors/event-store-add-ons/#the-conformance-kit));
+`run_event_store_conformance(source, open_store, store, *, level=2)` runs the nine level-2 event-store checks
+(`headers_round_trip`, `same_key_arrives_in_publish_order`, `every_processor_gets_every_event`,
+`instances_share_a_processor`, and the rest of the list on the
+[event-store contract](/docs/library-authors/event-store-add-ons/#the-conformance-kit)); `open_store` is called once
+per service instance, and `store` is a message store for the at-least-once check's markers. `level=3` runs those nine
+checks and the six level-3 capability checks in the form the store declares: `replay_from_earliest_redelivers_history`
+(or `admin_without_replay_is_unsupported` without `replay`), `lag_counts_unacked` (or `lag_unknown_without_capability`),
+`dead_letter_source_receives` when the store declares `native-dead-letter`, and `no_browser_without_capability`.
 `run_store_conformance` runs the nine outbox and processed-event checks. Each check is an async function named exactly as
-the Rust kit names it, and every check is exported, so a failing one can be run by itself. The capability checks
-(replay, lag, dead letters and browse) and the processor checks come with level 3.
+the Rust kit names it, and every check is exported, so a failing one can be run by itself (on an `EventStoreKit` for the
+event-store checks).
 
 `snodra.testing` has no Docker and no store client. The add-on's own test provides the store and the infrastructure;
 the kit only proves the contract.
@@ -88,5 +97,6 @@ outbox, the relay and the consumer. The checks and what each asserts are listed 
 
 ## Levels 3 and 4
 
-The Python library has no processor status, processor control, dead letters or sagas yet, so there are no level-3 or
-level-4 kits to run for it. The ports exist in the message-store interface and raise `MessageStoreUnsupported`.
+The level-3 event-store kit exists: `run_event_store_conformance(..., level=3)` runs the nine level-2 checks and the
+six level-3 capability checks, and `run_event_store_l3_conformance` is the same run as a named entry point. The
+library's level-3 work is in progress; the level-4 saga and external-call kits are not there yet.
