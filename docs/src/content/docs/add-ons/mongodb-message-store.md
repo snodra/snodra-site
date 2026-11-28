@@ -12,8 +12,8 @@ change and the event commit together.
 |---|---|
 | Kotlin | `com.damoreira.snodra:snodra-messaging-mongo:0.6.1` |
 | Rust | `snodra-messaging-mongo = "0.8"` |
-| Go | `github.com/snodra/snodra-messaging-go/mongo` (`go get github.com/snodra/snodra-messaging-go/mongo@v0.6.0`) |
-| Python | `snodra-messaging-mongo` (`pip install snodra-messaging-mongo==0.7.0`) |
+| Go | `github.com/snodra/snodra-messaging-go/mongo` (`go get github.com/snodra/snodra-messaging-go/mongo@v0.7.0`) |
+| Python | `snodra-messaging-mongo` (`pip install snodra-messaging-mongo==0.8.0`) |
 
 The Kotlin module brings Spring Data MongoDB; a service needs a `MongoTemplate`. The Rust crate takes
 a `mongodb::Client` and a database from your code; it reads no connection setting of its own. The Go
@@ -106,11 +106,11 @@ database the same retentions. The package is `snodra-messaging-mongo`; the full 
   the other.
 - **One database per logical service.** Instances share it; two different services keep separate
   databases, because markers and claims carry no service name.
-- **Level 3 ports, and the level-4 store ports on `main`.** The Go (0.6.0) and Python (0.7.0) releases implement the
-  outbox, the processed-event markers, the dead letters and the processor control; their claims, marks and retentions
-  follow the shared layout, and times they stamp themselves come from the application's clock. On `main`, unreleased,
-  the memory, SQL and MongoDB stores also implement the external-call and saga ports and pass the eleven level-4 store
-  checks; the saga runtime and the external-call adapter are not in the libraries yet.
+- **All ports through level 4.** The Go (0.7.0) and Python (0.8.0) releases implement the outbox, the processed-event
+  markers, the dead letters, the processor control, the external-call records and the saga records; their claims,
+  marks and retentions follow the shared layout, and times they stamp themselves come from the application's clock.
+  They pass the eleven level-4 store checks, and the saga runtime and the idempotent external-call adapter are part of
+  both libraries.
 
 ## Capabilities
 
@@ -120,8 +120,8 @@ database the same retentions. The package is `snodra-messaging-mongo`; the full 
 | Processed events | yes | yes | yes | yes |
 | Dead letters | yes | yes | yes (0.6.0) | yes (0.7.0) |
 | Processor control | yes | yes | yes (0.6.0) | yes (0.7.0) |
-| External calls | yes | yes | level 4, on `main`, unreleased | level 4, on `main`, unreleased |
-| Sagas | yes | yes | level 4, on `main`, unreleased | level 4, on `main`, unreleased |
+| External calls | yes | yes | yes (0.7.0) | yes (0.8.0) |
+| Sagas | yes | yes | yes (0.7.0) | yes (0.8.0) |
 
 ## Read next
 

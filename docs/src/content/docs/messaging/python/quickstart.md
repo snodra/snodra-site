@@ -2,20 +2,20 @@
 title: "Python quick start"
 ---
 
-The Python library is pre-1.0 and at feature level 3 (0.7.0): the API may still change between minor versions. It
+The Python library is pre-1.0 and at feature level 4 (0.8.0): the API may still change between minor versions. It
 needs Python 3.12 or later.
 
 ## Dependencies
 
 ```sh
-pip install snodra-messaging==0.7.0
-pip install snodra-messaging-observability==0.7.0   # optional: OpenTelemetry
+pip install snodra-messaging==0.8.0
+pip install snodra-messaging-observability==0.8.0   # optional: OpenTelemetry
 
 # One event store and one message store, when the service publishes or handles events:
-pip install snodra-messaging-kafka==0.7.0           # Kafka event store
-pip install snodra-messaging-rabbitmq==0.7.0        # RabbitMQ Streams event store
-pip install snodra-messaging-mongo==0.7.0           # MongoDB message store
-pip install snodra-messaging-sql==0.7.0             # SQL message store (PostgreSQL, MySQL)
+pip install snodra-messaging-kafka==0.8.0           # Kafka event store
+pip install snodra-messaging-rabbitmq==0.8.0        # RabbitMQ Streams event store
+pip install snodra-messaging-mongo==0.8.0           # MongoDB message store
+pip install snodra-messaging-sql==0.8.0             # SQL message store (PostgreSQL, MySQL)
 ```
 
 The package is named `snodra`. The core package depends only on `grpcio`, `protobuf` and `cryptography`. Telemetry is a
@@ -195,6 +195,70 @@ instances release it and consume again by themselves. The status, the control pr
 [API](/docs/messaging/python/api/#processor-control) and
 [Dead letters](/docs/messaging/python/api/#dead-letters).
 
+## Level 4: a saga and an external call
+
+A saga is a long-running process that remembers state between events. It runs in the `default` processor, after the
+event handlers, and needs one event store and one message store even when the service has no event handler. Decorate a
+class with `@app.saga`; its handlers record commands, events and deadlines on a `SagaContext`, and the relay sends them
+after the transaction commits:
+
+```python
+@snodra.message_type("payments.ChargeCard")
+@dataclass
+class ChargeCard:
+    order_id: str
+
+
+@app.saga("orders")
+class OrderSaga:
+    order_id: str = ""
+    payment_ref: str = ""
+    step: str = ""
+
+    @snodra.saga_start("order_id")
+    async def placed(self, event: OrderPlaced, ctx: snodra.SagaContext) -> None:
+        self.order_id = event.order_id
+        self.payment_ref = f"pay-{event.order_id}"
+        ctx.associate_with("payment_ref", self.payment_ref)
+        ctx.send(ChargeCard(order_id=event.order_id), routing_key=event.order_id)
+        ctx.schedule(15 * 60, "charge-timeout")
+
+    @snodra.saga_event("payment_ref", end=True)
+    async def charged(self, event: ChargeSucceeded, ctx: snodra.SagaContext) -> None:
+        self.step = "charged"
+
+    @snodra.saga_deadline("charge-timeout", end=True)
+    async def timed_out(self, ctx: snodra.SagaContext) -> None:
+        self.step = "timed-out"
+        ctx.publish(OrderPaymentFailed(order_id=self.order_id), key=self.order_id)
+
+    @snodra.saga_command_failed(end=True)
+    async def failed(self, event: snodra.SagaCommandFailed, ctx: snodra.SagaContext) -> None:
+        self.step = event.reason
+        ctx.publish(OrderPaymentFailed(order_id=self.order_id, reason=event.reason),
+                    key=self.order_id)
+```
+
+Every handler of a command a saga sends must be idempotent by `idempotency-key`: the relay sends at least once. The
+external call itself belongs in an idempotent command handler, which records the call before its body runs:
+
+```python
+@app.idempotent_command_handler(external_idempotent=True)
+async def charge_card(cmd: ChargeCard) -> ChargeReceipt:
+    key = snodra.current_message().headers["idempotency-key"]
+    try:
+        return await gateway.charge(cmd.order_id, key)
+    except GatewayUnavailable as error:
+        raise snodra.Retryable(str(error)) from error       # nothing was charged
+    except GatewayAmbiguous as error:
+        raise snodra.UnknownOutcome(str(error)) from error   # it may have charged
+```
+
+The model, the six `SagaCommandFailed` reasons, the dispatch rules and the record lifecycle are in
+[API](/docs/messaging/python/api/#sagas-and-deadlines) and
+[API](/docs/messaging/python/api/#idempotent-external-calls); the fixed level-4 clocks are in
+[Configuration](/docs/messaging/python/configuration/#sagas-deadlines-and-external-calls).
+
 ## Run it against a hub
 
 The hub is the `snodra/snodra-server` image (see the [Hub quick start](/docs/server/quickstart/)). Start one, then
@@ -221,7 +285,8 @@ add-on's own `from_env()` and are listed in [Configuration](/docs/messaging/pyth
 ## Next
 
 - [API](/docs/messaging/python/api/): events, stores and processors, processor status and control, reset and replay,
-  dead letters, the other handlers, sending, the four query modes, errors, identity, lifecycle and telemetry.
+  dead letters, sagas and deadlines, idempotent external calls, the other handlers, sending, the four query modes,
+  errors, identity, lifecycle and telemetry.
 - [Configuration](/docs/messaging/python/configuration/): every `SNODRA_*` variable of the core and of every add-on,
   and every credential.
 - [Testing](/docs/messaging/python/testing/): testing handlers, the `snodra.testing` kits and the conformance runner.

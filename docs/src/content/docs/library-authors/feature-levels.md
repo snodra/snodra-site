@@ -12,16 +12,15 @@ whose checks it passes together with every lower level's.
 | **1 Core** | register handlers and send commands and queries through the hub, in every query mode (point, scatter-gather, streaming, subscription), authenticate (token, JWT, client certificate), and connect to several hubs | [protocol.md](/docs/library-authors/protocol/), [messages.md](/docs/library-authors/messages/) |
 | **2 Events** | publish events through a message store's outbox to an event store, and handle them at least once with duplicates skipped | an event-store add-on and a message-store add-on: [event-store-add-ons.md](/docs/library-authors/event-store-add-ons/), [message-store-add-ons.md](/docs/library-authors/message-store-add-ons/) |
 | **3 Processors** | run named event processors, report their status, answer the hub's processor controls (pause, resume, reset and replay), and park and work dead letters | level 2 |
-| **4 Sagas** | run sagas and deadlines, with their commands relayed after the saga's transaction commits | level 3 |
+| **4 Sagas** | run sagas and deadlines, with their commands relayed after the saga's transaction commits, and idempotent external calls with the retryable and unknown-outcome markers | level 3 |
 
 Commands and queries alone need neither an event store nor a message store: a level 1 library is complete without
 them.
 
-The official libraries claim: **Kotlin 4** and **Rust 4**; **Go 3** (`v0.6.0`) and **Python 3** (0.7.0). The Go and
-Python libraries have no sagas or external calls (level 4) and no event browser, so their event-store add-ons declare
-no `browse` capability. Both of their conformance kits omit the four positive `browse` checks and always run
-`no_browser_without_capability`; the check accepts a store that declares `browse` with a note that the positive checks
-are a kit difference (Go skips it).
+The official libraries claim: **Kotlin 4**, **Rust 4**, **Go 4** (`v0.7.0`) and **Python 4** (0.8.0). The Go and
+Python libraries have no event browser, so their event-store add-ons declare no `browse` capability. Their
+event-store kits omit the four positive `browse` checks and always run `no_browser_without_capability`; the check
+accepts a store that declares `browse` with a note that the positive checks are a kit difference (Go skips it).
 
 ## How the checks are named and run
 
@@ -41,13 +40,13 @@ check that proves them. The **Proved by** column says what runs a check today:
   kits hold the same checks in camelCase, and the message-store page lists the Kotlin names that differ
   ([Check names in both libraries](/docs/library-authors/message-store-add-ons/#check-names-in-both-libraries)). The
   Go and Python kits list 15 possible event-store ids (the nine level-2 checks and the six possible level-3 ids: both
-  forms of `replay` and of `lag`, `dead_letter_source_receives` and `no_browser_without_capability`) and 17
-  message-store ids (nine level-2 and eight level-3). A run uses one form of `replay` and of `lag`, adds
-  `dead_letter_source_receives` when the store declares `native-dead-letter`, and always runs
+  forms of `replay` and of `lag`, `dead_letter_source_receives` and `no_browser_without_capability`) and 28
+  message-store ids (nine level-2, eight level-3 and eleven level-4). A run uses one form of `replay` and of `lag`,
+  adds `dead_letter_source_receives` when the store declares `native-dead-letter`, and always runs
   `no_browser_without_capability`. Go's `snodratest.CheckIDs()` and `StoreCheckIDs()` list them; Python's
-  `EVENT_STORE_CHECKS`/`EVENT_STORE_L3_CHECKS` and `MESSAGE_STORE_CHECKS`/`MESSAGE_STORE_L3_CHECKS` hold them. Both
-  kits omit the four positive `browse` checks, a kit difference: neither library has an event browser, so their
-  add-ons declare no `browse` capability.
+  `EVENT_STORE_CHECKS`/`EVENT_STORE_L3_CHECKS` and `MESSAGE_STORE_CHECKS`/`MESSAGE_STORE_L3_CHECKS`/
+  `MESSAGE_STORE_L4_CHECKS` hold them. Their event-store kits omit the four positive `browse` checks, a kit
+  difference: neither library has an event browser, so their add-ons declare no `browse` capability.
 
 ## Level 1: Core
 
@@ -122,6 +121,10 @@ check that proves them. The **Proved by** column says what runs a check today:
 | `L4-COMMAND-FAILED` | A saga command that fails for good comes back to the saga as the local event SagaCommandFailed, never published to the event store. | runner, not checked yet |
 | `L4-DEADLINES` | A deadline fires once at its due time over every instance, and a cancelled one never fires. | runner, not checked yet |
 | `L4-ADAPTER-MARKERS` | `Error.details` of `{"snodra":"retryable"}` and `{"snodra":"unknown-outcome"}` are written by an adapter's failure and read by the saga relay, also across the hub. | runner, not checked yet |
+
+Go's `snodratest.MessageStore` and Python's `run_store_conformance(..., level=4)` (or `run_store_l4_conformance`) run
+all eleven level-4 store checks together with the nine level-2 and eight level-3 checks, 28 in all; both libraries'
+own saga and adapter suites prove the runtime rules the runner does not check yet.
 
 The kits and the runner check behaviour a library can show from outside. The full contract of levels 3 and 4 (the
 reset steps, the dead-letter document, the saga dispatch, retries and failure notice, the saga storage) is written in

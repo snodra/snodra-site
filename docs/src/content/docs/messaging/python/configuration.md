@@ -81,6 +81,31 @@ stops itself after 120 s, a processor stays `FAILING` for 60 s after a record ex
 are sampled every 30 s (and after a park), and a dead letter's publish in mode `event-store` is given 30 s before the
 record is delivered again.
 
+### Sagas, deadlines and external calls
+
+The level-4 runtime has no `SNODRA_*` variable and no `Settings` field yet; it runs with the library's fixed timings,
+the reference libraries' values:
+
+| Setting | Value | Meaning |
+|---|---|---|
+| `saga_stage_max_attempts` | 5 | Attempts of one (event, saga type) on a version or start-key conflict |
+| `saga_stage_initial_backoff`, `saga_stage_max_backoff` | 0.2 s, 5 s | The wait after a conflict doubles from the first to the second, jittered by ±20 % |
+| Saga handler attempts | 2 | Attempts of a handler that fails, 50 ms apart; then the event is parked in `saga_failures` |
+| `saga_dispatch_poll` | 0.2 s | How often the relay looks for sagas with a pending entry |
+| `saga_dispatch_batch` | 100 | Sagas with a pending entry one pass reads; each runs as its own task |
+| `saga_dispatch_lease` | 60 s | How long one relay holds a saga's `seq` order |
+| `saga_dispatch_send_timeout` | 60 s | The longest one send is waited for; a send that ignores cancellation is abandoned |
+| `saga_dispatch_max_attempts` | 10 | Sends of one command before `EXHAUSTED` |
+| `saga_dispatch_initial_backoff`, `saga_dispatch_max_backoff` | 1 s, 300 s | The wait between attempts doubles, jittered by ±20 % |
+| `saga_notice_max_attempts` | 10 | Deliveries of one `SagaCommandFailed` before it is logged and dropped |
+| `deadline_poll`, `deadline_lease` | 1 s, 30 s | How often due deadlines are looked for, and how long a claim holds |
+| `external_call_lease` | 300 s | How long an `IN_PROGRESS` adapter call may take before its outcome is unknown |
+
+A dispatch lease, a deadline claim and an external-call lease are timestamps one instance writes and another compares
+with its own clock: keep the instances' clocks in step (NTP or the platform's time sync). See
+[API](/docs/messaging/python/api/#sagas-and-deadlines) and
+[API](/docs/messaging/python/api/#idempotent-external-calls) for what each setting bounds.
+
 ## Add-ons
 
 The core reads the variables above. An add-on has a `from_env()` of its own, and the service hands the result to the
@@ -144,11 +169,11 @@ The management API's own login (`RabbitMQConfig.management_username`, `managemen
 ### Event stores and message stores
 
 An event store publishes the service's events and serves its processors' subscriptions; a message store holds the
-outbox, the processed-event markers, the dead letters and the processor control state, and on `main`, unreleased, the
-external-call and saga records too; the saga runtime is level 4 and not in the library yet. The
-in-memory ones, `snodra.MemoryEventStore()` and `snodra.MemoryStore()`, are for tests and local runs: nothing survives
-the process, and `start` warns once for each. A service that only handles commands, queries and subscription queries
-needs neither store and starts without them.
+outbox, the processed-event markers, the dead letters, the processor control state, the external-call records and the
+saga records. The in-memory ones, `snodra.MemoryEventStore()` and `snodra.MemoryStore()`, are for tests and local runs:
+nothing survives the process, and `start` warns once for each. A service that only handles commands, queries and
+subscription queries needs neither store and starts without them; a saga needs both, even with no event handler, and
+an idempotent command handler needs the message store only.
 
 ## Credentials
 

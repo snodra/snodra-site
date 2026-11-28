@@ -3,8 +3,9 @@ title: "API"
 ---
 
 The package is `snodra`, imported as `snodra "github.com/snodra/snodra-messaging-go"`. `go doc -all` on it is the
-complete reference; this page is the tour. Every snippet below is compiled by the library's tests, except the two
-level-3 handlers, which call the service's own store and mail functions.
+complete reference; this page is the tour. Every snippet below is compiled by the library's tests, except the
+level-3 handlers, which call the service's own store and mail functions, and the saga and adapter sketches, which are
+condensed from the library's saga and external-call tests.
 
 ## Messages
 
@@ -265,7 +266,7 @@ app, err := snodra.New(
 ```
 
 ```sh
-go get github.com/snodra/snodra-messaging-go/observability@v0.6.0
+go get github.com/snodra/snodra-messaging-go/observability@v0.7.0
 ```
 
 `observability.New` takes `WithMeterProvider`, `WithTracerProvider` and `WithPropagator` to use others than the global ones. One
@@ -493,8 +494,8 @@ and an add-on's `SubscriptionAdmin.Plan` returns one `ReplayRange` per segment i
 `From` (inclusive) to `Until` (exclusive) are a replay; `From` is the target, `Until` the subscription's committed
 position before the reset (empty when it had none). Only a range with `Until` set and `From` before it replays
 anything; `latest` makes none. In a replay the processor's handlers run again except those registered with
-`DisallowReplay()`, the stage-1 marker is still recorded (and the record acknowledged), and the sagas are never run
-(the Go library has none). The range closes once the committed position of a segment this instance holds (or its next
+`DisallowReplay()`, the stage-1 marker is still recorded (and the record acknowledged), and the sagas are never run.
+The range closes once the committed position of a segment this instance holds (or its next
 position while nothing is committed) reaches its `Until`: the instance removes it from the state, and the status stops
 showing `replaying`; another instance's range is left to that instance. A reset never touches the dead letters.
 
@@ -577,6 +578,224 @@ A retry reaches only the processors this instance runs; a letter of another proc
 `Get`, `List`, `Summaries`, `Count`, `Delete`, `DeleteIn`, `RecordFailure`); the in-memory message store implements it
 and the control state, for tests.
 
+## Sagas and deadlines
+
+A saga is a long-running process that reacts to events, keeps its own state, sends commands and events, waits, and
+ends. It is the saga model of the Kotlin and Rust libraries, for integrations with external systems: the saga records
+what it wants done, a relay sends it after the transaction commits, and the external system's answer comes back as an
+event or as the local `SagaCommandFailed` notice. A saga runs inside the service, against its message store and its
+event-store consumer; the hub only carries the commands it sends to another service. Sagas run in the `default`
+processor only.
+
+```go
+// The state is persisted as its JSON object after every handled message; it must round-trip
+// from its zero value through the codec.
+type OrderSagaState struct {
+	OrderID string `json:"orderId,omitempty"`
+	Step    string `json:"step,omitempty"`
+}
+
+err := snodra.HandleSaga(app, "orders", func(d *snodra.SagaDefinition[OrderSagaState]) {
+	d.StartOn(snodra.StartedOn(
+		snodra.Associate("orderId", func(e OrderPlaced) string { return e.OrderID }),
+		func(ctx context.Context, saga *snodra.SagaContext, state *OrderSagaState, e OrderPlaced) error {
+			state.OrderID = e.OrderID
+			if _, err := saga.Schedule(15*time.Minute, "charge-timeout", nil); err != nil {
+				return err
+			}
+			return saga.Send(ChargeCard{OrderID: e.OrderID}, e.OrderID)
+		}))
+	d.OnDeadline(snodra.Deadline("charge-timeout",
+		func(ctx context.Context, saga *snodra.SagaContext, state *OrderSagaState, _ any) error {
+			state.Step = "timed-out"
+			return saga.Publish(OrderPaymentFailed{OrderID: state.OrderID}, state.OrderID)
+		}).Ending())
+	d.OnCommandFailed(snodra.CommandFailed(
+		func(ctx context.Context, saga *snodra.SagaContext, state *OrderSagaState, failed snodra.SagaCommandFailed) error {
+			state.Step = string(failed.Reason)
+			return saga.Publish(OrderPaymentFailed{OrderID: state.OrderID}, state.OrderID)
+		}))
+})
+```
+
+The definition:
+
+| Element | Meaning |
+|---|---|
+| `HandleSaga[S](app, name, define)` | Registers the saga; `S` is the state. The name is unique and cannot contain `:` (the marker and dispatch-entry ids use it). A definition error names the saga and handler and is returned here and by `Start`. |
+| `d.StartOn(StartedOn(route, handler))` | A handler that may create an instance. The event starts one when no live instance of the type matches any handler for it; at most one live instance exists per start key. `.ForceNew()` always starts one, without a start key. |
+| `d.On(HandledOn(route, handler))` | A handler of an event on the live instances associated with the route's key and value. |
+| `d.OnDeadline(Deadline[S, P](name, handler))` | A handler of deadlines named `name`; it receives the payload as `P` (the zero value when there is none). One handler per name. `.Ending()` ends the instance after it. |
+| `d.OnCommandFailed(CommandFailed(handler))` | The handler of the local `SagaCommandFailed`; it is routed to the sending instance by its `SagaID`, no association needed. |
+| `.Ending()` on an event or deadline | Ends the instance after the handler returns; later handlers of that event do not run. |
+| `Associate(key, value)` | The route: the event's value for `key`. A nil or blank value matches no instance. |
+
+A handler is `func(context.Context, *SagaContext, *S, E) error` (the deadline payload `P` replaces `E`). Handlers of
+one event type run in registration order. The state is stored as JSON: it must encode to a JSON object and encode to
+the same text after a decode, or registration fails. A handler runs synchronously on the consumer and holds its
+goroutine and the partition; keep it to recording, not I/O. A panic is a handling failure, never a crashed process.
+`MessageFrom(ctx)` describes the delivered event, or a deadline's synthetic `deadline:<name>` message with empty
+headers and the correlation id of the message that scheduled it.
+
+`SagaContext` is the only supported way to act from a handler:
+
+| Call | Meaning |
+|---|---|
+| `SagaID()`, `CorrelationID()` | The instance id and the correlation id of the message being handled. |
+| `Associate(key, value)`, `RemoveAssociation(key, value)` | Add or remove an association. Removing the start association frees the start key. |
+| `End()` | Ends the instance after the handler returns and cancels its scheduled deadlines. |
+| `Send(command, routingKey)`, `Publish(event, key)` | **Record** a command or event in the saga's transaction, sent after the commit, in order. `Publish` also refuses at record time an event the outbox could never hold. |
+| `Schedule(after, name, payload)`, `ScheduleAt(at, name, payload)` | Record a deadline; both return its id. The payload is JSON with its type name. |
+| `CancelDeadline(id)`, `CancelDeadlines(name)` | Cancel a deadline, or every scheduled deadline of that name. |
+
+A handling records at most 999 messages. Nothing is sent or published while the handler runs. The package-level
+`Send`, `Query` and `Publish` are refused with an error naming `SagaContext` while a saga handler runs; do not capture
+a `Sender`, `EventBus` or `App` either, for the same reason.
+
+**Start keys and matching.** A start key is `"<type>|<key>=<value>"` with `%`, `|` and `=` escaped. It lives with its
+association: removing that association, or ending the instance, releases it, so a later start event for the same value
+creates a new instance. The first start handler in registration order whose association value is present creates the
+instance; the new instance then runs every handler of that event whose key and value are that association.
+
+### Stage 2
+
+The saga stage runs in the `default` processor **after** stage 1 committed, and also when stage 1 failed, decoded the
+wrong type or exhausted its attempts. The record is acknowledged only after both stages. Stage 2 also sees a record
+parked `SEQUENCED` behind an earlier dead letter (stage 1 never ran) and a record whose own letter exists after a
+crash. A record inside an open replay range is skipped: a replay never runs a saga again.
+
+Per (event, saga type), one message-store transaction:
+
+1. inserts the marker `saga:<type>:<eventId>` (a conflict retries the event, it is not a duplicate);
+2. resolves every live instance of the type by each handler's association;
+3. runs the matching handlers in registration order, in one transaction with the state writes, the dispatch entries
+   and the deadline changes;
+4. commits, then acknowledges the record.
+
+The marker is committed even when no instance matched. The state uses optimistic version 0 at creation and `+1` per
+write; a version or start-key conflict retries the event up to 5 attempts (200 ms doubling to 5 s, jittered), and a
+handler failure gets 2 quick attempts. An event that fails every attempt is parked in `saga_failures` with its marker
+and the consumer moves on; a store failure while parking leaves the record unacknowledged.
+
+### The dispatch relay
+
+Every instance runs the relay. It polls every 500 ms: failure notices due first, then the sagas whose first pending
+entry is due, at most 100 sagas per poll and 4 at a time. One saga's entries go strictly in `seq` order under a 30-second
+lease; a slow or retrying saga holds back only itself. Different sagas are dispatched at the same time.
+
+- **An event entry** is appended to the ordinary outbox and marked dispatched in one transaction, with a fresh event
+  id, the entry's key, the recording message's correlation id and a valid trace. An event the outbox refuses is given
+  up at once as `INVALID`, with no notice, and the later entries go on.
+- **A command entry** is sent by its wire type with its stored JSON, routing key, `idempotency-key`
+  (`<sagaId>:<seq>`) and `saga-id`, the recording message's correlation id and trace, and **no authorization** or
+  caller identity. A type the service handles itself goes to its own handler unless `AlwaysRouteThroughHub` is on;
+  otherwise it goes through the hub. The sender uses `NoRetry`: the relay owns every retry.
+- **At least once.** An entry is marked dispatched after its reply. A crash in between sends it again with the same
+  idempotency key, so every handler of a command a saga sends must be idempotent by `idempotency-key`.
+- **The send bound.** A send is waited for at most 1 minute; a call through the hub is waited out for the hub's guard
+  (11 s) too, so it is not resent while a hub may still run it. A local handler that honours its context and returns
+  after it ended is an unknown outcome and is retried with the same key. A handler that ignores its context cannot be
+  stopped by Go; its goroutine may outlive the relay's wait, which the relay abandons at the bound.
+
+A failed attempt is classified as **transient** or **permanent**:
+
+| Transient (retried) | Permanent (notice at once) |
+|---|---|
+| never sent; unknown outcome; hub `NO_HANDLER`; `TIMEOUT`; `HANDLER_DISCONNECTED`; `RESOURCE_EXHAUSTED`; `{"snodra":"retryable"}`; a non-messaging sender failure | local `UNAUTHENTICATED`/`PERMISSION_DENIED` (`DENIED`); `INVALID_REQUEST` (`INVALID`); `{"snodra":"unknown-outcome"}` (`UNKNOWN_OUTCOME`); any other `HANDLER_ERROR` or `CANCELLED` (`FAILED`) |
+
+A transient failure waits 1 s, doubling to 5 minutes (±20 %), 10 attempts in all, then becomes `EXHAUSTED`. The failure
+and its pending notice are written in one `MarkFailed` before the notice is delivered, and the saga's later entries are
+still sent: the saga decides what a failure means. A permanent failure is recorded at once.
+
+### `SagaCommandFailed`
+
+`SagaCommandFailed` is the local event `snodra.SagaCommandFailed` with `SagaID`, `CommandType`, `IdempotencyKey`,
+`Reason` and `Message`; its id is `failed:<sagaId>:<seq>` and it carries the command's correlation id. The runtime
+routes it to the live instance of its type that handles it, by `SagaID`, without an association, and also runs any
+ordinary `HandleEvent` handler the service has for the type. It is **never** appended to the outbox or published to the
+event store.
+
+| Reason | When |
+|---|---|
+| `NO_HANDLER` | Nobody handles the command type in a service without a hub. A Go service always has a hub, so this reason is only read from records written by another library; a hub's `NO_HANDLER` is transient and ends as `EXHAUSTED`. |
+| `DENIED` | The handler requires an authenticated caller (or denies the caller): a saga command has no caller. |
+| `INVALID` | The handler could not read the payload. |
+| `FAILED` | The handler failed with any other error, including an idempotent adapter's permanent failure. |
+| `UNKNOWN_OUTCOME` | An idempotent adapter cannot tell whether its external call happened. |
+| `EXHAUSTED` | A transient failure lasted through all 10 attempts. |
+
+A notice that cannot be delivered is retried on the command backoff and given up after 10 attempts, logged at error; a
+notice nobody handles is logged at error. A permanently failed command does not hold back the saga's later entries.
+
+### Deadlines
+
+`Schedule`/`ScheduleAt` and the cancel operations are recorded in the saga's transaction. Every instance runs a
+scheduler every second: it claims each due deadline with a 30-second lease, then runs the handler, writes the state,
+its dispatch entries and the deadline changes, and marks the deadline fired, all in one transaction. A deadline no
+longer scheduled is left alone; one whose saga ended, is gone or has no handler of that name is cancelled. A failed
+firing retries like an event and leaves the claim to expire, so the deadline fires again after the lease: **at least
+once**, never before its due time, never for a cancelled deadline or an ended saga. Ending the instance cancels its
+scheduled deadlines. A deadline handler's context has empty headers, the scheduling message's correlation id and no
+trace; the commands it records carry that correlation and no trace header.
+
+Leases are timestamps written by one instance and compared with another instance's clock: keep the instances' clocks
+in step (NTP or the platform's time sync).
+
+## Idempotent external calls
+
+`HandleIdempotentCommand` makes a command handler safe to call again with the same key: each call is recorded in the
+message store's `external_calls` before the body runs.
+
+```go
+err := snodra.HandleIdempotentCommand(app, func(ctx context.Context, cmd ChargeCard) (ChargeReceipt, error) {
+	info, _ := snodra.MessageFrom(ctx)
+	receipt, err := gateway.Charge(ctx, cmd.OrderID, info.Headers["idempotency-key"])
+	switch {
+	case errors.Is(err, gateway.ErrUnavailable):
+		return ChargeReceipt{}, snodra.Retryable(err)       // nothing was charged: try again later
+	case errors.Is(err, gateway.ErrAmbiguous):
+		return ChargeReceipt{}, snodra.UnknownOutcome(err)  // it may have charged
+	case err != nil:
+		return ChargeReceipt{}, err                          // permanent: replay the stored error
+	}
+	return receipt, nil
+}, snodra.ExternalIdempotent())
+```
+
+- **The key** is the `idempotency-key` header. A saga's relay sets it to `<sagaId>:<seq>`. A missing or blank key is a
+  plain `HANDLER_ERROR` naming the command and the header, before any record or body. The key is the header only: the
+  library does not evaluate a typed key expression (the Kotlin library's `@IdempotentHandler(key = ...)`).
+- **The record lifecycle.** The first call inserts `IN_PROGRESS` with a fresh owner and a 5-minute lease; the first
+  insert wins. A concurrent call sees the owner's in-flight record and is answered with the retryable marker. A repeat
+  after `SUCCEEDED` returns the stored reply bytes without running the body. `FAILED` replays its stored message.
+  `UNKNOWN` reports the unknown-outcome marker again.
+- **A lapsed call.** An `IN_PROGRESS` record past its lease is given up as `UNKNOWN` by default, or taken over and
+  run again with `ExternalIdempotent()` (the partner de-duplicates by the key). If the record changed between the read
+  and the write, the write fails and the call reads again (three rounds at most), so a slow call's success is returned
+  rather than overwritten.
+- **Settlements are owner-conditional.** A body failure with `Retryable` calls `Reset` (the next call runs the body
+  again; the relay owns the backoff), `UnknownOutcome` calls `MarkUnknown`, and any other error stores `FAILED` with
+  the `HANDLER_ERROR` JSON and is returned unchanged. A settlement matches the owner token, so a call whose lease ran
+  out never overwrites the record of the call that took it over.
+- **A panic** in the body is recovered: the record is settled `UNKNOWN` (the external call may have happened) and the
+  caller gets the unknown-outcome marker, not a plain failure. This is a deliberate divergence from Kotlin, which
+  settles `FAILED`; the safe answer is that the outcome is unknown.
+- **An unrecorded success** (the body returned but its reply could not be encoded, or the `SUCCEEDED` write failed) is
+  never reported as success: with a de-duplicating partner it is the retryable marker and the record stays
+  `IN_PROGRESS`; otherwise the record is marked `UNKNOWN` and the caller gets the unknown-outcome marker.
+- **Store failures before the body** (`Insert`, `Find`, `TakeOver`, `Expire`) are a plain permanent `HANDLER_ERROR`,
+  as in Kotlin; the body never runs and a saga records `FAILED`.
+- **The records are their own short writes**, outside the caller's transaction: a rolled-back caller never forgets a
+  call that happened. The adapter never retries a call itself; the saga relay owns the retry.
+- **The markers.** `Retryable(err)` and `UnknownOutcome(err)` answer `HANDLER_ERROR` with details exactly
+  `{"snodra":"retryable"}` or `{"snodra":"unknown-outcome"}`, whatever they wrap. `IsRetryable` and `IsUnknownOutcome`
+  read the marker from a local handler error or a hub `*Error`, trimming surrounding whitespace as the relay does. A
+  marker wrapped in another error is found too.
+- **Startup.** The handler needs a message store and its external-calls port: `Start` refuses a service without
+  either, names the port for an `ErrUnsupported` store, and probes it after schema preparation. An
+  idempotent-command-only service needs no event store.
+- **Commands only.** There is no idempotent event-handler adapter; wrap an external call in an idempotent command.
+
 ## Event stores and message stores
 
 The two stores are add-ons: the core ships neither and imports neither. A service passes one of each to `New`, with
@@ -591,12 +810,11 @@ The two stores are add-ons: the core ships neither and imports neither. A servic
 
 The event-store interface expects one subscription per processor, competing instances sharing its segments, order per
 key, at-least-once delivery with acknowledgement, pause and resume, the headers as the store's native metadata, and the
-admin side of a reset (`Admin`, `Members`, `Plan`, `Apply`). The message-store interface is frozen through level 3: its
-outbox, processed-event, dead-letter and processor-control ports are implemented by both official stores (the
-dead-letter and control ports since `v0.6.0`). The external-call and saga store ports are implemented on `main`,
-unreleased, in the memory store and both official stores, which pass the eleven level-4 store checks; the saga runtime
-and the external-call adapter are not in the library yet. A third-party add-on implements the same interfaces and
-depends on the core only; `snodratest` is its conformance kit (see [Testing](/docs/messaging/go/testing/)).
+admin side of a reset (`Admin`, `Members`, `Plan`, `Apply`). The message-store interface is frozen through level 4: its
+outbox, processed-event, dead-letter, processor-control, external-call and saga ports are implemented by both official
+stores (the dead-letter and control ports since `v0.6.0`, the external-call and saga ports since `v0.7.0`), which pass
+the eleven level-4 store checks. A third-party add-on implements the same interfaces and depends on the core only;
+`snodratest` is its conformance kit (see [Testing](/docs/messaging/go/testing/)).
 
 `App.Start` hands the message store the application's clock, then prepares its schema (`InitSchema`) or, with
 `SNODRA_STORE_INIT_SCHEMA=false`, checks it (`CheckSchema`); a failure fails `Start`. A store that also implements
@@ -634,11 +852,27 @@ nor rolled back keeps its write reservations until the process ends; commit or r
 
 The add-on's own errors wrap these, so `errors.Is` works across the stores.
 
-## Not in the Go library yet
+## Limits and differences
 
-The saga runtime and the external-call adapter (feature level 4) are not in the Go library: a service cannot yet define
-a saga or an idempotent command handler. Their store ports — the saga records and the external-call records — are
-implemented on `main`, unreleased, by the memory store and both official stores, which pass the eleven level-4 store
-checks ([Testing](/docs/messaging/go/testing/#levels-3-and-4)). The library has no event browser either, so its
-event-store add-ons declare no `browse` capability. For sagas today, use the
-[Kotlin](/docs/messaging/kotlin/) or [Rust](/docs/messaging/rust/) library.
+The library is at feature level 4, with these documented limits:
+
+- **No event browser.** Its event-store add-ons declare no `browse` capability, and its event-store kit omits the four
+  positive `browse` checks while running `no_browser_without_capability`.
+- **No permanent local `NO_HANDLER`.** Go has no hubless service mode (`New` requires a hub), so a command type the
+  service does not handle goes to the hub; a hub's `NO_HANDLER` is transient and ends as `EXHAUSTED`. The
+  `NO_HANDLER` notice reason is kept for records written by another library.
+- **The adapter key is the header only.** There is no typed key expression like Kotlin's
+  `@IdempotentHandler(key = ...)`; a key derived from the message must be set as `idempotency-key` by the caller.
+- **An adapter panic is an unknown outcome.** The record is settled `UNKNOWN` and the caller gets the
+  unknown-outcome marker, not Kotlin's `FAILED`; the call may have happened.
+- **Commands only.** `HandleIdempotentCommand` is the idempotent adapter; there is no idempotent event-handler adapter.
+- **No saga or external-call metrics.** The telemetry interface has no counters for them; the outcomes are in the
+  store and the logs. The core otherwise keeps the Kotlin and Rust metric names.
+- **No local admin API for parked saga events.** They are in the message store's `saga_failures` records; the
+  Go library has no `SagaFailures` list/retry/discard helper like Kotlin's or Rust's.
+- **The level-4 clocks are fixed.** The saga stage, relay, deadline scheduler and external-call lease use the
+  reference values, with no `SNODRA_*` variable or option yet ([Configuration](/docs/messaging/go/configuration/#sagas-deadlines-and-external-calls)).
+- **Leases need synchronised clocks.** The dispatch lease, the deadline claim and the external-call lease compare one
+  instance's timestamp with another's; keep the clocks in step.
+
+For a language-specific API, see the [Kotlin](/docs/messaging/kotlin/) and [Rust](/docs/messaging/rust/) pages.

@@ -9,7 +9,7 @@ add-ons: the core library ships neither, so you choose the infrastructure you al
 |---|---|---|---|
 | [Kafka event store](/docs/add-ons/kafka-event-store/) | event store | `snodra-messaging-kafka`, `snodra-messaging-go/kafka` | Events, in ordered partitions |
 | [RabbitMQ Streams event store](/docs/add-ons/rabbitmq-streams-event-store/) | event store | `snodra-messaging-rabbitmq`, `snodra-messaging-go/rabbitmq` | Events, in partitioned streams |
-| [MongoDB message store](/docs/add-ons/mongodb-message-store/) | message store | `snodra-messaging-mongo`, `snodra-messaging-go/mongo` | Outbox, markers, dead letters, sagas, processor control |
+| [MongoDB message store](/docs/add-ons/mongodb-message-store/) | message store | `snodra-messaging-mongo`, `snodra-messaging-go/mongo` | Outbox, markers, dead letters, external calls, sagas, processor control |
 | [SQL message store](/docs/add-ons/sql-message-store/) | message store | `snodra-messaging-jdbc` (Kotlin), `snodra-messaging-sqlx` (Rust), `snodra-messaging-go/sql` (Go), `snodra-messaging-sql` (Python) | The same, in PostgreSQL or MySQL tables |
 
 ## Two choices, one of each

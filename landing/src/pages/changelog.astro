@@ -6,7 +6,7 @@ import { releases, accentClasses } from "../data/releases";
 
 <Base
   title="Changelog — Snodra"
-  description="Every Snodra release: the server, the Kotlin and Rust libraries, the event browser and the conformance suite."
+  description="Every Snodra release: the server, the client libraries, the event browser and the conformance suite."
   ogType="website"
 >
   <section class="relative overflow-hidden pb-10 pt-32 sm:pt-40">
@@ -30,7 +30,7 @@ import { releases, accentClasses } from "../data/releases";
           </h1>
         </div>
         <p class="max-w-md text-pretty text-[0.96rem] leading-relaxed text-muted lg:justify-self-end">
-          The server, the Kotlin and Rust libraries, the event browser and the conformance suite
+          The server, the client libraries, the event browser and the conformance suite
           release together. Every tag is built by CI and attached to a GitHub release.
         </p>
       </div>
@@ -72,7 +72,7 @@ import { releases, accentClasses } from "../data/releases";
         }
       </div>
 
-      <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <a
           href="https://github.com/snodra/snodra-server/releases"
           class="group rounded-xl border border-line bg-white/[0.025] p-5 transition-colors hover:border-primary/35"
@@ -110,15 +110,27 @@ import { releases, accentClasses } from "../data/releases";
           </span>
         </a>
         <a
-          href="https://github.com/snodra/snodra-messaging-go/releases/tag/v0.1.1"
+          href="https://github.com/snodra/snodra-messaging-go/releases/tag/v0.7.0"
           class="group rounded-xl border border-line bg-white/[0.025] p-5 transition-colors hover:border-primary/35"
           rel="noopener"
         >
           <p class="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-dim">Go</p>
           <p class="mt-2 text-sm font-medium text-white">Go module</p>
-          <p class="mt-1 text-[0.76rem] text-muted">Commands and queries at feature level 1.</p>
+          <p class="mt-1 text-[0.76rem] text-muted">Feature level 4, with sagas, deadlines and external calls.</p>
           <span class="mt-3 inline-flex items-center gap-1 text-[0.74rem] text-white/80 group-hover:text-white">
             Release notes <Icon name="arrow-up-right" size={11} />
+          </span>
+        </a>
+        <a
+          href="https://pypi.org/project/snodra-messaging/"
+          class="group rounded-xl border border-line bg-white/[0.025] p-5 transition-colors hover:border-primary/35"
+          rel="noopener"
+        >
+          <p class="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-dim">Python</p>
+          <p class="mt-2 text-sm font-medium text-white">PyPI</p>
+          <p class="mt-1 text-[0.76rem] text-muted">Six distributions at 0.8.0, feature level 4.</p>
+          <span class="mt-3 inline-flex items-center gap-1 text-[0.74rem] text-white/80 group-hover:text-white">
+            PyPI <Icon name="arrow-up-right" size={11} />
           </span>
         </a>
       </div>

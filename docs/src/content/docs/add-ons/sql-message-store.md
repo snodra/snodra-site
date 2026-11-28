@@ -12,8 +12,8 @@ already owns a relational database and wants the outbox in the same transaction 
 |---|---|
 | Kotlin | `com.damoreira.snodra:snodra-messaging-jdbc:0.6.1` |
 | Rust | `snodra-messaging-sqlx = "0.8"`, with feature `postgres` or `mysql` |
-| Go | `github.com/snodra/snodra-messaging-go/sql` (`go get github.com/snodra/snodra-messaging-go/sql@v0.6.0`) |
-| Python | `snodra-messaging-sql` (`pip install snodra-messaging-sql==0.7.0`) |
+| Go | `github.com/snodra/snodra-messaging-go/sql` (`go get github.com/snodra/snodra-messaging-go/sql@v0.7.0`) |
+| Python | `snodra-messaging-sql` (`pip install snodra-messaging-sql==0.8.0`) |
 
 The Kotlin module runs on the application's `DataSource` through Spring's `JdbcClient`; it needs at
 least two connections in the pool. The Rust crate runs on `sqlx` and takes your pool. The Go module
@@ -104,10 +104,10 @@ every add-on and checked against its published SHA-256.
   rollback sends nothing and a commit wakes the relay at once.
 - **No silent truncation.** A missing STRICT mode, an old server, MariaDB or a one-connection pool
   fails the startup with a message naming what is supported.
-- **Level 3 ports, and the level-4 store ports on `main`.** The Go (0.6.0) and Python (0.7.0) releases implement the
-  outbox, the processed-event markers, the dead letters and the processor control. On `main`, unreleased, the memory,
-  SQL and MongoDB stores also implement the external-call and saga ports and pass the eleven level-4 store checks; the
-  saga runtime and the external-call adapter are not in the libraries yet.
+- **All ports through level 4.** The Go (0.7.0) and Python (0.8.0) releases implement the outbox, the processed-event
+  markers, the dead letters, the processor control, the external-call records and the saga records, and pass the eleven
+  level-4 store checks. The saga runtime and the idempotent external-call adapter are part of both libraries; their
+  records are the shared tables listed above.
 
 The schema files are versioned (`V1__snodra.sql`) and the schema is applied once at startup unless
 the service runs its own migration. The Go store embeds the published files and checks their SHA-256
@@ -122,8 +122,8 @@ apply V1 once.
 | Processed events | yes | yes | yes | yes |
 | Dead letters | yes | yes | yes (0.6.0) | yes (0.7.0) |
 | Processor control | yes | yes | yes (0.6.0) | yes (0.7.0) |
-| External calls | yes | yes | level 4, on `main`, unreleased | level 4, on `main`, unreleased |
-| Sagas | yes | yes | level 4, on `main`, unreleased | level 4, on `main`, unreleased |
+| External calls | yes | yes | yes (0.7.0) | yes (0.8.0) |
+| Sagas | yes | yes | yes (0.7.0) | yes (0.8.0) |
 
 ## Read next
 

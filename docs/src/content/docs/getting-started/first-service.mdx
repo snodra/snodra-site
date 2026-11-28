@@ -6,8 +6,8 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 This walkthrough connects one service to a running server and sends it a command. It links the
 existing quickstarts for the code instead of repeating them: the Kotlin, Rust, Go and Python pages are the
-reference for handlers and buses. The Go and Python libraries are at feature level 3: commands, queries and
-events, plus processor status, control, reset and replay and dead letters; sagas are Kotlin and Rust only.
+reference for handlers and buses. All four libraries are at feature level 4: commands, queries,
+events, processor status, control, reset and replay, dead letters, sagas and idempotent external calls.
 
 ## Before you start
 
@@ -62,8 +62,8 @@ export SNODRA_SERVER_ADDRESS=static://localhost:7000
 
 Follow [the Go quick start](/docs/messaging/go/quickstart/) through the message types and the handlers. A
 function passed to `snodra.HandleCommand` or `snodra.HandleQuery` is the handler; `app.Run` opens the hub stream and
-registers the types. Events, and their processors, need one event store and one message store; the quickstart adds
-them.
+registers the types. Events, their processors and sagas need one event store and one message store; the quickstart
+adds them.
 ```sh
 export SNODRA_SERVICE_NAME=orders
 export SNODRA_SERVER_ADDRESS=static://localhost:7000
@@ -75,8 +75,8 @@ export SNODRA_SERVER_ADDRESS=static://localhost:7000
 
 Follow [the Python quick start](/docs/messaging/python/quickstart/) through the message types and the handlers. A
 function decorated with `@app.command_handler` or `@app.query_handler` is the handler; `app.run()` opens the hub stream
-and registers the types. Events, and their processors, need one event store and one message store; the quickstart adds
-them.
+and registers the types. Events, their processors and sagas need one event store and one message store; the quickstart
+adds them.
 ```sh
 export SNODRA_SERVICE_NAME=orders
 export SNODRA_SERVER_ADDRESS=static://localhost:7000
@@ -118,7 +118,7 @@ store's settings in [Add-ons](/docs/add-ons/).
 |---|---|
 | Add authentication | [Authentication](/docs/server/configuration/) |
 | Choose the stores | [Add-ons](/docs/add-ons/) |
-| Add a saga | [Sagas](/docs/concepts/sagas/), then [Rust sagas](/docs/messaging/rust/sagas/) |
+| Add a saga | [Sagas](/docs/concepts/sagas/), then [Go](/docs/messaging/go/api/#sagas-and-deadlines), [Python](/docs/messaging/python/api/#sagas-and-deadlines) or [Rust sagas](/docs/messaging/rust/sagas/) |
 | Test the service | [Testing](/docs/operations/testing/) |
 | Run it in a container | [Containers](/docs/integrations/containers/) |
 | Tune queues and deadlines | [Tuning](/docs/operations/tuning/) |

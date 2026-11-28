@@ -5,7 +5,7 @@ export type Release = {
   iso: string;
   summary: string;
   href: string;
-  accent: "emerald" | "pink" | "teal" | "slate" | "lime" | "sky";
+  accent: "emerald" | "pink" | "teal" | "slate" | "lime" | "sky" | "amber";
 };
 
 export const releases: Release[] = [
@@ -41,12 +41,12 @@ export const releases: Release[] = [
   },
   {
     project: "Snodra Event Browser",
-    version: "0.3.2",
+    version: "0.3.3",
     date: "24 Nov 2026",
     iso: "2026-11-24",
     summary:
-      "The read-only event browser add-on at 0.3.2, aligned with the 0.6 server and shipped as an image and per-platform binaries.",
-    href: "https://github.com/snodra/snodra-event-browser/releases/tag/v0.3.2",
+      "The read-only event browser add-on at 0.3.3, aligned with the 0.6 server and shipped as an image and per-platform binaries.",
+    href: "https://github.com/snodra/snodra-event-browser/releases/tag/v0.3.3",
     accent: "slate",
   },
   {
@@ -61,13 +61,23 @@ export const releases: Release[] = [
   },
   {
     project: "Snodra Messaging for Go",
-    version: "0.1.1",
-    date: "24 Nov 2026",
-    iso: "2026-11-24",
+    version: "0.7.0",
+    date: "28 Nov 2026",
+    iso: "2026-11-28",
     summary:
-      "The Go client at 0.1.1: commands and queries at feature level 1, over the same protocol as Kotlin and Rust.",
-    href: "https://github.com/snodra/snodra-messaging-go/releases/tag/v0.1.1",
+      "The Go client and its five modules at 0.7.0: feature level 4, with sagas, deadlines, idempotent external calls and the level-4 store ports.",
+    href: "https://github.com/snodra/snodra-messaging-go/releases/tag/v0.7.0",
     accent: "sky",
+  },
+  {
+    project: "Snodra Messaging for Python",
+    version: "0.8.0",
+    date: "28 Nov 2026",
+    iso: "2026-11-28",
+    summary:
+      "The Python client and its five packages at 0.8.0: feature level 4, with sagas, deadlines, idempotent external calls and the level-4 store ports.",
+    href: "https://github.com/snodra/snodra-messaging-python/releases/tag/v0.8.0",
+    accent: "amber",
   },
 ];
 
@@ -78,4 +88,5 @@ export const accentClasses: Record<Release["accent"], { text: string; dot: strin
   slate: { text: "text-slate-300", dot: "bg-slate-400", ring: "border-slate-400/25 bg-slate-400/10" },
   lime: { text: "text-lime-300", dot: "bg-lime-400", ring: "border-lime-400/25 bg-lime-400/10" },
   sky: { text: "text-sky-300", dot: "bg-sky-400", ring: "border-sky-400/25 bg-sky-400/10" },
+  amber: { text: "text-amber-300", dot: "bg-amber-400", ring: "border-amber-400/25 bg-amber-400/10" },
 };

@@ -18,16 +18,17 @@ const products = [
   },
   {
     name: "Snodra Messaging",
-    tagline: "Kotlin, Rust and Go, one wire protocol",
+    tagline: "Kotlin, Rust, Go and Python, one wire protocol",
     icon: "/brand/snodra-messaging.svg",
     tint: "from-pink-400/20",
     accent: "text-pink-300",
-    copy: "Spring Boot starter, Rust builder and Go client for the buses, handlers, outbox, sagas and processors. The Go client is at feature level 1; Python is in progress.",
+    copy: "Spring Boot starter, Rust builder, Go module and Python package for the buses, handlers, outbox, sagas and processors. All four clients are at feature level 4.",
     points: ["Outbox built into the store", "Sagas with deadlines", "Testing kits and in-memory stores"],
     links: [
       { label: "Kotlin", href: "https://github.com/snodra/snodra-messaging" },
       { label: "Rust", href: "https://github.com/snodra/snodra-messaging-rs" },
       { label: "Go", href: "https://github.com/snodra/snodra-messaging-go" },
+      { label: "Python", href: "https://github.com/snodra/snodra-messaging-python" },
     ],
     get: "com.damoreira.snodra:snodra-messaging:0.6.1",
   },
@@ -57,7 +58,7 @@ const products = [
       { label: "Repository", href: "https://github.com/snodra/snodra-event-browser" },
       { label: "Docs", href: "/docs/tools/event-browser/" },
     ],
-    get: "docker run snodra/snodra-event-browser:0.3.2",
+    get: "docker run snodra/snodra-event-browser:0.3.3",
   },
 ];
 ---

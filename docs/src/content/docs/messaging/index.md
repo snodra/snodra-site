@@ -5,10 +5,10 @@ title: "The messaging model"
 This document specifies the messaging layer in Snodra: the Kotlin starter
 `snodra-messaging`, the Rust crate `snodra-messaging`, the wire format, the Kafka layout, the
 outbox, and the hub protocol. The Go library, [snodra-messaging-go](/docs/messaging/go/), and the Python
-library, [snodra-messaging-python](/docs/messaging/python/), claim feature level 3 (commands, queries, events and
-processors, with their status, control, reset and replay, and dead letters). The saga runtime and the external-call
-adapter (level 4) are in Kotlin and Rust only; the Go and Python stores keep the saga and external-call records on
-`main`, unreleased, but neither library has the runtime or the adapter yet.
+library, [snodra-messaging-python](/docs/messaging/python/), also claim feature level 4: commands, queries, events and
+processors, plus sagas, deadlines and idempotent external calls. All four libraries run the same saga model on the same
+store records. The Go and Python libraries have no event browser, so their event-store add-ons declare no `browse`
+capability.
 
 ## The model in one paragraph
 
@@ -614,13 +614,16 @@ left subscribed afterwards, and the initial result for an unknown name (see
 A **saga** is a long-running process that reacts to events, keeps its own state, sends commands and events, waits, and
 ends. It is the saga model: `@Saga`, `@StartSaga`, `@SagaEventHandler`, `@EndSaga`, deadlines, built for what Snodra
 needs it for: driving **integrations with external systems**, that is asking an outside system to do something, waiting
-for its answer and handling the answer that never comes. Sagas live in the Kotlin library, inside each service, against
-that service's MongoDB and Kafka consumer; the hub only carries the commands a saga sends to another service. Service
-authors start with the "Sagas" section of the
+for its answer and handling the answer that never comes. Sagas live in the service's library, inside each service,
+against that service's message store and event-store consumer; the hub only carries the commands a saga sends to
+another service. Service authors start with the "Sagas" section of the
 `snodra-messaging` README and the sandbox's postcard saga (`snodra-messaging/examples/README.md`).
 
-Kotlin and Rust both have it, on the same collections. The sections below describe the model with the
-Kotlin API; Rust gives the crate's API next to it and what differs.
+Kotlin, Rust, Go and Python all have it, on the same collections and document shapes. The sections below describe the
+model with the Kotlin API; Rust gives the crate's API next to it and what differs, and Go and Python have their own
+model pages ([Go](/docs/messaging/go/api/#sagas-and-deadlines),
+[Python](/docs/messaging/python/api/#sagas-and-deadlines)). The same delivery, dispatch and command-failure rules apply
+to all four; the Go and Python pages note their language-specific limits.
 
 ### Programming model
 
@@ -766,7 +769,9 @@ dispatched **locally** (never published to `snodra.events`; dedupe id `failed:<s
 `@SagaEventHandler(associationProperty = "sagaId")`. The runtime routes it to the saga instance that sent the command **by its
 id** (load by `sagaId`, check that the type has a `SagaCommandFailed` handler): no association is needed, and a saga that
 also associated itself with `sagaId` keeps working. When the saga type has no such handler or the saga has ended, and no
-ordinary `@EventHandler` took the event either, it is logged at error and counted (`snodra.saga.command.failures`).
+ordinary `@EventHandler` took the event either, it is logged at error (and counted in
+`snodra.saga.command.failures` in Kotlin). In
+Go the handler is `CommandFailed`, in Python `@saga_command_failed`; both route by the saga id with no association.
 
 | `reason` | When |
 |---|---|
@@ -805,7 +810,9 @@ local). It is a general option: extra request headers, never the reserved `autho
 ### Deadlines
 
 `DeadlineManager.schedule(after | at, name, payload)` records a deadline in the saga's transaction; `cancel(id)` and
-`cancelAll(name)` mark it `CANCELLED` in the same one. A deadline of an ended saga is cancelled (when the saga ends, and again
+`cancelAll(name)` mark it `CANCELLED` in the same one. In Go these are `SagaContext.Schedule`/`ScheduleAt`,
+`CancelDeadline` and `CancelDeadlines`; in Python `ctx.schedule`, `ctx.cancel_deadline` and `ctx.cancel_deadlines`.
+A deadline of an ended saga is cancelled (when the saga ends, and again
 if one is found due later). The payload may be any object the library's codec can write; it is stored as JSON text with its
 type name (the class's `@MessageType` name, else its class name) and decoded to the first parameter of the `@DeadlineHandler`.
 
@@ -966,6 +973,11 @@ else the startup fails naming the key, also in a service with no saga):
 | `external.kafka.sources.<name>.group-id` | `<service-name>.external.<name>` | Consumer group of the source |
 | `external.kafka.sources.<name>.properties.*` | none | Extra consumer properties (for example `security.protocol`); bootstrap servers, group id, deserializers and auto-commit are fixed by the library (an entry for one fails the startup). `auto.offset.reset` is `earliest` unless set here |
 
+The table is Kotlin's properties (Rust maps them to `SNODRA_*` variables, in [Rust sagas](/docs/messaging/rust/sagas/)).
+Go and Python have the same behaviour with fixed timings and no settings yet; the values are on their configuration
+pages ([Go](/docs/messaging/go/configuration/#sagas-deadlines-and-external-calls),
+[Python](/docs/messaging/python/configuration/#sagas-deadlines-and-external-calls)).
+
 A source's record retries use `kafka.consumer.max-attempts` (5) with a fixed 1 s wait. Not every knob is a property: the relay's
 backoff multiplier (2), parallelism (4 sagas at a time) and batch size (100 sagas per poll), the deadline scheduler's batch
 size (100 per poll), the saga retry's backoff, and the gauge sampler's interval (15 s) are constants of the library; every
@@ -1037,7 +1049,7 @@ example.
 
 ## Event processors and dead letters
 
-Built in both libraries and on the hub; the hub side:
+Built in every official library and on the hub; the hub side:
 [Event processors](/docs/server/event-processors/).
 
 - **Named processors.** `@ProcessingGroup("orders")` on a handler class (Kotlin) or
@@ -1075,13 +1087,13 @@ Built in both libraries and on the hub; the hub side:
 
 ## Processor control
 
-Built in both libraries and on the hub; the hub side, its routes, credentials and curl examples:
+Built in every official library and on the hub; the hub side, its routes, credentials and curl examples:
 [Processor control](/docs/server/processor-control/).
 
 - **The hub asks, the service keeps the state.** The hub's dashboard and HTTP API (`/api/v1/services/{service}/processors/
   {processor}/...`, with the write token `SNODRA_SERVER_DASHBOARD_WRITE_TOKEN` or an ACL credential with `control = true`;
-  the dashboard token only reads) send a `ControlRequest` to every instance whose status lists the processor. The state lives in the service's MongoDB, collection
-  `processor_control`, one document per processor; every instance applies it before its consumer's first poll and every
+  the dashboard token only reads) send a `ControlRequest` to every instance whose status lists the processor. The state lives in the service's message store, the
+  `processor_control` collection in MongoDB or the `snodra_processor_control` table in SQL, one document or row per processor; every instance applies it before its consumer's first poll and every
   5 s, so a pause outlives every hub and restart and reaches instances that start later. Nothing to configure in either
   library.
 - **Pause and resume** stop and restart consumption on every instance without leaving the consumer group (no
@@ -1330,7 +1342,7 @@ before the offset is committed; see [Delivery and consistency](#delivery-and-con
 
 > **Builder call (first version):** no dead-letter topic; failed records are visible as metrics
 > and logs in Grafana. **Reversed since**
-> (both libraries): a record that exhausts its attempts is parked as a dead
+> (all four libraries): a record that exhausts its attempts is parked as a dead
 > letter by default, see [Event processors and dead letters](#event-processors-and-dead-letters).
 
 ## Hub protocol walkthrough

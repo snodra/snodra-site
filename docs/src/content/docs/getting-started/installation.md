@@ -119,19 +119,19 @@ Next: [the Rust quick start](/docs/messaging/rust/quickstart/), then
 
 ## Go
 
-The Go library is pre-1.0 and at feature level 3: commands and queries in every query mode, events through the outbox,
-event stores and processors, and the level-3 processor status, control, reset and replay and dead letters; no sagas
-yet. The release is 0.6.0 and needs Go 1.26 or later:
+The Go library is pre-1.0 and at feature level 4: commands and queries in every query mode, events through the outbox,
+event stores and processors, the level-3 processor status, control, reset and replay and dead letters, and the level-4
+sagas, deadlines and idempotent external calls. The release is 0.7.0 and needs Go 1.26 or later:
 
 ```sh
-go get github.com/snodra/snodra-messaging-go@v0.6.0
-go get github.com/snodra/snodra-messaging-go/observability@v0.6.0   # optional: OpenTelemetry metrics and traces
+go get github.com/snodra/snodra-messaging-go@v0.7.0
+go get github.com/snodra/snodra-messaging-go/observability@v0.7.0   # optional: OpenTelemetry metrics and traces
 
 # One event store and one message store, when the service publishes or handles events:
-go get github.com/snodra/snodra-messaging-go/kafka@v0.6.0           # Kafka event store
-go get github.com/snodra/snodra-messaging-go/rabbitmq@v0.6.0        # RabbitMQ Streams event store
-go get github.com/snodra/snodra-messaging-go/mongo@v0.6.0           # MongoDB message store
-go get github.com/snodra/snodra-messaging-go/sql@v0.6.0             # SQL message store (PostgreSQL, MySQL)
+go get github.com/snodra/snodra-messaging-go/kafka@v0.7.0           # Kafka event store
+go get github.com/snodra/snodra-messaging-go/rabbitmq@v0.7.0        # RabbitMQ Streams event store
+go get github.com/snodra/snodra-messaging-go/mongo@v0.7.0           # MongoDB message store
+go get github.com/snodra/snodra-messaging-go/sql@v0.7.0             # SQL message store (PostgreSQL, MySQL)
 ```
 
 The package is named `snodra`; import it as `snodra "github.com/snodra/snodra-messaging-go"`. The core module depends
@@ -142,19 +142,19 @@ Next: [the Go quick start](/docs/messaging/go/quickstart/), then
 
 ## Python
 
-The Python library is pre-1.0 and at feature level 3: commands and queries in every query mode, events through the
-outbox, event stores and processors, and the level-3 processor status, control, reset and replay and dead letters; no
-sagas yet. The release is 0.7.0 and needs Python 3.12 or later:
+The Python library is pre-1.0 and at feature level 4: commands and queries in every query mode, events through the
+outbox, event stores and processors, the level-3 processor status, control, reset and replay and dead letters, and the
+level-4 sagas, deadlines and idempotent external calls. The release is 0.8.0 and needs Python 3.12 or later:
 
 ```sh
-pip install snodra-messaging==0.7.0
-pip install snodra-messaging-observability==0.7.0   # optional: OpenTelemetry metrics and traces
+pip install snodra-messaging==0.8.0
+pip install snodra-messaging-observability==0.8.0   # optional: OpenTelemetry metrics and traces
 
 # One event store and one message store, when the service publishes or handles events:
-pip install snodra-messaging-kafka==0.7.0           # Kafka event store
-pip install snodra-messaging-rabbitmq==0.7.0        # RabbitMQ Streams event store
-pip install snodra-messaging-mongo==0.7.0           # MongoDB message store
-pip install snodra-messaging-sql==0.7.0             # SQL message store (PostgreSQL, MySQL)
+pip install snodra-messaging-kafka==0.8.0           # Kafka event store
+pip install snodra-messaging-rabbitmq==0.8.0        # RabbitMQ Streams event store
+pip install snodra-messaging-mongo==0.8.0           # MongoDB message store
+pip install snodra-messaging-sql==0.8.0             # SQL message store (PostgreSQL, MySQL)
 ```
 
 The package is named `snodra`. The core package depends only on `grpcio`, `protobuf` and `cryptography`. Each add-on is a

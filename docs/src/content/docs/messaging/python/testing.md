@@ -11,7 +11,14 @@ or `@app.event_handler`) so that a test can call it directly with `pytest`.
 
 An event handler is tested the same way. A test that wants the outbox and the markers can use the in-memory stores:
 `snodra.MemoryStore()` and `snodra.MemoryEventStore()` are complete stores with no infrastructure, for tests only. They
-are not durable, and `start` warns when one is active.
+are not durable, and `start` warns when one is active. `MemoryStore` implements the saga and external-call ports too,
+so a test can drive `store.sagas` and `store.external` directly.
+
+A saga is a class with decorated handlers; test it by registering it on an app with the two in-memory stores, feeding
+events through the `default` processor and letting the deadline scheduler run (the level-4 clocks are fixed), as
+`tests/test_saga_runtime.py` does. An idempotent adapter is tested like any command handler, with an
+`idempotency-key` header and the same in-memory store; `tests/test_external.py` shows the record, replay, takeover and
+marker cases. There is no exported saga fixture in Python: the test drives the public `@app.saga` API and the app.
 
 To test the wiring against a real hub, run the hub image (`snodra/snodra-server`, see the
 [Hub quick start](/docs/server/quickstart/)) and point the service at it with `SNODRA_SERVER_ADDRESS`.
@@ -147,7 +154,8 @@ the named entry point; `run_store_conformance(..., level=3)` runs the nine level
 dead-letter and processor-control checks (`MESSAGE_STORE_L3_CHECKS`), with `run_store_l3_conformance` as the named entry
 point. The
 library's own tests prove the status, the control plane, the reset state machine and the three dead-letter modes; the
-runner still proves level 1 only. The store kit now carries the eleven level-4 checks too:
-`run_store_conformance(..., level=4)` and `run_store_l4_conformance` run all 28 on the memory store and both official
-stores on `main`, unreleased. The library still claims level 3: the saga runtime and the external-call adapter, and the
-kits that prove them, are not there yet.
+runner still proves level 1 only. Level 4 is proved by the eleven level-4 store checks:
+`run_store_conformance(..., level=4)` and `run_store_l4_conformance` run all 28
+(`MESSAGE_STORE_CHECKS`, `MESSAGE_STORE_L3_CHECKS` and `MESSAGE_STORE_L4_CHECKS`), on the memory store and both
+official stores in 0.8.0. The library's own tests add the saga runtime (stage 2, the dispatch relay, the notice and
+deadlines) and the idempotent adapter (the record lifecycle, takeover and the two markers), on the in-memory store.

@@ -45,6 +45,9 @@ OrderPlaced ──▶ saga ──▶ ReserveStock (command)
 - Kotlin: [Kotlin API](/docs/messaging/kotlin/api/) and the saga fixture in
   [Testing](/docs/operations/testing/).
 - Rust: [Sagas](/docs/messaging/rust/sagas/).
+- Go: [Go API](/docs/messaging/go/api/#sagas-and-deadlines) and [Go quick start](/docs/messaging/go/quickstart/).
+- Python: [Python API](/docs/messaging/python/api/#sagas-and-deadlines) and
+  [Python quick start](/docs/messaging/python/quickstart/).
 - The store that holds saga state: [MongoDB message store](/docs/add-ons/mongodb-message-store/) or
   [SQL message store](/docs/add-ons/sql-message-store/).
 - What survives a failure: [Consistency](/docs/concepts/consistency/).

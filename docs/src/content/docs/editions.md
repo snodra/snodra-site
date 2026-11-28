@@ -10,11 +10,11 @@ open source and stays that way. The paid side is support and the enterprise add-
 Free, for everyone:
 
 - **Snodra Server**: commands, queries, every query mode, several servers, the dashboard, processor control.
-- **Go and Python libraries** (feature level 3): commands, queries, events, outbox, consumer, named processors with
-  their status, control, reset and replay, dead letters and the add-on stores.
-- **Kotlin and Rust libraries** (feature level 4): the same model, the same wire, plus sagas, external calls, and a
-  local dead-letter admin API (`DeadLetters` / `app.dead_letters()`; Go and Python list, retry and discard their dead
-  letters through the hub at level 3).
+- **Go and Python libraries** (feature level 4): commands, queries, events, outbox, consumer, named processors with
+  their status, control, reset and replay, dead letters, sagas, deadlines, idempotent external calls and the add-on
+  stores.
+- **Kotlin and Rust libraries** (feature level 4): the same model, the same wire, and a local dead-letter admin API
+  (`DeadLetters` / `app.dead_letters()`; Go and Python list, retry and discard their dead letters through the hub).
 - **Snodra Event Browser**: the dashboard's events, records, tails and lag.
 - **Snodra Conformance**: the level-1 conformance runner, so anyone can check a new client library.
 - **Documentation, examples and the community issue tracker.**

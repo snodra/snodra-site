@@ -2,20 +2,20 @@
 title: "Go quick start"
 ---
 
-The Go library is pre-1.0 and at feature level 3 (`v0.6.0`): the API may still change between minor versions. It needs
+The Go library is pre-1.0 and at feature level 4 (`v0.7.0`): the API may still change between minor versions. It needs
 Go 1.26 or later.
 
 ## Dependencies
 
 ```sh
-go get github.com/snodra/snodra-messaging-go@v0.6.0
-go get github.com/snodra/snodra-messaging-go/observability@v0.6.0   # optional: OpenTelemetry
+go get github.com/snodra/snodra-messaging-go@v0.7.0
+go get github.com/snodra/snodra-messaging-go/observability@v0.7.0   # optional: OpenTelemetry
 
 # One event store and one message store, when the service publishes or handles events:
-go get github.com/snodra/snodra-messaging-go/kafka@v0.6.0           # Kafka event store
-go get github.com/snodra/snodra-messaging-go/rabbitmq@v0.6.0        # RabbitMQ Streams event store
-go get github.com/snodra/snodra-messaging-go/mongo@v0.6.0           # MongoDB message store
-go get github.com/snodra/snodra-messaging-go/sql@v0.6.0             # SQL message store (PostgreSQL, MySQL)
+go get github.com/snodra/snodra-messaging-go/kafka@v0.7.0           # Kafka event store
+go get github.com/snodra/snodra-messaging-go/rabbitmq@v0.7.0        # RabbitMQ Streams event store
+go get github.com/snodra/snodra-messaging-go/mongo@v0.7.0           # MongoDB message store
+go get github.com/snodra/snodra-messaging-go/sql@v0.7.0             # SQL message store (PostgreSQL, MySQL)
 ```
 
 The package is named `snodra`; the examples import it as `snodra "github.com/snodra/snodra-messaging-go"`.
@@ -215,6 +215,69 @@ next poll. A reset the hub does not finish (the hub died mid-way) is not carried
 instances release it and consume again by themselves. The status, the control protocol and every outcome are in
 [API](/docs/messaging/go/api/#processor-control) and [Dead letters](/docs/messaging/go/api/#dead-letters).
 
+## Level 4: a saga and an external call
+
+A saga is a long-running process that remembers state between events. It runs in the `default` processor, after the
+event handlers, and needs one event store and one message store even when the service has no event handler. Register
+it with `HandleSaga`; a handler records commands, events and deadlines on its `SagaContext`, and the relay sends them
+after the transaction commits:
+
+```go
+type OrderSagaState struct {
+	OrderID string `json:"orderId,omitempty"`
+	Step    string `json:"step,omitempty"`
+}
+
+err := snodra.HandleSaga(app, "orders", func(d *snodra.SagaDefinition[OrderSagaState]) {
+	d.StartOn(snodra.StartedOn(
+		snodra.Associate("orderId", func(e OrderPlaced) string { return e.OrderID }),
+		func(ctx context.Context, saga *snodra.SagaContext, state *OrderSagaState, e OrderPlaced) error {
+			state.OrderID = e.OrderID
+			if _, err := saga.Schedule(15*time.Minute, "charge-timeout", nil); err != nil {
+				return err
+			}
+			return saga.Send(ChargeCard{OrderID: e.OrderID}, e.OrderID)
+		}))
+	d.OnDeadline(snodra.Deadline("charge-timeout",
+		func(ctx context.Context, saga *snodra.SagaContext, state *OrderSagaState, _ any) error {
+			state.Step = "timed-out"
+			return saga.Publish(OrderPaymentFailed{OrderID: state.OrderID}, state.OrderID)
+		}).Ending())
+	d.OnCommandFailed(snodra.CommandFailed(
+		func(ctx context.Context, saga *snodra.SagaContext, state *OrderSagaState, failed snodra.SagaCommandFailed) error {
+			state.Step = string(failed.Reason)
+			return saga.Publish(OrderPaymentFailed{OrderID: state.OrderID}, state.OrderID)
+		}))
+})
+if err != nil {
+	return err
+}
+```
+
+Every handler of a command a saga sends must be idempotent by `idempotency-key`: the relay sends at least once. The
+external call itself belongs in an idempotent command handler, which records the call before its body runs:
+
+```go
+err = snodra.HandleIdempotentCommand(app, func(ctx context.Context, cmd ChargeCard) (ChargeReceipt, error) {
+	info, _ := snodra.MessageFrom(ctx)
+	receipt, err := gateway.Charge(ctx, cmd.OrderID, info.Headers["idempotency-key"])
+	switch {
+	case errors.Is(err, gateway.ErrUnavailable):
+		return ChargeReceipt{}, snodra.Retryable(err)       // nothing was charged
+	case errors.Is(err, gateway.ErrAmbiguous):
+		return ChargeReceipt{}, snodra.UnknownOutcome(err)  // it may have charged
+	case err != nil:
+		return ChargeReceipt{}, err
+	}
+	return receipt, nil
+}, snodra.ExternalIdempotent()) // the partner de-duplicates by the key
+```
+
+The model, the six `SagaCommandFailed` reasons, the dispatch rules and the record lifecycle are in
+[API](/docs/messaging/go/api/#sagas-and-deadlines) and
+[API](/docs/messaging/go/api/#idempotent-external-calls); the fixed level-4 clocks are in
+[Configuration](/docs/messaging/go/configuration/#sagas-deadlines-and-external-calls).
+
 ## Run it against a hub
 
 The hub is the `snodra/snodra-server` image (see the [Hub quick start](/docs/server/quickstart/)). Start one, then
@@ -234,6 +297,7 @@ add-on's own `FromEnv` and are listed in [Configuration](/docs/messaging/go/conf
 ## Next
 
 - [API](/docs/messaging/go/api/): events, stores and processors, processor status and control, reset and replay, dead
-  letters, the other handlers, sending, the four query modes, errors, identity, lifecycle and telemetry.
+  letters, sagas and deadlines, idempotent external calls, the other handlers, sending, the four query modes, errors,
+  identity, lifecycle and telemetry.
 - [Configuration](/docs/messaging/go/configuration/): every `SNODRA_*` variable and every credential.
 - [Testing](/docs/messaging/go/testing/): testing handlers, the `snodratest` kits and the conformance runner.

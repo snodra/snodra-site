@@ -31,14 +31,14 @@ every query mode, credentials, several hubs), **2 Events**, **3 Processors**, **
 |---|---|---|---|---|
 | [snodra-messaging](/docs/messaging/kotlin/) ([releases](https://github.com/snodra/snodra-messaging/releases)) | Kotlin (Spring Boot starter) | Apache-2.0 | 4, implemented; level 1 proved by the runner | level 1 passes every check of the runner through `examples/conformance-service`; the event-store and message-store kits pass |
 | [snodra-messaging](/docs/messaging/rust/) ([releases](https://github.com/snodra/snodra-messaging-rs/releases)) | Rust | Apache-2.0 | 4, implemented; level 1 proved by the runner | level 1 passes every check of the runner through the runner's own reference service; the event-store and message-store kits pass |
-| [snodra-messaging-go](/docs/messaging/go/) ([releases](https://github.com/snodra/snodra-messaging-go/releases)) | Go | Apache-2.0 | 3, implemented; level 1 proved by the runner, levels 2 and 3 by the add-on kits and the library's own tests | level 1 passes every check of the runner through `examples/conformance-service`; the level-2 and level-3 event-store and message-store kits pass (the event-store kit omits the four positive `browse` checks and runs the no-browser check: no event browser) |
-| [snodra-messaging-python](/docs/messaging/python/) ([PyPI](https://pypi.org/project/snodra-messaging/)) | Python | Apache-2.0 | 3, implemented; level 1 proved by the runner, levels 2 and 3 by the add-on kits and the library's own tests | level 1 passes every check of the runner through `examples/conformance-service`; the level-2 and level-3 event-store and message-store kits pass (the event-store kit omits the four positive `browse` checks and runs the no-browser check: no event browser) |
+| [snodra-messaging-go](/docs/messaging/go/) ([releases](https://github.com/snodra/snodra-messaging-go/releases)) | Go | Apache-2.0 | 4, implemented; level 1 proved by the runner, levels 2 to 4 by the add-on kits and the library's own tests | level 1 passes every check of the runner through `examples/conformance-service`; the level-2 and level-3 event-store kit and the level-2 to level-4 message-store kit pass (the event-store kit omits the four positive `browse` checks and runs the no-browser check: no event browser) |
+| [snodra-messaging-python](/docs/messaging/python/) ([PyPI](https://pypi.org/project/snodra-messaging/)) | Python | Apache-2.0 | 4, implemented; level 1 proved by the runner, levels 2 to 4 by the add-on kits and the library's own tests | level 1 passes every check of the runner through `examples/conformance-service`; the level-2 and level-3 event-store kit and the level-2 to level-4 message-store kit pass (the event-store kit omits the four positive `browse` checks and runs the no-browser check: no event browser) |
 
 The Kotlin and Rust libraries are reference implementations of the same contract: a service on one is indistinguishable
 from a service on the other in front of the hub and the event store. The Go and Python libraries are pre-1.0 and
-implement level 3: commands and queries through the hub, events through the outbox and the event stores, and named
-processors with their status, control, leased reset and replay and dead letters. They have no sagas or external calls
-(level 4) and no event browser yet. The
+implement level 4: commands and queries through the hub, events through the outbox and the event stores, named
+processors with their status, control, leased reset and replay and dead letters, and sagas, deadlines and idempotent
+external calls. They have no event browser yet. The
 [conformance runner](/docs/library-authors/conformance/) ([releases](https://github.com/snodra/snodra-conformance/releases)) proves level 1
 for all four; levels 2 to 4 are proved by the add-on kits and, for the rules the runner does not check yet, each
 library's own tests.
@@ -52,10 +52,16 @@ Rust instance shared one Kafka consumer group and one RabbitMQ Streams consumer 
 stored offsets; dead letters of either were read by both; on PostgreSQL and MySQL each library checked the other's
 schema and relayed, marked, claimed and read the other's outbox entries, markers, sagas, deadlines, dead letters and
 processor control; on MongoDB the same, after the fixes for optional fields; and a chain of commands and events
-through one hub crossed the languages eight times with the same `traceparent` and correlation id. Not run: saga
-runtimes continuing a saga started in the other language, two languages as instances of one service through their
-real cores, and the Kotlin RabbitMQ Streams add-on on a cluster ([event-store-add-ons.md](/docs/library-authors/event-store-add-ons/#rabbitmq-streams-wire-rules)
+through one hub crossed the languages eight times with the same `traceparent` and correlation id. Not run for Kotlin and
+Rust: saga runtimes continuing a saga started in the other language, two languages as instances of one service through
+their real cores, and the Kotlin RabbitMQ Streams add-on on a cluster
+([event-store-add-ons.md](/docs/library-authors/event-store-add-ons/#rabbitmq-streams-wire-rules)
 has the cluster run of the Rust add-on).
+
+The Go and Python saga runtimes were later run on one shared store (PostgreSQL and MongoDB, 2026-11-28): a saga started
+by one library continued in the other, the dispatch lease was exclusive across languages, a deadline scheduled by one
+fired on the other, and a command given up in one produced its SagaCommandFailed notice in the other. Their store kits
+and processors were covered on the same shared stores by the earlier level-2 and level-3 interop runs.
 
 ## Community libraries
 

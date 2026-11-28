@@ -38,6 +38,8 @@ let app = stores.install(SnodraMessaging::builder(stores.config("orders")).await
 </Tabs>
 Both fixtures run the library's own runtime, so a passing saga test behaves like the real one. The
 in-memory buses do not commit or use credits; they are for unit tests, not for proving delivery.
+Go and Python have no exported saga fixture; their in-memory stores and the app drive a saga in a
+test ([Go testing](/docs/messaging/go/testing/), [Python testing](/docs/messaging/python/testing/)).
 
 ## A service against real infrastructure
 

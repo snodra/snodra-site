@@ -11,7 +11,14 @@ that a test can reach it.
 
 An event handler is tested the same way. A test that wants the outbox and the markers can use the in-memory stores:
 `snodra.NewMemoryMessageStore()` and `snodra.NewMemoryEventStore()` are complete stores with no infrastructure, for
-tests only. They are not durable, and `Start` warns when one is active.
+tests only. They are not durable, and `Start` warns when one is active. The in-memory message store implements the
+saga and external-call ports too, so a test can drive `store.Sagas()` and `store.ExternalCalls()` directly.
+
+A saga is a state type and a definition; test it by registering the definition on an app with the two in-memory
+stores, feeding events through the `default` processor and letting the deadline scheduler run (the level-4 clocks are
+fixed), as the library's `saga_test.go` does. An idempotent adapter is tested like any command handler, calling it with
+an `idempotency-key` header and the same in-memory store; `external_test.go` shows the record, replay and marker cases.
+There is no exported saga fixture in Go: the test drives the public `HandleSaga` API and the app.
 
 The library's own scripted hub, `internal/fakehub`, is an internal package: Go does not let another module import it.
 A service does not need it. To test the wiring against a real hub, run the hub image (`snodra/snodra-server`, see the
@@ -124,7 +131,8 @@ the outbox, the relay and the consumer. The checks and what each asserts are lis
 ## Levels 3 and 4
 
 Level 3 is proved by the kits above and by the library's own tests of the status, the control plane, the reset state
-machine and the three dead-letter modes; the runner still proves level 1 only. The message-store kit now carries the
-eleven level-4 checks, so `snodratest.MessageStore` runs all 28 on the memory store and both official stores on `main`,
-unreleased. The library still claims level 3: the saga runtime and the external-call adapter, and the kits that prove
-them, are not in the Go library yet.
+machine and the three dead-letter modes; the runner still proves level 1 only. The message-store kit carries all 28
+checks, so `snodratest.MessageStore` runs the nine level-2, eight level-3 and eleven level-4 checks on the memory store
+and both official stores in `v0.7.0`; `StoreCheckIDs()` lists them in the Rust kit's order. Level 4 is also proved by
+the library's own saga tests (stage 2, the dispatch relay, the notice and deadlines) and external-call tests (the
+record lifecycle, takeover and the two markers), which run on the in-memory store.
