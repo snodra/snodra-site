@@ -628,7 +628,7 @@ The definition:
 | `d.OnDeadline(Deadline[S, P](name, handler))` | A handler of deadlines named `name`; it receives the payload as `P` (the zero value when there is none). One handler per name. `.Ending()` ends the instance after it. |
 | `d.OnCommandFailed(CommandFailed(handler))` | The handler of the local `SagaCommandFailed`; it is routed to the sending instance by its `SagaID`, no association needed. |
 | `.Ending()` on an event or deadline | Ends the instance after the handler returns; later handlers of that event do not run. |
-| `Associate(key, value)` | The route: the event's value for `key`. A nil or blank value matches no instance. |
+| `Associate(key, value)` | The route: the event's value for `key`. A nil value function is a registration error; an empty value matches no instance, while a whitespace-only value is a value like any other. |
 
 A handler is `func(context.Context, *SagaContext, *S, E) error` (the deadline payload `P` replaces `E`). Handlers of
 one event type run in registration order. The state is stored as JSON: it must encode to a JSON object and encode to
@@ -649,8 +649,8 @@ headers and the correlation id of the message that scheduled it.
 | `CancelDeadline(id)`, `CancelDeadlines(name)` | Cancel a deadline, or every scheduled deadline of that name. |
 
 A handling records at most 999 messages. Nothing is sent or published while the handler runs. The package-level
-`Send`, `Query` and `Publish` are refused with an error naming `SagaContext` while a saga handler runs; do not capture
-a `Sender`, `EventBus` or `App` either, for the same reason.
+`Send`, `Query` and `Publish` are refused with an error naming `SagaContext` while a saga handler runs; use the
+context, and do not capture the `*App` to call them later for the same reason.
 
 **Start keys and matching.** A start key is `"<type>|<key>=<value>"` with `%`, `|` and `=` escaped. It lives with its
 association: removing that association, or ending the instance, releases it, so a later start event for the same value
@@ -680,8 +680,11 @@ and the consumer moves on; a store failure while parking leaves the record unack
 ### The dispatch relay
 
 Every instance runs the relay. It polls every 500 ms: failure notices due first, then the sagas whose first pending
-entry is due, at most 100 sagas per poll and 4 at a time. One saga's entries go strictly in `seq` order under a 30-second
-lease; a slow or retrying saga holds back only itself. Different sagas are dispatched at the same time.
+entry is due, at most 100 sagas per poll and 4 at a time. One saga's entries go strictly in `seq` order under a lease:
+the base is 30 seconds, and while a relay owns a saga it claims and renews 1 minute + 11 seconds + 30 seconds =
+**101 seconds** with the defaults, covering the send bound and the hub guard, so another instance cannot take the saga
+while a send may still run. A slow or retrying saga holds back only itself. Different sagas are dispatched at the same
+time.
 
 - **An event entry** is appended to the ordinary outbox and marked dispatched in one transaction, with a fresh event
   id, the entry's key, the recording message's correlation id and a valid trace. An event the outbox refuses is given

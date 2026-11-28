@@ -92,7 +92,7 @@ are also the Kotlin defaults unless a Kotlin property overrides them:
 | Saga handler attempts | 2 | Attempts of a handler that fails, 50 ms apart; then the event is parked in `saga_failures` |
 | Dispatch poll | 500 ms | How often the relay looks for sagas with a pending entry |
 | Dispatch batch, parallelism | 100, 4 | Sagas per poll, and sagas dispatched at once |
-| Dispatch lease | 30 s | How long one relay holds a saga's `seq` order |
+| Dispatch lease | 30 s base, 101 s effective | How long one relay holds a saga's `seq` order: the base 30 s, and each claim or renewal covers the send bound and the hub guard too — 1 min + 11 s + 30 s = 101 s with the defaults — so another instance cannot take the saga while a send may still run |
 | Dispatch send bound | 1 min | The longest one send is waited for; a call through the hub also gets the hub's 11 s guard |
 | Dispatch attempts and backoff | 10, 1 s to 5 min | Sends of one command before `EXHAUSTED`; the wait doubles, jittered by ±20 % |
 | Notice attempts | 10 | Deliveries of one `SagaCommandFailed` before it is logged and dropped, on the same backoff |

@@ -602,11 +602,12 @@ The definition:
 | `@app.saga(name=None)` | Registers the class. It needs a no-argument constructor, at least one `@saga_start` handler, and fields that round-trip through the codec as JSON. The name defaults to `module.Class`; give it one to keep stored sagas valid when the class moves. A duplicate name or a handler the library cannot serve raises `SagaError` naming the saga and handler. |
 | `@saga_start(association, *, key=None, header=None, force_new=False, end=False)` | A handler that may create an instance. `association` is a field of the event (or `header=` names a message header); `key=` names the association differently. The event starts one when no live instance matches; at most one live instance exists per start key. `force_new=True` always starts one, without a start key. `end=True` ends the instance after the handler. |
 | `@saga_event(association, *, key=None, header=None, end=False)` | A handler of an event on the live instances associated with the value. |
-| `@saga_deadline(name, *, end=False)` | A handler of deadlines named `name`; it receives the deadline payload, or only the `SagaContext` when the deadline has none. One handler per name. |
+| `@saga_deadline(name, *, end=False)` | A handler of deadlines named `name`. A payload parameter receives the scheduled payload, or `None` when none was scheduled; a context-only handler receives the `SagaContext`. One handler per name. |
 | `@saga_command_failed(*, end=False)` | The handler of the local `SagaCommandFailed`; it is routed to the sending instance by `saga_id`, no association needed. |
 
 Handlers are `async def`; the event handler's first parameter is the event class and the `SagaContext` parameter is
-optional (the deadline handler's first parameter is its payload, or the context when it has none). Postponed
+optional. A deadline handler's first parameter is either the payload type, which receives `None` when no payload was
+scheduled, or the `SagaContext`, in which case it always receives the context. Postponed
 annotations (`from __future__ import annotations`) are resolved, so `ctx: snodra.SagaContext` works. Handlers of one
 event type run in declaration order. The state is persisted as JSON: a field the codec cannot carry fails registration
 and names the saga.
@@ -619,7 +620,7 @@ and names the saga.
 | `associations`, `ended`, `dispatch`, `deadline_ops` | What the handling has recorded so far (read-only views). |
 | `associate_with(key, value)`, `remove_association_with(key, value)` | Add or remove an association. Removing the start association frees the start key. |
 | `end()` | Ends the instance after the handler returns and cancels its scheduled deadlines. |
-| `send(command, routing_key=None)`, `publish(event, key=None)` | **Record** a command or event in the saga's transaction, sent after the commit, in order. `publish` refuses an event the outbox could never hold. |
+| `send(command, routing_key=None)`, `publish(event, key=None)` | **Record** a command or event in the saga's transaction, sent after the commit, in order. `publish` only encodes here: an event the outbox refuses is given up by the relay as `INVALID`, with no notice, and the later entries go on. |
 | `schedule(after, name, payload=None, *, at=None)` | Record a deadline after a number of seconds, a `timedelta` or an instant, or `at=` an instant; returns its id. The payload is JSON with its type name. |
 | `cancel_deadline(id)`, `cancel(id)`, `cancel_deadlines(name)`, `cancel_all(name)` | Cancel a deadline, or every scheduled deadline of that name. |
 

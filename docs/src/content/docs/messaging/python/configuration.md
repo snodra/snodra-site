@@ -83,8 +83,9 @@ record is delivered again.
 
 ### Sagas, deadlines and external calls
 
-The level-4 runtime has no `SNODRA_*` variable and no `Settings` field yet; it runs with the library's fixed timings,
-the reference libraries' values:
+The level-4 runtime has no `SNODRA_*` variable and no `Settings` field yet; it runs with the library's fixed timings.
+The dispatch poll and lease are Python's own — 0.2 s and 60 s, where Kotlin and Go default to 0.5 s and a 30 s base
+lease:
 
 | Setting | Value | Meaning |
 |---|---|---|

@@ -19,8 +19,9 @@ them.
 
 The official libraries claim: **Kotlin 4**, **Rust 4**, **Go 4** (`v0.7.0`) and **Python 4** (0.8.0). The Go and
 Python libraries have no event browser, so their event-store add-ons declare no `browse` capability. Their
-event-store kits omit the four positive `browse` checks and always run `no_browser_without_capability`; the check
-accepts a store that declares `browse` with a note that the positive checks are a kit difference (Go skips it).
+event-store kits omit the four positive `browse` checks and run `no_browser_without_capability`: a store that does
+not declare `browse` proves the absence, and one that does is a kit difference — Go skips the check, Python reports it
+with a note — because neither library can run the positive checks.
 
 ## How the checks are named and run
 
@@ -101,7 +102,7 @@ check that proves them. The **Proved by** column says what runs a check today:
 
 | Id | Check | Proved by |
 |---|---|---|
-| `L3-EVENT-STORE-KIT` | The event-store add-on passes the kit's capability checks: for each capability it declares `replay_from_earliest_redelivers_history` (`replay`), `lag_counts_unacked` (`lag`), `dead_letter_source_receives` (`native-dead-letter`), `search_finds_by_type_key_and_correlation`, `search_stops_at_bounds`, `tail_streams_new_events`, `browser_never_commits_a_position` (`browse`); for each it does not, `admin_without_replay_is_unsupported`, `lag_unknown_without_capability`, `no_browser_without_capability`. The Go and Python kits list 15 possible ids (nine level-2 and six level-3; a run uses one form of `replay` and of `lag`, `dead_letter_source_receives` when the store declares `native-dead-letter`, and always the no-browser check). Both omit the four positive `browse` checks (no event browser) and their no-browser check accepts a store declaring `browse` with a note. | kit |
+| `L3-EVENT-STORE-KIT` | The event-store add-on passes the kit's capability checks: for each capability it declares `replay_from_earliest_redelivers_history` (`replay`), `lag_counts_unacked` (`lag`), `dead_letter_source_receives` (`native-dead-letter`), `search_finds_by_type_key_and_correlation`, `search_stops_at_bounds`, `tail_streams_new_events`, `browser_never_commits_a_position` (`browse`); for each it does not, `admin_without_replay_is_unsupported`, `lag_unknown_without_capability`, `no_browser_without_capability`. The Go and Python kits list 15 possible ids (nine level-2 and six level-3; a run uses one form of `replay` and of `lag`, `dead_letter_source_receives` when the store declares `native-dead-letter`, and always the no-browser check). Both omit the four positive `browse` checks (no event browser); a store that declares `browse` skips the check in Go and is noted as a kit difference in Python. | kit |
 | `L3-STORE-KIT` | The message-store add-on passes the kit's processor checks (17 ids: the nine level-2 checks and these eight): `delete_markers_removes_only_the_range`, `dead_letters_sequence_per_key`, `dead_letter_parked_inside_rolled_back_transaction_is_kept`, `dead_letter_deleted_in_a_transaction_goes_with_it`, `control_lock_is_exclusive_until_lease_expires`, `pause_state_round_trips`, `replay_ranges_round_trip`, `processor_control_write_inside_rolled_back_transaction_is_kept`. | kit |
 | `L3-PROCESSORS` | Handlers run in named processors (`default` and names matching `[a-z0-9][a-z0-9-]{0,47}`), each with its own subscription `<service>.<processor>` and markers `processor:<name>:<eventId>`; one event type in two processors reaches both, and a failure in one does not affect the other. | runner, not checked yet |
 | `L3-STATUS` | Every status tick carries one `ProcessorStatus` per started processor, filled as [protocol.md](/docs/library-authors/protocol/#processor-status) says, with the event store's name and capabilities, and the whole list each time. | runner, not checked yet |
