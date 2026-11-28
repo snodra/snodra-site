@@ -6,8 +6,9 @@ This document specifies the messaging layer in Snodra: the Kotlin starter
 `snodra-messaging`, the Rust crate `snodra-messaging`, the wire format, the Kafka layout, the
 outbox, and the hub protocol. The Go library, [snodra-messaging-go](/docs/messaging/go/), and the Python
 library, [snodra-messaging-python](/docs/messaging/python/), claim feature level 3 (commands, queries, events and
-processors, with their status, control, reset and replay, and dead letters). Sagas and external calls (level 4) are
-in Kotlin and Rust only.
+processors, with their status, control, reset and replay, and dead letters). The saga runtime and the external-call
+adapter (level 4) are in Kotlin and Rust only; the Go and Python stores keep the saga and external-call records on
+`main`, unreleased, but neither library has the runtime or the adapter yet.
 
 ## The model in one paragraph
 

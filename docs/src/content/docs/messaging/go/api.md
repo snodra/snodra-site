@@ -593,9 +593,10 @@ The event-store interface expects one subscription per processor, competing inst
 key, at-least-once delivery with acknowledgement, pause and resume, the headers as the store's native metadata, and the
 admin side of a reset (`Admin`, `Members`, `Plan`, `Apply`). The message-store interface is frozen through level 3: its
 outbox, processed-event, dead-letter and processor-control ports are implemented by both official stores (the
-dead-letter and control ports since `v0.6.0`); the external-call and saga ports return `ErrUnsupported` until level 4. A
-third-party add-on implements the same interfaces and depends on the core only; `snodratest` is its conformance kit
-(see [Testing](/docs/messaging/go/testing/)).
+dead-letter and control ports since `v0.6.0`). The external-call and saga store ports are implemented on `main`,
+unreleased, in the memory store and both official stores, which pass the eleven level-4 store checks; the saga runtime
+and the external-call adapter are not in the library yet. A third-party add-on implements the same interfaces and
+depends on the core only; `snodratest` is its conformance kit (see [Testing](/docs/messaging/go/testing/)).
 
 `App.Start` hands the message store the application's clock, then prepares its schema (`InitSchema`) or, with
 `SNODRA_STORE_INIT_SCHEMA=false`, checks it (`CheckSchema`); a failure fails `Start`. A store that also implements
@@ -635,6 +636,9 @@ The add-on's own errors wrap these, so `errors.Is` works across the stores.
 
 ## Not in the Go library yet
 
-Sagas and external calls (feature level 4) are not in the Go library: the message store's external-call and saga ports
-return `ErrUnsupported`. The library has no event browser either, so its event-store add-ons declare no `browse`
-capability. For sagas, use the [Kotlin](/docs/messaging/kotlin/) or [Rust](/docs/messaging/rust/) library.
+The saga runtime and the external-call adapter (feature level 4) are not in the Go library: a service cannot yet define
+a saga or an idempotent command handler. Their store ports — the saga records and the external-call records — are
+implemented on `main`, unreleased, by the memory store and both official stores, which pass the eleven level-4 store
+checks ([Testing](/docs/messaging/go/testing/#levels-3-and-4)). The library has no event browser either, so its
+event-store add-ons declare no `browse` capability. For sagas today, use the
+[Kotlin](/docs/messaging/kotlin/) or [Rust](/docs/messaging/rust/) library.

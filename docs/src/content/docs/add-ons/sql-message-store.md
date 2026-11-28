@@ -104,9 +104,10 @@ every add-on and checked against its published SHA-256.
   rollback sends nothing and a commit wakes the relay at once.
 - **No silent truncation.** A missing STRICT mode, an old server, MariaDB or a one-connection pool
   fails the startup with a message naming what is supported.
-- **Level 3 ports.** The Go (0.6.0) and Python (0.7.0) stores implement the outbox, the processed-event markers, the
-  dead letters and the processor control; their external-call and saga ports return `ErrUnsupported` in Go and raise
-  `MessageStoreUnsupported` in Python (the official add-ons implement every port by level 4).
+- **Level 3 ports, and the level-4 store ports on `main`.** The Go (0.6.0) and Python (0.7.0) releases implement the
+  outbox, the processed-event markers, the dead letters and the processor control. On `main`, unreleased, the memory,
+  SQL and MongoDB stores also implement the external-call and saga ports and pass the eleven level-4 store checks; the
+  saga runtime and the external-call adapter are not in the libraries yet.
 
 The schema files are versioned (`V1__snodra.sql`) and the schema is applied once at startup unless
 the service runs its own migration. The Go store embeds the published files and checks their SHA-256
@@ -121,8 +122,8 @@ apply V1 once.
 | Processed events | yes | yes | yes | yes |
 | Dead letters | yes | yes | yes (0.6.0) | yes (0.7.0) |
 | Processor control | yes | yes | yes (0.6.0) | yes (0.7.0) |
-| External calls | yes | yes | no (level 4) | no (level 4) |
-| Sagas | yes | yes | no (level 4) | no (level 4) |
+| External calls | yes | yes | level 4, on `main`, unreleased | level 4, on `main`, unreleased |
+| Sagas | yes | yes | level 4, on `main`, unreleased | level 4, on `main`, unreleased |
 
 ## Read next
 

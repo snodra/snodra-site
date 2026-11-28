@@ -59,9 +59,11 @@ pause and resume, the leased reset with reset handlers and replay, and the dead 
 interfaces of the event store and the message store are frozen through this level, so a third-party add-on compiles
 once.
 
-Sagas and external calls (level 4) are not in the library yet. The Python library has no event browser, so its
-event-store add-ons declare no `browse` capability; its conformance kit runs the browser check as
-`no_browser_without_capability` ([Testing](/docs/messaging/python/testing/#the-add-on-kits)).
+The saga and external-call store ports are implemented on `main`, unreleased: the memory, SQL and MongoDB stores pass
+the eleven level-4 store checks, but the saga runtime and the external-call adapter are not in the library yet. The
+Python library has no event browser, so its event-store add-ons declare no `browse` capability; its conformance kit
+runs the browser check as `no_browser_without_capability`
+([Testing](/docs/messaging/python/testing/#the-add-on-kits)).
 
 ## Add-ons
 

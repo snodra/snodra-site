@@ -568,9 +568,10 @@ The event-store interface expects one subscription per processor, competing inst
 key, at-least-once delivery with acknowledgement, pause and resume, the headers as the store's native metadata, and the
 admin side of a reset (`admin`, `members`, `plan`, `apply`). The message-store interface is frozen through level 3: its
 outbox, processed-event, dead-letter and processor-control ports are implemented by both official stores (the
-dead-letter and control ports since 0.7.0); the external-call and saga ports raise `MessageStoreUnsupported` until level
-4. A third-party add-on implements the same interfaces and depends on the core only; `snodra.testing` is its conformance
-kit (see [Testing](/docs/messaging/python/testing/)).
+dead-letter and control ports since 0.7.0). The external-call and saga store ports are implemented on `main`,
+unreleased, in the memory store and both official stores, which pass the eleven level-4 store checks; the saga runtime
+and the external-call adapter are not in the library yet. A third-party add-on implements the same interfaces and
+depends on the core only; `snodra.testing` is its conformance kit (see [Testing](/docs/messaging/python/testing/)).
 
 `App.start` hands the message store the application's clock, then prepares its schema (`init_schema`) or, with
 `SNODRA_STORE_INIT_SCHEMA=false`, checks it (`check_schema`); a failure fails `start`. A store that also implements
@@ -613,6 +614,9 @@ Outside any transaction, a store call runs in a short transaction of its own.
 
 ## Not in the Python library yet
 
-Sagas and external calls (feature level 4) are not in the Python library: the official SQL and MongoDB stores raise
-`MessageStoreUnsupported` for those ports. The library has no event browser either, so its event-store add-ons declare
-no `browse` capability. For sagas, use the [Kotlin](/docs/messaging/kotlin/) or [Rust](/docs/messaging/rust/) library.
+The saga runtime and the external-call adapter (feature level 4) are not in the Python library: a service cannot yet
+define a saga or an idempotent command handler. Their store ports — the saga records and the external-call records —
+are implemented on `main`, unreleased, by the memory store and both official stores, which pass the eleven level-4
+store checks ([Testing](/docs/messaging/python/testing/#levels-3-and-4)). The library has no event browser either, so
+its event-store add-ons declare no `browse` capability. For sagas today, use the
+[Kotlin](/docs/messaging/kotlin/) or [Rust](/docs/messaging/rust/) library.

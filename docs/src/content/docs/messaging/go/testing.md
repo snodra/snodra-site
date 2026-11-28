@@ -66,11 +66,19 @@ always. The four positive `browse` checks are omitted as a kit difference, becau
 browser; `CheckIDs()` lists the 15 possible ids (both forms of `replay` and `lag` included), and `EventStoreKit` is
 what every check runs on.
 
-`snodratest.MessageStore` runs 17 checks: the nine level-2 outbox and processed-event checks, and the eight level-3
+`snodratest.MessageStore` runs 28 checks: the nine level-2 outbox and processed-event checks, the eight level-3
 processor checks (`delete_markers_removes_only_the_range`, `dead_letters_sequence_per_key`,
 `dead_letter_parked_inside_rolled_back_transaction_is_kept`, `dead_letter_deleted_in_a_transaction_goes_with_it`,
 `control_lock_is_exclusive_until_lease_expires`, `pause_state_round_trips`, `replay_ranges_round_trip` and
-`processor_control_write_inside_rolled_back_transaction_is_kept`). `StoreCheckIDs()` lists them in the Rust kit's order.
+`processor_control_write_inside_rolled_back_transaction_is_kept`) and the eleven level-4 store checks
+(`external_call_idempotency_returns_first_result`, `saga_ports_round_trip`,
+`two_transactions_starting_one_saga_key_leave_one_live_saga`,
+`two_transactions_updating_one_saga_version_commit_once`,
+`saga_dispatch_store_refuses_an_event_the_outbox_would_refuse`,
+`due_deadline_is_claimed_once_until_its_lease_passes`, `an_empty_deadline_correlation_id_reads_as_absent`,
+`two_schedulers_claim_each_due_deadline_once`, `dispatch_hands_out_each_saga_in_seq_order`,
+`two_relays_never_hold_one_saga_lease` and `concurrent_notice_claims_return_each_notice_once`). `StoreCheckIDs()`
+lists them in the Rust kit's order.
 Each check is a subtest named exactly as the Rust kit names it, and every check is exported, so a failing one can be run
 by itself:
 
@@ -81,7 +89,8 @@ func TestReplayRanges(t *testing.T) {
 }
 ```
 
-Both kits always run their level-3 checks; a level-2-only entry point is a follow-up.
+The event-store kit always runs its level-3 checks and the message-store kit all 28; a level-2-only entry point is a
+follow-up.
 
 `snodratest` has no Docker and no store client. The add-on's own test provides the store and the infrastructure; the
 kit only proves the contract. For a service's own tests, the in-memory message store implements the dead-letter and
@@ -115,5 +124,7 @@ the outbox, the relay and the consumer. The checks and what each asserts are lis
 ## Levels 3 and 4
 
 Level 3 is proved by the kits above and by the library's own tests of the status, the control plane, the reset state
-machine and the three dead-letter modes; the runner still proves level 1 only. The level-4 saga and external-call kits
-are not in the Go library, and its message store's saga and external-call ports return `ErrUnsupported`.
+machine and the three dead-letter modes; the runner still proves level 1 only. The message-store kit now carries the
+eleven level-4 checks, so `snodratest.MessageStore` runs all 28 on the memory store and both official stores on `main`,
+unreleased. The library still claims level 3: the saga runtime and the external-call adapter, and the kits that prove
+them, are not in the Go library yet.

@@ -58,9 +58,10 @@ pause and resume, the leased reset with reset handlers and replay, and the dead 
 interfaces of the event store and the message store are frozen through this level, so a third-party add-on compiles
 once.
 
-Sagas (level 4) are not in the library yet. The Go library has no event browser, so its event-store add-ons declare no
-`browse` capability and its conformance kit omits the four `browse`-capability checks
-([Testing](/docs/messaging/go/testing/#the-add-on-kits)).
+The saga and external-call store ports are implemented on `main`, unreleased: the memory, SQL and MongoDB stores pass
+the eleven level-4 store checks, but the saga runtime and the external-call adapter are not in the library yet. The Go
+library has no event browser, so its event-store add-ons declare no `browse` capability and its conformance kit omits
+the four `browse`-capability checks ([Testing](/docs/messaging/go/testing/#the-add-on-kits)).
 
 ## Add-ons
 

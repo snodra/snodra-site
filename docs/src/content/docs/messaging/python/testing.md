@@ -59,6 +59,10 @@ async def test_my_message_store():
 async def test_my_message_store_at_level_3():
     # run_store_l3_conformance(lambda: make_message_store()) is the same run.
     await run_store_conformance(lambda: make_message_store(), level=3)
+
+async def test_my_message_store_at_level_4():
+    # run_store_l4_conformance(lambda: make_message_store()) is the same run.
+    await run_store_conformance(lambda: make_message_store(), level=4)
 ```
 
 `run_event_store_conformance(source, open_store, store, *, level=2)` runs the nine level-2 event-store checks
@@ -72,13 +76,22 @@ checks and the six possible level-3 ids, one form per capability: `replay_from_e
 always. `EVENT_STORE_CHECKS` holds the nine, `EVENT_STORE_L3_CHECKS` the six possible ids, and
 `run_event_store_l3_conformance(source, open_store, store)` is the same run as `level=3`.
 `run_store_conformance(open_store, *, level=2)` runs the nine level-2
-outbox and processed-event checks, or with `level=3` the 17: those nine and the eight level-3 dead-letter and
-processor-control checks (`delete_markers_removes_only_the_range`, `dead_letters_sequence_per_key`,
+outbox and processed-event checks; `level=3` runs those nine and the eight level-3 dead-letter and processor-control
+checks (`delete_markers_removes_only_the_range`, `dead_letters_sequence_per_key`,
 `dead_letter_parked_inside_rolled_back_transaction_is_kept`, `dead_letter_deleted_in_a_transaction_goes_with_it`,
 `control_lock_is_exclusive_until_lease_expires`, `pause_state_round_trips`, `replay_ranges_round_trip` and
-`processor_control_write_inside_rolled_back_transaction_is_kept`). The default `level=2` preserves the published entry
-point; `run_store_l3_conformance(open_store)` is the same run as a named entry point, `MESSAGE_STORE_CHECKS` lists the
-nine and `MESSAGE_STORE_L3_CHECKS` the eight (what each asserts is on the
+`processor_control_write_inside_rolled_back_transaction_is_kept`), 17 in all; `level=4` runs all 28, adding the eleven
+level-4 store checks: `external_call_idempotency_returns_first_result`, `saga_ports_round_trip`,
+`two_transactions_starting_one_saga_key_leave_one_live_saga`,
+`two_transactions_updating_one_saga_version_commit_once`,
+`saga_dispatch_store_refuses_an_event_the_outbox_would_refuse`,
+`due_deadline_is_claimed_once_until_its_lease_passes`, `an_empty_deadline_correlation_id_reads_as_absent`,
+`two_schedulers_claim_each_due_deadline_once`, `dispatch_hands_out_each_saga_in_seq_order`,
+`two_relays_never_hold_one_saga_lease` and `concurrent_notice_claims_return_each_notice_once`. The default `level=2`
+preserves the published entry point; `run_store_l3_conformance(open_store)` and `run_store_l4_conformance(open_store)`
+are the named entry points for the `level=3` and `level=4` runs, `MESSAGE_STORE_CHECKS` lists the nine,
+`MESSAGE_STORE_L3_CHECKS` the eight and
+`MESSAGE_STORE_L4_CHECKS` the eleven (what each asserts is on the
 [store contract](/docs/library-authors/message-store-add-ons/#the-conformance-kit)). Each check is an async function
 named exactly as the Rust kit names it, and every check is exported, so a failing one can be run by itself (a
 `MessageStore` for the store checks, an `EventStoreKit` for the event-store checks):
@@ -134,4 +147,7 @@ the named entry point; `run_store_conformance(..., level=3)` runs the nine level
 dead-letter and processor-control checks (`MESSAGE_STORE_L3_CHECKS`), with `run_store_l3_conformance` as the named entry
 point. The
 library's own tests prove the status, the control plane, the reset state machine and the three dead-letter modes; the
-runner still proves level 1 only. The level-4 saga and external-call kits are not there yet.
+runner still proves level 1 only. The store kit now carries the eleven level-4 checks too:
+`run_store_conformance(..., level=4)` and `run_store_l4_conformance` run all 28 on the memory store and both official
+stores on `main`, unreleased. The library still claims level 3: the saga runtime and the external-call adapter, and the
+kits that prove them, are not there yet.

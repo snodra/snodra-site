@@ -144,7 +144,8 @@ The management API's own login (`RabbitMQConfig.management_username`, `managemen
 ### Event stores and message stores
 
 An event store publishes the service's events and serves its processors' subscriptions; a message store holds the
-outbox, the processed-event markers, the dead letters and the processor control state; the sagas are level 4. The
+outbox, the processed-event markers, the dead letters and the processor control state, and on `main`, unreleased, the
+external-call and saga records too; the saga runtime is level 4 and not in the library yet. The
 in-memory ones, `snodra.MemoryEventStore()` and `snodra.MemoryStore()`, are for tests and local runs: nothing survives
 the process, and `start` warns once for each. A service that only handles commands, queries and subscription queries
 needs neither store and starts without them.
