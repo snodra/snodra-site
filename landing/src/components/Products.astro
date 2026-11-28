@@ -8,13 +8,13 @@ const products = [
     icon: "/brand/snodra-server.svg",
     tint: "from-emerald-400/20",
     accent: "text-emerald-300",
-    copy: "A stateless gRPC process that matches commands and queries to a live handler. Dashboard, topology, processor control and health probes are in the same binary.",
+    copy: "A stateless gRPC process that matches commands and queries to a live handler. Dashboard, topology, the schema catalogue, processor control and health probes are in the same binary.",
     points: ["Deadlines, retries, priority", "Multi-server, no server-to-server traffic", "Token, OIDC/JWT or mTLS with ACLs"],
     links: [
       { label: "Repository", href: "https://github.com/snodra/snodra-server" },
       { label: "Server docs", href: "/docs/server/" },
     ],
-    get: "docker run snodra/snodra-server:0.6.0",
+    get: "docker run -e SNODRA_SERVER_CATALOG=off snodra/snodra-server:0.7.0",
   },
   {
     name: "Snodra Messaging",

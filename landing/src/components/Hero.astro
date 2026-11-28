@@ -28,7 +28,7 @@ const services = [
           <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal opacity-60"></span>
           <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-teal"></span>
         </span>
-        v0.6.0 is here
+        v0.7.0 is here
         <span class="text-dim">·</span>
         Apache-2.0
         <Icon name="arrow-right" size={13} class="text-dim transition-transform group-hover:translate-x-0.5" />
@@ -193,7 +193,7 @@ const services = [
             <div class="flex flex-col gap-2 border-t border-line bg-black/30 px-4 py-3 font-mono text-[0.66rem] text-dim sm:flex-row sm:items-center sm:justify-between sm:px-5">
               <span class="flex items-center gap-2">
                 <span class="text-primary-soft">$</span>
-                <span class="text-white/80">docker run -p 7000:7000 -p 7001:7001 snodra/snodra-server:0.6.0</span>
+                <span class="text-white/80">docker run -p 7000:7000 -p 7001:7001 -e SNODRA_SERVER_CATALOG=off snodra/snodra-server:0.7.0</span>
                 <span class="cursor-blink text-primary-soft">▍</span>
               </span>
               <span class="flex items-center gap-3">

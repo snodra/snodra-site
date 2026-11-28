@@ -125,6 +125,8 @@ honouring `Permits.grant`), later and empty `Register`s, `NO_HANDLER` for a type
 request without an id, kind or type, and no `Cancel` for a command. The runner's tests run one script of frames
 against a fake hub and against snodra-server and require the same answers. What remains different, on purpose:
 
+- A fake hub has no schema catalogue: it ignores `Register.contracts`, `Register.event_contracts` and the two contract
+  version headers, as snodra-server does with `SNODRA_SERVER_CATALOG=off`, and the runner checks none of them.
 - A fake hub routes nothing between instances: it is the only other party. It forwards what a check sends, including
   requests snodra-server would not route (a type the instance does not list, a unary request to a streaming handler, a
   request of a subscription type in another mode), and answers the library's own requests as the check scripts them,

@@ -95,6 +95,12 @@ answers with an HTTP/2 frame error is talking to it — pass `--listen` or `--ad
 | `SNODRA_SERVER_EDGE_STATS_WINDOW` | `5m` | sliding window of the edge statistics, at least `10s` |
 | `SNODRA_SERVER_PEERS` | none | the other hubs' dashboard base URLs as the operator's browser reaches them, comma-separated, for example `http://localhost:7001,http://localhost:7011` (this hub's own URL may be listed; the page skips it by hub id). Each must be `http://` or `https://` with a host and optional port, no user info, no path beyond `/`; normalised to origins (lowercase, default port dropped), duplicates removed, at most 16; anything else stops the hub at startup. See Multiple hubs |
 
+## Schema catalogue
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `SNODRA_SERVER_CATALOG` | `on` | `on` or `off` (any letter case; anything else stops the hub at startup). `on` keeps the contracts services declare, refuses a `Register` without them and routes by the version headers; `off` ignores contracts and both headers, routes by type name alone and leaves the catalogue views empty. The released client libraries declare no contracts yet, so a hub that serves them runs with `off` for now. See [Schema catalogue](/docs/server/catalog/) |
+
 ## Processor control
 
 | Variable | Default | Meaning |
@@ -121,7 +127,7 @@ answers with an HTTP/2 frame error is talking to it — pass `--listen` or `--ad
 | `SNODRA_SERVER_HTTP_TLS_CERT`, `SNODRA_SERVER_HTTP_TLS_KEY` | the gRPC pair | PEM pair of the HTTP listener |
 | `SNODRA_SERVER_TLS_HANDSHAKE_TIMEOUT` | `5s` | a TLS handshake that takes longer is dropped; positive |
 | `SNODRA_SERVER_TLS_HANDSHAKES_PER_IP` | `32` | TLS handshakes in progress at once from one peer IP; more are dropped at once; `0` removes the cap |
-| `SNODRA_SERVER_DASHBOARD_TOKEN` | none | at least 16 characters; when set `/api/v1/*` and the gRPC `Topology` call need `Authorization: Bearer <token>` |
+| `SNODRA_SERVER_DASHBOARD_TOKEN` | none | at least 16 characters; when set `/api/v1/*` (the catalogue endpoints included) and the gRPC `Topology` call need `Authorization: Bearer <token>` |
 | `SNODRA_SERVER_DASHBOARD_TOKEN_FILE` | none | a file holding the dashboard token (trailing newline trimmed, same rules as the variable); read at startup and again on the reload poll, so a rotation needs no restart. Wins over `SNODRA_SERVER_DASHBOARD_TOKEN` when both are set (as `SNODRA_MESSAGING_HUB_TOKEN_FILE` does in the client libraries). An unreadable or invalid file stops the hub at startup; at a reload it keeps the previous token and logs an error. Prefer it to the variable: an environment variable shows in `docker inspect` and `/proc` |
 | `SNODRA_SERVER_DASHBOARD_WRITE_TOKEN`, `SNODRA_SERVER_DASHBOARD_WRITE_TOKEN_FILE` | none | at least 16 characters; the processor controls' token (`Authorization: Bearer <token>` on the mutating calls), which also reads what the dashboard token reads; the file variant is read and reloaded like `SNODRA_SERVER_DASHBOARD_TOKEN_FILE`. Equal to the dashboard token (whatever the source) is a config error at start, and a reload that would make them equal keeps both previous tokens. Unset and no ACL entry with `control = true`: the controls answer 403 `controls are disabled` |
 

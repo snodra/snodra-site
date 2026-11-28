@@ -6,7 +6,7 @@ const downloads = [
     label: "Server",
     title: "Run the router",
     detail: "The gRPC listener, dashboard, HTTP API and event browser in one distroless image.",
-    command: "docker run --rm -p 7000:7000 -p 7001:7001 snodra/snodra-server:0.6.0",
+    command: "docker run --rm -p 7000:7000 -p 7001:7001 -e SNODRA_SERVER_CATALOG=off snodra/snodra-server:0.7.0",
     meta: "Linux (musl + gnu), macOS and Windows binaries on the release page.",
     href: "https://github.com/snodra/snodra-server/releases",
     cta: "Server releases",

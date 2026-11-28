@@ -8,6 +8,8 @@ How the hub decides which live instance receives a request, and what happens whe
 
 ```text
 registry
+├── contracts: Map<(type_name, payload_version, response_version), Contract>   (the schema catalogue)
+│     Contract { kind, shared, subscription, schemas + hashes, instances serving it }
 ├── types: Map<type_name, Owner>
 │     Owner { kind: COMMAND | QUERY, shared, services: Map<service_name, { holders, orphaned_at }>,
 │             rotation (shared types) }
@@ -62,6 +64,10 @@ Rules enforced on `Register`:
 - registering a type under a different kind than its current owner uses is
   rejected with `ALREADY_EXISTS`. A type's kind cannot change while it is owned; change it only
   after every instance of the owner has left and the owner grace sweep has removed the type.
+- With the [schema catalogue](/docs/server/catalog/) on (the default), a `Register` also carries one contract per
+  handled type. One without, a contract for a type it does not declare, a duplicate, a kind or flag that
+  disagrees with the lists, or a schema outside the limits is `INVALID_ARGUMENT`; a contract whose live definition
+  has a different schema is `FAILED_PRECONDITION`. With the catalogue off, contracts are ignored.
 - A later `Register` on the same stream replaces that instance's type list. Its `client_version`,
   `initial_permits`, `load_factor` and `tags` are ignored: the first `Register` of a stream fixes
   them.
@@ -80,6 +86,15 @@ Rules enforced on `Register`:
   last owner's grace expires.
 
 ## Routing rules
+
+With the catalogue on, the rules below choose among the instances that serve the contract the request names: the
+exact `(type, payload version, response version)` from the `snodra-schema-version` and
+`snodra-response-schema-version` request headers (an absent header reads as 1). That holds for every request mode,
+and a keyed command's ring is the ring of the instances serving that contract. A request for a contract nobody
+serves is `NO_HANDLER` naming the live ones, for example
+`no handler for orders.PlaceOrder (payload 1, response 1); live: (payload 2, response 2)`; a malformed version
+header is `INVALID_REQUEST`. See [Schema catalogue](/docs/server/catalog/#versions-on-requests). With the catalogue
+off, the headers are ignored and every instance of the owning service serves the type.
 
 | Kind | `routing_key` present | Target |
 |---|---|---|

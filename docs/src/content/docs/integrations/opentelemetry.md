@@ -10,7 +10,8 @@ and the same series feed the Snodra dashboards and your own.
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
   -e SNODRA_SERVER_OTLP_ENDPOINT=http://otel-collector:4317 \
-  snodra/snodra-server:0.6.0
+  -e SNODRA_SERVER_CATALOG=off \
+  snodra/snodra-server:0.7.0
 ```
 
 - **Traces**: one `hub.route` span per request, parented from the request's `traceparent`. The

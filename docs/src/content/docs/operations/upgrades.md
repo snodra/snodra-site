@@ -29,6 +29,15 @@ A release that changes the gRPC package is a coordinated window: the server and 
 move together. There is no mixed-version mode and no negotiation. Upgrade the server and all services
 in the same window, then confirm registration.
 
+## Server 0.7: the schema catalogue
+
+Server 0.7.0 keeps a [schema catalogue](/docs/server/catalog/) by default and then refuses a `Register` that declares
+no contracts. The released client libraries do not declare contracts yet, so a 0.7 hub with the default setting
+refuses their handler instances (a refusal each service logs and retries; nothing is routed to it). To upgrade the hub
+under them, set `SNODRA_SERVER_CATALOG=off` on every hub: contracts and the version headers are then ignored and
+routing is by type name alone, as on 0.6. Count refusals in `snodra_server_register_refused_total{reason="missing_contract"}`.
+Turn the catalogue on once every service you run declares its contracts.
+
 ## Stores and schema
 
 - **MongoDB**: the library writes explicit documents and creates TTL indexes at startup. No migration

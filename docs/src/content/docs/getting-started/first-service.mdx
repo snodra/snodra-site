@@ -21,7 +21,8 @@ events, processor status, control, reset and replay, dead letters, sagas and ide
 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
-  snodra/snodra-server:0.6.0
+  -e SNODRA_SERVER_CATALOG=off \
+  snodra/snodra-server:0.7.0
 ```
 
 Open [http://localhost:7001/ui/](http://localhost:7001/ui/). The topology is empty until a service registers. If the port is

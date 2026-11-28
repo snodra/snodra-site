@@ -9,7 +9,8 @@ the library and the server address.
 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
-  snodra/snodra-server:0.6.0
+  -e SNODRA_SERVER_CATALOG=off \
+  snodra/snodra-server:0.7.0
 ```
 
 | Port | Protocol | Use |
@@ -27,9 +28,10 @@ it speaks TLS and pins the server's own certificate, so the probe needs no chang
 ```yaml
 services:
   snodra-server:
-    image: snodra/snodra-server:0.6.0
+    image: snodra/snodra-server:0.7.0
     ports: ["7000:7000", "7001:7001"]
     environment:
+      SNODRA_SERVER_CATALOG: "off"   # until the client libraries declare contracts
       SNODRA_SERVER_OTLP_ENDPOINT: http://otel-lgtm:4317
     # The image already declares this healthcheck; repeat it only to change the timings.
     healthcheck:
@@ -62,12 +64,13 @@ The same image, with the binary's probe as an exec probe:
 ```yaml
 containers:
   - name: snodra-server
-    image: snodra/snodra-server:0.6.0
+    image: snodra/snodra-server:0.7.0
     ports:
       - { name: grpc, containerPort: 7000 }
       - { name: http, containerPort: 7001 }
     env:
       - { name: SNODRA_SERVER_OTLP_ENDPOINT, value: "http://otel-collector:4317" }
+      - { name: SNODRA_SERVER_CATALOG, value: "off" }   # until the client libraries declare contracts
     readinessProbe:
       exec: { command: ["/app/snodra-server", "--health-check"] }
       periodSeconds: 10

@@ -27,8 +27,8 @@ then the runner:
 
 ```sh
 # two servers, plain text, access control off
-docker run -d --rm -p 7000:7000 -e SNODRA_SERVER_OTLP_ENDPOINT= snodra/snodra-server:latest
-docker run -d --rm -p 7100:7000 -e SNODRA_SERVER_OTLP_ENDPOINT= snodra/snodra-server:latest
+docker run -d --rm -p 7000:7000 -e SNODRA_SERVER_OTLP_ENDPOINT= -e SNODRA_SERVER_CATALOG=off snodra/snodra-server:latest
+docker run -d --rm -p 7100:7000 -e SNODRA_SERVER_OTLP_ENDPOINT= -e SNODRA_SERVER_CATALOG=off snodra/snodra-server:latest
 
 snodra-conformance run \
   --service-cmd "/path/to/your-conformance-service" \

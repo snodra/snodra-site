@@ -68,6 +68,7 @@ of a Rust one.
 | `authorization` | `Bearer <JWT>` of the acting user ([Forwarded identity](#forwarded-identity)); absent when there is none |
 | `correlationId` | ties together everything one action caused ([Correlation id](#correlation-id)) |
 | `traceparent`, `tracestate` | W3C trace context ([Trace context](#trace-context)) |
+| `snodra-schema-version`, `snodra-response-schema-version` | the payload and response contract versions of the request: a positive integer, absent reads as 1. A hub with its schema catalogue on routes by them and passes them to the handler unchanged; the rules are in [the hub protocol, Message contracts](/docs/library-authors/protocol/#message-contracts) |
 
 - These headers are the library's own: a library must refuse a call that sets one of them through its generic header
   option, before anything is sent (`L1-PROPAGATION`). The reserved names are `authorization`, `traceparent`,

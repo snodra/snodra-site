@@ -41,7 +41,7 @@ client                                   hub
   `Register` is dropped, like a heartbeat echo, when the session's outbound buffer is full).
   Requests routed to the new instance meanwhile may arrive before the ack.
 - A `Register` the hub refuses closes the stream with a status instead (`INVALID_ARGUMENT`,
-  `ALREADY_EXISTS`, `UNAUTHENTICATED`, `PERMISSION_DENIED`); a stream without a `Register` within
+  `ALREADY_EXISTS`, `FAILED_PRECONDITION` for a schema conflict, `UNAUTHENTICATED`, `PERMISSION_DENIED`); a stream without a `Register` within
   `SNODRA_SERVER_HANDSHAKE_TIMEOUT` is closed with `DEADLINE_EXCEEDED`.
 - Every session has every feature: flow control,
   `InstanceStatus` reports ([High availability](/docs/server/operations/#high-availability)), the query modes
@@ -96,6 +96,8 @@ without client configuration.
 | Situation | Hub behaviour | Sender sees |
 |---|---|---|
 | Type never registered | reply immediately | `Error{NO_HANDLER}` |
+| The type is live, but no instance serves the contract versions the request names (catalogue on) | reply immediately; no instance gets anything | `Error{NO_HANDLER}`: `no handler for orders.PlaceOrder (payload 1, response 1); live: (payload 2, response 2)` |
+| `snodra-schema-version` or `snodra-response-schema-version` is not a positive integer that fits 32 bits (catalogue on) | reply immediately | `Error{INVALID_REQUEST}` |
 | Owner service has no live instance but is inside the grace period | reply immediately | `Error{NO_HANDLER}` (message says "owner known, no instance") |
 | Handler instance closes stream while request in flight | fail all its pending requests | `Error{HANDLER_DISCONNECTED}` |
 | Handler reconnects with the same instance id while its old stream is still registered | the new stream replaces the old session; requests forwarded to the old stream fail at once (clients reply only on the stream a request arrived on) | `Error{HANDLER_DISCONNECTED}` |
@@ -119,6 +121,8 @@ without client configuration.
 | A type registered exclusive by one registrant and shared by another | the later `Register` rejected, stream closed with `ALREADY_EXISTS` | as above: the later registrant keeps reconnecting and exposes the rejection; it does not fail startup |
 | A type declared a subscription type by one registrant and not by another (also the type's only instance re-registering it the other way, until the hub forgets the type after the owner grace) | the later `Register` rejected, stream closed with `ALREADY_EXISTS` | as above |
 | A type in `subscription_query_types` that is in neither `query_types` nor `shared_query_types` of the same `Register` | stream closed with `INVALID_ARGUMENT` | as above |
+| `Register` with a missing, extra, duplicate or disagreeing contract, or a schema over the limits (catalogue on) | stream closed with `INVALID_ARGUMENT`; the missing-contract message says to upgrade the library or set `SNODRA_SERVER_CATALOG=off` | as above |
+| `Register` with a contract whose `(type, payload version, response version)` is live with a different schema, on any instance of any service, this one included | stream closed with `FAILED_PRECONDITION`; nothing is registered; listed under the Catalogue page's recent conflicts | as above: a changed schema needs a new version |
 | `Register` without credentials, or with an unknown token (`enforce`) | stream closed with `UNAUTHENTICATED`; nothing is registered | the service's connection fails and retries at the backoff cap: a registration rejection (`lastRejection`, `HubRegistrationRejectedException` from `awaitRegistered`, `await_hub` false in Rust, one `ERROR` line; [Client configuration](https://snodra.damoreira.com/docs/server/configuration/mtls/)). `jwt` credentials on a hub with no `SNODRA_SERVER_JWT_ISSUER`: `UNAUTHENTICATED` "jwt credentials are not configured on this hub" |
 | `Register` with an invalid JWT (`enforce`): expired, wrong issuer or audience, bad signature, `none`/`HS*`, an ID or refresh token | stream closed with `UNAUTHENTICATED` and a short reason ("token expired", "wrong token issuer", ...), never the token | as above (a registration rejection) |
 | `Register` with a JWT for another service (`azp` differs), or for a service with no `[[service]]` table (`enforce`) | stream closed with `PERMISSION_DENIED` "token azp `<a>` is not service `<b>`" or "no ACL entry for service `<a>`" | as above |

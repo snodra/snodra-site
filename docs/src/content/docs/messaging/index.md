@@ -1357,7 +1357,9 @@ Reference: ``protocol/hub.proto``, hub internals in
    default_timeout_ms, max_timeout_ms, type_timeouts_ms, ...}` before the echo of that heartbeat. The ack is the
    confirmation that the `Register` was processed: a stream without one within 10 s fails with `DEADLINE_EXCEEDED`
    ("registration not confirmed in time") and the client reconnects. The hub and the libraries ship together, a hub
-   and a client of different builds are not supported.
+   and a client of different builds are not supported. A hub with its
+   [schema catalogue](/docs/server/catalog/) on (the default of server 0.7) also expects `Register.contracts`, which
+   the released libraries do not send yet: run such a hub with `SNODRA_SERVER_CATALOG=off` for now.
 2. **Heartbeat.** The client heartbeats at the interval from the ack (3 s by default); the hub echoes it with
    `sent_at_ms` unchanged. Silence for the hub's heartbeat timeout (10 s) or a closed stream removes the instance and fails its in-flight requests with `HANDLER_DISCONNECTED`. A
    client drops the stream and reconnects when the hub is silent: on a heartbeat tick, more than three intervals since
@@ -1372,7 +1374,8 @@ Reference: ``protocol/hub.proto``, hub internals in
    reused `Request.id` while the first attempt is still pending is rejected with `INVALID_REQUEST`.
 4. **Route.** The hub looks up the type. No owner: `Error{NO_HANDLER}` back to the sender. Owner
    found: pick an instance (commands: consistent hash of `routing_key`, round-robin when empty;
-   queries: round-robin) and forward the `Request` unchanged.
+   queries: round-robin) and forward the `Request` unchanged. With the catalogue on, only instances serving the
+   contract versions in the request's `snodra-schema-version` and `snodra-response-schema-version` headers qualify.
 5. **Handle.** The receiving library validates the JWT, deserialises the payload to the handler's
    parameter type, invokes it, and writes `Reply{request_id, payload}` or `Reply{request_id,
    error}`.

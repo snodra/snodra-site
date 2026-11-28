@@ -129,6 +129,10 @@ export const sidebar = [
             "slug": "server/event-browser"
           },
           {
+            "label": "Schema catalogue",
+            "slug": "server/catalog"
+          },
+          {
             "label": "Routing",
             "slug": "server/routing"
           },

@@ -30,6 +30,7 @@ This is the simplest credential for a small deployment without an identity provi
 3. Enable it:
 
    ```sh
+   SNODRA_SERVER_CATALOG=off \
    SNODRA_SERVER_AUTH_MODE=permissive \
    SNODRA_SERVER_ACL_FILE=/etc/snodra/snodra.acl.toml \
    snodra/snodra-server:latest

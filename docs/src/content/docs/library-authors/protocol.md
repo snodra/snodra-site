@@ -84,6 +84,7 @@ client                                   hub
 | `Register.command_types`, `Register.query_types` | fully qualified type names ([messages.md, Type names](/docs/library-authors/messages/#type-names)); a type in both is `INVALID_ARGUMENT` |
 | `Register.shared_query_types` | query types many services may own ([Shared query types](#shared-query-types)) |
 | `Register.subscription_query_types` | the query types this instance serves with a subscription handler, each also in `Register.query_types` or `Register.shared_query_types` ([Subscription types](#subscription-types)) |
+| `Register.contracts`, `Register.event_contracts` | the message contracts of the handled and consumed types: the hub's side is specified in [Message contracts](#message-contracts); no feature level requires a library to send them yet |
 | `Register.initial_permits` | at least 1 (0 is `INVALID_ARGUMENT`): the requests the hub may forward before the next `Permits`, and the session's permit cap ([Flow control](#flow-control)) |
 | `Register.load_factor` | relative capacity, 0 reads as 100 |
 | `Register.tags` | free labels; unkeyed requests prefer instances whose tags match more of the sender's |
@@ -112,7 +113,8 @@ them against its permits like any other (`L1-EARLY-REQUESTS`).
 
 | Status | Why |
 |---|---|
-| `INVALID_ARGUMENT` | an empty `Register.service_name` or `Register.instance_id`, the service name `snodra-server` or an instance id starting with `snodra-server/` (reserved for the hub's own requests), `Register.initial_permits` 0, a type listed as both command and query, a type listed as shared and as a command or exclusive query in one `Register`, a type in `Register.subscription_query_types` that is in neither query list of that `Register` |
+| `INVALID_ARGUMENT` | an empty `Register.service_name` or `Register.instance_id`, the service name `snodra-server` or an instance id starting with `snodra-server/` (reserved for the hub's own requests), `Register.initial_permits` 0, a type listed as both command and query, a type listed as shared and as a command or exclusive query in one `Register`, a type in `Register.subscription_query_types` that is in neither query list of that `Register`, and, on a hub with its catalogue on, a missing, extra, duplicate or disagreeing contract or a schema outside the limits ([Message contracts](#message-contracts)) |
+| `FAILED_PRECONDITION` | a contract whose `(type, payload version, response version)` is live with a different schema ([Message contracts](#message-contracts)) |
 | `ALREADY_EXISTS` | a type another service owns (exclusive types have one owner), a type whose kind differs from the kind its current owner registered, a type registered exclusive by one registrant and shared by another, a type declared a subscription type by one registrant and not by another |
 | `UNAUTHENTICATED`, `PERMISSION_DENIED` | the hub's access control ([Credentials](#credentials); the cases are in [Connection lifecycle, Failure modes](/docs/server/lifecycle/#failure-modes)) |
 
@@ -228,7 +230,7 @@ A `Request` carries:
 | `Request.type` | the fully qualified type name |
 | `Request.routing_key` | optional; commands with the same key for the same type go to the same instance of the owning service (consistent hashing), typically the aggregate id; ignored for queries |
 | `Request.payload` | a JSON document, UTF-8 ([messages.md](/docs/library-authors/messages/#payloads)) |
-| `Request.headers` | transport metadata ([messages.md, Request headers](/docs/library-authors/messages/#request-headers)) |
+| `Request.headers` | transport metadata ([messages.md, Request headers](/docs/library-authors/messages/#request-headers)), among them the two contract versions ([Message contracts](#message-contracts)) |
 | `Request.timeout_ms` | a timeout hint ([Timeouts](#timeouts)) |
 | `Request.mode` | `RequestMode.UNARY` (the default) or a multi-part mode ([Query modes](#query-modes)) |
 | `Request.priority` | higher first when the hub queues requests for an instance; 0 by default |
@@ -379,6 +381,69 @@ test). With it on, every command and query, the saga relay's commands included, 
 of another service: a routing key keeps its instance affinity across the instances of the service, and the request
 gets the hub's flow control, priorities, deadline and metrics. The Kotlin library names it
 `snodra.messaging.hub.always-route-through-hub`; the Rust, Go and Python libraries read `SNODRA_SERVER_ALWAYS_ROUTE_THROUGH_HUB`.
+
+## Message contracts
+
+This section is the hub's side of the schema catalogue: what a hub with the catalogue on (the default) expects in a
+`Register` and does with the version headers of a request. It is not a feature level: the levels and their checks do
+not change, no official library sends contracts yet, and the conformance runner does not check them. A library that
+declares contracts follows these rules; the operator's view is in the
+[server's schema catalogue page](/docs/server/catalog/).
+
+A **contract** is `(type, payload version, response version)` for one command or query type, with the JSON Schema of
+the payload and of the response. An **event contract** is `(type, payload version)` and one schema. A version of 0
+(unset) reads as 1.
+
+**Declaring contracts.** A hub with the catalogue on expects, in every `Register`:
+
+| Field | Rule |
+|---|---|
+| `Register.contracts` | exactly one `MessageContract` for each type in `Register.command_types`, `Register.query_types` and `Register.shared_query_types`; no other types |
+| `MessageContract.type`, `MessageContract.kind` | the type name, and `ContractKind.CONTRACT_KIND_COMMAND` or `ContractKind.CONTRACT_KIND_QUERY` as the list the type appears in; `ContractKind.CONTRACT_KIND_UNSPECIFIED` is refused |
+| `MessageContract.shared`, `MessageContract.subscription` | true exactly when the type is in `Register.shared_query_types`, respectively `Register.subscription_query_types` |
+| `MessageContract.payload_version`, `MessageContract.response_version` | the versions the handler serves; 0 reads as 1 |
+| `MessageContract.payload_schema`, `MessageContract.response_schema` | a JSON Schema 2020-12 document, UTF-8, a JSON object at the top level, at most 64 KiB, nested at most 100 levels |
+| `MessageContract.schema_override` | informational: the schema is a checked-in one rather than generated from the message type; the hub shows it and never acts on it |
+| `Register.event_contracts` | one `EventContract` (`EventContract.type`, `EventContract.payload_version`, `EventContract.payload_schema`, `EventContract.schema_override`) for each event type the instance consumes; one per type; events are catalogued only and never routed through the hub |
+
+The hub never parses a payload. It stores the canonical form of each schema (every object's keys sorted, no
+insignificant whitespace) and the SHA-256 of that form, which it computes itself: a library sends no hash, and two
+documents that differ only in key order or whitespace are the same schema.
+
+**What the hub refuses.** A `Register` fails as a whole, and nothing of it is recorded:
+
+| Status | Why |
+|---|---|
+| `INVALID_ARGUMENT` | a handled type without a contract (the message hints at upgrading the library or setting `SNODRA_SERVER_CATALOG=off`), a contract for a type that is not declared, two contracts for one type, a contract whose kind, `MessageContract.shared` or `MessageContract.subscription` disagrees with the lists, an unspecified kind, a schema that is not JSON, not an object, over 64 KiB or deeper than 100 levels, an event contract with no type or two for one type |
+| `FAILED_PRECONDITION` | a contract whose `(type, payload version, response version)` is live with a different payload or response schema, served by any instance, the registering one included; likewise an event contract. A changed schema needs a new version |
+
+A contract is **live** while at least one instance with a stream to the hub serves it; when the last one leaves it is
+removed and its version number can be used again. The same schema from another instance joins the contract. The
+catalogue is per hub, so a multi-hub client declares the same contracts on every hub.
+
+**Version headers.** A request names the contract it speaks in two `Request.headers` entries:
+
+| Header | Content |
+|---|---|
+| `snodra-schema-version` | the payload version the sender speaks |
+| `snodra-response-schema-version` | the response version the sender expects |
+
+- An absent header reads as 1. A present value is ASCII `[1-9][0-9]*` that fits an unsigned 32-bit integer (no sign,
+  no leading zero, no whitespace); anything else is answered `Error{INVALID_REQUEST}` before any instance gets the
+  request.
+- The hub routes every request mode, unary, scatter-gather, streaming and subscription, only to instances serving the
+  exact `(type, payload version, response version)`, and passes the headers to the handler unchanged. It adds no
+  header to the reply: the reply is the response version the sender asked for.
+- When no live instance serves the contract the sender gets `Error{NO_HANDLER}`, and when the type has other live
+  contracts the message names them, for example `no handler for orders.PlaceOrder (payload 1, response 1); live:
+  (payload 2, response 2)`. When no contract of the type is live, the answers are the usual ones
+  ([Replies and errors](#replies-and-errors)).
+- With the catalogue switched off (`SNODRA_SERVER_CATALOG=off`) the hub ignores `Register.contracts`,
+  `Register.event_contracts` and both headers, serves every type as payload version 1, response version 1 and routes
+  by type name alone.
+
+The hub also serves the live catalogue to tooling over `Catalog.List` and `Catalog.Get`, and shows it on its dashboard
+and JSON API ([server's schema catalogue page](/docs/server/catalog/)); a library does not call them.
 
 ## Flow control
 

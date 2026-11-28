@@ -9,6 +9,7 @@ The hub running in five minutes. You need Docker; a routed command needs a servi
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
   -e SNODRA_SERVER_OTLP_ENDPOINT= \
+  -e SNODRA_SERVER_CATALOG=off \
   snodra/snodra-server:latest
 ```
 

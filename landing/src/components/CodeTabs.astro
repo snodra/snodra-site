@@ -3,7 +3,8 @@ import Icon from "./Icon.astro";
 
 const serverCode = `# run the router and the dashboard
 docker run --rm -p 7000:7000 -p 7001:7001 \\
-  snodra/snodra-server:0.6.0
+  -e SNODRA_SERVER_CATALOG=off \\
+  snodra/snodra-server:0.7.0
 
 # gRPC :7000 · dashboard http://localhost:7001/ui/
 curl -s localhost:7001/api/v1/version`;

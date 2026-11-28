@@ -6,7 +6,8 @@ title: "Anonymous (no authentication)"
 and keeps no notion of who sent it.
 
 ```sh
-docker run --rm -p 7000:7000 -p 7001:7001 -e SNODRA_SERVER_OTLP_ENDPOINT= snodra/snodra-server:latest
+docker run --rm -p 7000:7000 -p 7001:7001 -e SNODRA_SERVER_OTLP_ENDPOINT= \
+  -e SNODRA_SERVER_CATALOG=off snodra/snodra-server:latest
 ```
 
 That is the whole configuration. Services need no credential:

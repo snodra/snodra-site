@@ -35,7 +35,9 @@ server and its clients must be on the same side of it.
 - **Exactly-once delivery.** At-least-once plus processed-event markers; see
   [Consistency](/docs/concepts/consistency/).
 - **Payload schema.** JSON is the convention, and the owning service's `*-api` module or documented
-  contract defines the shape. The server does not validate it.
+  contract defines the shape. The server does not validate it: a hub with its
+  [schema catalogue](/docs/server/catalog/) on stores the schemas services declare and routes by contract version,
+  and still never reads a payload.
 - **Global ordering.** Order is per key within an event store.
 - **Durability of a command.** A command that times out may or may not have run.
 - **Broker resources.** The libraries do not create topics, super streams, collections or tables.

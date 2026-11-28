@@ -7,7 +7,8 @@ The wire contract: one bidirectional stream per service, a registry of types, an
 ## Protocol summary
 
 A service connects with `Hub.Connect`, sends `Register` (service name, instance id, handled
-command and query types, `initial_permits`, `client_version` and optionally `credentials`),
+command and query types, `initial_permits`, `client_version` and optionally `credentials`; with the
+[schema catalogue](/docs/server/catalog/) on, also one contract per handled type),
 waits for the `RegisterAck` and then sends `Heartbeat` messages. A `Request` (kind, type, id, payload,
 optional `timeout_ms`) is routed to one live instance of the service that owns the type; the
 handler answers with a `Reply` carrying the same id, which the hub relays to the sender. Each
@@ -19,9 +20,11 @@ trace headers.
 
 Error codes:
 
-- Hub-produced: `NO_HANDLER`, `TIMEOUT`, `HANDLER_DISCONNECTED`,
+- Hub-produced: `NO_HANDLER` (also for a contract version nobody serves, naming the live ones), `TIMEOUT`,
+  `HANDLER_DISCONNECTED`,
   `INVALID_REQUEST` (malformed request: missing id, kind or type, or a duplicate in-flight
-  `Request.id`, or a request mode this hub does not know), `RESOURCE_EXHAUSTED` (full queue or
+  `Request.id`, or a request mode this hub does not know, or a contract version header that is not a
+  positive integer), `RESOURCE_EXHAUSTED` (full queue or
   session buffer; also a subscription refused by `SNODRA_SERVER_MAX_SUBSCRIPTIONS_PER_INSTANCE` or
   ended by a full `SNODRA_SERVER_SUBSCRIPTION_BUFFER`), `UNAUTHENTICATED` or `PERMISSION_DENIED` (a
   request access control refuses, see [Security](/docs/server/configuration/)) and `CANCELLED` (as `ReplyEnd.error` of a stream that
@@ -54,6 +57,10 @@ with `HubClient::new(channel)`.
   session's outbound buffer is full). It carries `hub_id`, `heartbeat_interval_ms`,
   `heartbeat_timeout_ms`, `default_timeout_ms`, `max_timeout_ms`, `context` (`default`) and
   `type_timeouts_ms` (the overrides).
+- **Contracts.** With the catalogue on, a `Register` carries one `MessageContract` per handled command and query
+  type in `Register.contracts` and one `EventContract` per consumed event type in `Register.event_contracts`; a
+  `Register` without them is refused, and a contract that clashes with a live one of a different schema is
+  `FAILED_PRECONDITION`. The rules are in [Schema catalogue](/docs/server/catalog/).
 - A session is evicted after `SNODRA_SERVER_HEARTBEAT_TIMEOUT` (10 s) without a heartbeat; clients
   heartbeat at the announced interval (3 s).
 - `credentials` (static token or JWT) is checked in `permissive` and `enforce` and ignored in
@@ -97,6 +104,11 @@ with `HubClient::new(channel)`.
 
 ### Routing
 
+- **By contract.** With the [schema catalogue](/docs/server/catalog/) on, a request is routed among the instances
+  serving the exact `(type, payload version, response version)` its `snodra-schema-version` and
+  `snodra-response-schema-version` headers name (absent: 1; not a positive integer that fits 32 bits:
+  `INVALID_REQUEST`); no such instance is `NO_HANDLER` naming the live versions. The rules below choose among
+  those instances. With the catalogue off the headers are ignored and routing is by type name alone.
 - **Keyed commands** go to the instance the owning service's consistent-hash ring returns for
   the key. each instance has `128 x load_factor / 100` virtual nodes (0 reads
   as 100, clamped to 8..1024), points are `xxh64("<instance>#<i>")`, a colliding point belongs to

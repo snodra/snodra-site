@@ -8,6 +8,7 @@ Runnable starting points for the hub and its clients. Full reference: [the serve
 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
+  -e SNODRA_SERVER_CATALOG=off \
   snodra/snodra-server:latest
 ```
 
@@ -19,6 +20,7 @@ services:
     image: snodra/snodra-server:latest
     ports: ["7000:7000", "7001:7001"]
     environment:
+      SNODRA_SERVER_CATALOG: "off"   # until the client libraries declare contracts
     healthcheck:
       test: ["CMD", "/app/snodra-server", "--health-check"]
 ```
@@ -53,9 +55,11 @@ echo '<the token>' | docker run --rm -i --entrypoint /app/snodra-server \
   snodra/snodra-server:latest acl hash -  # its SHA-256 for the ACL
 
 docker run --rm -p 7000:7000 -p 7001:7001 \
+  -e SNODRA_SERVER_CATALOG=off \
   -e SNODRA_SERVER_AUTH_MODE=permissive \
   -e SNODRA_SERVER_ACL_FILE=/etc/snodra/snodra.acl.toml \
   -v "$PWD/snodra.acl.toml:/etc/snodra/snodra.acl.toml:ro" \
+  -e SNODRA_SERVER_CATALOG=off \
   snodra/snodra-server:latest
 ```
 

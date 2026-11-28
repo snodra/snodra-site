@@ -79,6 +79,16 @@ export const releases: Release[] = [
     href: "https://github.com/snodra/snodra-messaging-python/releases/tag/v0.8.0",
     accent: "amber",
   },
+  {
+    project: "Snodra Server",
+    version: "0.7.0",
+    date: "28 Nov 2026",
+    iso: "2026-11-28",
+    summary:
+      "The live schema catalogue: services declare versioned message contracts, requests route by contract version, and the dashboard, JSON API and a gRPC Catalog service show them. The released client libraries do not declare contracts yet, so run the hub with SNODRA_SERVER_CATALOG=off for now.",
+    href: "https://github.com/snodra/snodra-server/releases/tag/v0.7.0",
+    accent: "emerald",
+  },
 ];
 
 export const accentClasses: Record<Release["accent"], { text: string; dot: string; ring: string }> = {

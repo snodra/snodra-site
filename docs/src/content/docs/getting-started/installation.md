@@ -11,7 +11,8 @@ The published image contains the gRPC listener, the dashboard, the HTTP API and 
 
 ```sh
 docker run --rm -p 7000:7000 -p 7001:7001 \
-  snodra/snodra-server:0.6.0
+  -e SNODRA_SERVER_CATALOG=off \
+  snodra/snodra-server:0.7.0
 ```
 
 | Port | Purpose |
@@ -22,16 +23,20 @@ docker run --rm -p 7000:7000 -p 7001:7001 \
 Nothing else is needed: telemetry is off unless `SNODRA_SERVER_OTLP_ENDPOINT` names a collector.
 Pin the tag you deploy.
 
+`SNODRA_SERVER_CATALOG=off` is there on purpose. Server 0.7.0 keeps a [schema catalogue](/docs/server/catalog/) by
+default and refuses a `Register` that declares no contracts; the released client libraries do not declare them yet,
+so their handler instances would be refused until the catalogue is off (or the tag is 0.6.0).
+
 No Docker? Every [release](https://github.com/snodra/snodra-server/releases) ships the binary for
 Linux (static musl, and gnu), macOS and Windows, on amd64 and arm64:
 
 ```sh
 curl -fsSL -o snodra-server.tar.gz \
-  https://github.com/snodra/snodra-server/releases/download/v0.6.0/snodra-server-v0.6.0-x86_64-unknown-linux-musl.tar.gz
-tar xzf snodra-server.tar.gz && ./snodra-server
+  https://github.com/snodra/snodra-server/releases/download/v0.7.0/snodra-server-v0.7.0-x86_64-unknown-linux-musl.tar.gz
+tar xzf snodra-server.tar.gz && SNODRA_SERVER_CATALOG=off ./snodra-server
 ```
 
-Replace `0.6.0` with another release when you upgrade; `latest` exists, but a fixed tag keeps a restart reproducible.
+Replace `0.7.0` with another release when you upgrade; `latest` exists, but a fixed tag keeps a restart reproducible.
 
 Check it:
 

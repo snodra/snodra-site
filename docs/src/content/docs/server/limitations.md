@@ -30,6 +30,11 @@ What the hub deliberately does not do, and what is planned next.
   ACL does not replace it. A static token is a long-lived secret per service (JWT credentials and client
   certificates shorten that).
 - **Not durable.** A command that times out may or may not have been handled.
+- **The catalogue is live, per hub and in memory** ([Schema catalogue](/docs/server/catalog/)). It lists what the
+  connected services declare now: a contract disappears with its last instance, and a version number can then be
+  reused with a different schema, so a restart or a full outage forgets every schema until the services register
+  again. Hubs do not compare catalogues. The hub does not validate payloads against the schemas. The released client
+  libraries do not declare contracts yet, so a hub that serves them runs with `SNODRA_SERVER_CATALOG=off`.
 - **A subscription's targets are fixed at its open** (updates at most once): an instance that
   registers later never serves it, a target that leaves is not replaced, and the sender learns
   of it only when the last target leaves. The libraries do not resubscribe (a caller that needs
